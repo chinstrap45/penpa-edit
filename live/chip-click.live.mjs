@@ -1,12 +1,13 @@
 // A press and release on a Pinned or Recent chip's main area switches to that tool (#346), whatever the timing: fast repeats, a few
-// pixels of movement between press and release, and no chip text selected. The mouse is real; the tool is read from `engine.getTool()`.
+// pixels of movement between press and release, a board redraw between them, and no chip text selected. The mouse is real. The no-selection
+// checks hold with or without the chips' own `user-select: none`, since upstream's base CSS already sets it on every element.
 import assert from 'node:assert/strict'
 import { before, after, describe, it } from 'node:test'
-import { afterChange, newBoardSolveLink, openSolvePage, setTool, useBrowser, waitForTool } from './page.mjs'
+import { afterChange, currentTool, newBoardSolveLink, openSolvePage, setTool, useBrowser, waitForTool } from './page.mjs'
 
 const browser = useBrowser()
 
-const CLICKS = 20
+const CLICKS_PER_CHIP = 20
 const MOVED_CLICKS = 10
 // 3 px is the ticket's; 6 and 10 are past Chromium's drag threshold (4 px), where a draggable chip starts a drag and a text press starts a selection.
 const MOVES_PX = [3, 6, 10]
@@ -14,8 +15,8 @@ const MOVES_PX = [3, 6, 10]
 const openSolve = async (tabSet) => openSolvePage(browser(), await newBoardSolveLink(browser(), tabSet))
 const selectedText = (page) => page.evaluate(() => getSelection().toString())
 
-// A press, a move of `movePx` (none when 0), and the release, all on the chip's centre.
-async function press (page, chip, movePx) {
+// A press, a move of `movePx` (none when 0), `between` (a board redraw, say) and the release, all on the chip's centre.
+async function press (page, chip, movePx, between) {
   await afterChange(page)
   await chip.waitFor()
   const { x, y, width, height } = await chip.boundingBox()
@@ -24,14 +25,27 @@ async function press (page, chip, movePx) {
   if (movePx) {
     await page.mouse.move(x + width / 2 + movePx, y + height / 2, { steps: 3 })
   }
+  await between?.()
   await page.mouse.up()
 }
 
-// Presses the chips of `tools` alternately, and checks each switches the tool and no text is selected.
-async function pressAlternately (page, chipOf, tools, count, movePx) {
+// Clicks the chips of `tools` alternately, each click straight after the last with no wait for the page between, and reads the tool the
+// instant a click returns.
+async function quickClicks (page, chipOf, tools, count) {
   for (let i = 0; i < count; i++) {
     const tool = tools[i % tools.length]
-    await press(page, chipOf(tool.name), movePx)
+    await chipOf(tool.name).click()
+    const { mode, submode } = await currentTool(page)
+    assert.deepEqual({ mode, submode }, tool.tool, `click ${i + 1} on ${tool.name} switches the tool`)
+    assert.equal(await selectedText(page), '', `click ${i + 1} on ${tool.name} selects no text`)
+  }
+}
+
+// Presses the chips of `tools` alternately, and checks each switches the tool and no text is selected.
+async function pressAlternately (page, chipOf, tools, count, movePx, between) {
+  for (let i = 0; i < count; i++) {
+    const tool = tools[i % tools.length]
+    await press(page, chipOf(tool.name), movePx, between)
     await waitForTool(page, tool.tool, `press ${i + 1} on ${tool.name} switches the tool`)
     assert.equal(await selectedText(page), '', `press ${i + 1} on ${tool.name} selects no text`)
   }
@@ -61,8 +75,12 @@ describe('a press on a chip', () => {
   const chipIn = (card) => (name) => opened.page.getByRole('region', { name: card }).locator('.ui-chip-main').filter({ hasText: name }).first()
 
   for (const [card, tools] of [['Pinned', PINNED], ['Recent', RECENT]]) {
-    it(`switches the tool on every one of ${CLICKS} quick presses on ${card} chips`, async () => {
-      await pressAlternately(opened.page, chipIn(card), tools, CLICKS, 0)
+    it(`switches the tool on every one of ${CLICKS_PER_CHIP} quick clicks on each ${card} chip`, async () => {
+      await quickClicks(opened.page, chipIn(card), tools, CLICKS_PER_CHIP * tools.length)
+    })
+
+    it(`switches the tool on a press on a ${card} chip with a board redraw between the press and the release`, async () => {
+      await pressAlternately(opened.page, chipIn(card), tools, MOVED_CLICKS, 0, () => opened.page.evaluate(() => pu.redraw()))
     })
 
     for (const movePx of MOVES_PX) {
@@ -72,11 +90,16 @@ describe('a press on a chip', () => {
     }
   }
 
-  it('selects no text when a chip is double-clicked', async () => {
+  it('leaves the tool alone when a Pinned chip is dragged onto another chip or off the strip', async () => {
     const { page } = opened
-    for (const card of ['Pinned', 'Recent']) {
-      await chipIn(card)(card === 'Pinned' ? PINNED[0].name : RECENT[0].name).dblclick()
-      assert.equal(await selectedText(page), '', `a double click on a ${card} chip selects no text`)
-    }
+    const wall = RECENT[0].tool
+    await setTool(page, wall)
+    await waitForTool(page, wall)
+    await afterChange(page)
+    await chipIn('Pinned')(PINNED[0].name).dragTo(chipIn('Pinned')(PINNED[1].name))
+    await afterChange(page)
+    await chipIn('Pinned')(PINNED[1].name).dragTo(page.getByRole('region', { name: 'Board' }))
+    await afterChange(page)
+    assert.deepEqual(await waitForTool(page, wall), wall)
   })
 })

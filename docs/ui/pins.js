@@ -241,11 +241,12 @@
                 e.dataTransfer.setData('text/plain', label);
             });
             // A press that moved a few pixels before the release starts a drag, and a drag suppresses `click`: one that ends on
-            // the chip's own button is the solver's click.
+            // the chip's own button is the solver's click. A reorder redraws the strip, which detaches this button; its box is then
+            // all zeros, which a browser that reports a drag's end at 0, 0 would match.
             node.addEventListener('dragend', (e) => {
                 dragged = null;
                 const { left, right, top, bottom } = main.getBoundingClientRect();
-                if (e.clientX >= left && e.clientX <= right && e.clientY >= top && e.clientY <= bottom) {
+                if (main.isConnected && e.clientX >= left && e.clientX <= right && e.clientY >= top && e.clientY <= bottom) {
                     choose();
                 }
             });
