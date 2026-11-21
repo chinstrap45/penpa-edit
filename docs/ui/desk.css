@@ -127,20 +127,16 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-card-board .ui-body > * { margin: auto; flex: none; position: relative; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
 .ui-card-board canvas { background: #fff; }
 /* The board coordinates sit in a gutter above and left of the canvas (and below and right of it, with `ui-coordinates-four-sides`), outside any outside-clue band the canvas holds. */
-.ui-card-board .ui-body > .ui-coordinates-on { --ui-coordinates-gutter: calc(48px * var(--ui-text-scale, 1)); padding: var(--ui-coordinates-gutter) 0 0 var(--ui-coordinates-gutter); box-sizing: content-box; width: auto; }
+.ui-card-board .ui-body > .ui-coordinates-on { --ui-coordinates-gutter: calc(30px * var(--ui-text-scale, 1)); padding: var(--ui-coordinates-gutter) 0 0 var(--ui-coordinates-gutter); box-sizing: content-box; width: auto; }
 .ui-card-board .ui-body > .ui-coordinates-four-sides { padding: var(--ui-coordinates-gutter); }
 .ui-grid-coordinates { position: absolute; inset: 0; pointer-events: none; }
-.ui-grid-coordinate { position: absolute; transform: translate(-50%, -50%); line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; user-select: none;
-  /* A filled circle as wide as the longest label of its axis needs (`--ui-coord-chars`, in digit widths), so one axis reads evenly; the colours are inverted for the theme (#345).
-     Where the cells of the axis are closer than that circle (`--ui-coord-pitch`), the text and circle shrink together to fit between them. */
-  --ui-coord-em: max(1.5, calc(0.7 * var(--ui-coord-chars, 1) + 0.55));
-  font-size: min(calc(19px * var(--ui-text-scale, 1)), calc(var(--ui-coord-pitch, 9999px) * 0.92 / var(--ui-coord-em)));
-  display: grid; place-items: center; box-sizing: border-box; width: calc(var(--ui-coord-em) * 1em); aspect-ratio: 1; border-radius: 50%; background: #111827; color: #fff; }
+.ui-grid-coordinate { position: absolute; transform: translate(-50%, -50%); font-size: calc(19px * var(--ui-text-scale, 1)); line-height: 1; color: #111827; font-weight: 700; font-variant-numeric: tabular-nums; user-select: none; }
 .ui-grid-coordinate[data-axis="column"] { transform: translate(-50%, calc(-50% + var(--ui-stick-y, 0px))); }
 .ui-grid-coordinate[data-axis="row"] { transform: translate(calc(-50% + var(--ui-stick-x, 0px)), -50%); }
 .ui-grid-coordinate[data-axis="column"][data-side="end"] { transform: translate(-50%, calc(-50% + var(--ui-stick-end-y, 0px))); }
 .ui-grid-coordinate[data-axis="row"][data-side="end"] { transform: translate(calc(-50% + var(--ui-stick-end-x, 0px)), -50%); }
-.ui-dark .ui-grid-coordinate { background: #fff; color: #111827; }
+.ui-grid-band { opacity: .75; }
+.ui-dark .ui-grid-coordinate { color: #f3f4f6; }
 .ui-card-rules .ui-body { --ui-rules-text: 14px; max-height: 520px; font-size: calc(var(--ui-rules-text) * var(--ui-text-scale, 1)); color: #3b3e45; white-space: pre-wrap; tab-size: 2; overflow-wrap: anywhere; }
 /* Each rules line is a block; a list item's marker is its own flex item, so a wrapped line hangs under the text. */
 .ui-rules-line { min-height: 1.4em; }
