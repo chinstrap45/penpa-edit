@@ -4,7 +4,7 @@
 // box (#250). Label positions are read against the cells Penpa+ draws.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { boardCanvasInPage, linkFromNewBoard, solveLinkOfImport, openSolvePage, useBrowser, waitForDesk } from './page.mjs'
+import { boardCanvasInPage, contrastHelpersInPage, linkFromNewBoard, solveLinkOfImport, openSolvePage, useBrowser, waitForDesk } from './page.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
 import { settle } from './settle.mjs'
 import { FRAMED_GRID_LINK } from './framed-grid-link.mjs'
@@ -50,10 +50,27 @@ const readCells = async (page) => {
 
 // Runs in the page: every shown label's text, axis and box.
 function labelsInPage () {
+  const { parse, ratio, luminance } = window.__helpers()
   return [...document.querySelectorAll('.ui-grid-coordinate')].map((node) => {
     const r = node.getBoundingClientRect()
-    return { text: node.textContent, band: node.classList.contains('ui-grid-band'), axis: node.dataset.axis, side: node.dataset.side, cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2, left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+    const style = getComputedStyle(node)
+    const range = document.createRange()
+    range.selectNodeContents(node)
+    let opacity = 1
+    for (let n = node; n; n = n.parentElement) opacity *= Number(getComputedStyle(n).opacity)
+    const [background, color] = [parse(style.backgroundColor), parse(style.color)]
+    return {
+      text: node.textContent, band: node.classList.contains('ui-grid-band'), axis: node.dataset.axis, side: node.dataset.side, cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2, left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+      textWidth: range.getBoundingClientRect().width, fontPx: parseFloat(style.fontSize), weight: style.fontWeight, radius: style.borderRadius, opacity,
+      backgroundAlpha: background[3], contrast: ratio(background, color), circleIsLighter: luminance(background) > luminance(color)
+    }
   })
+}
+
+// Reads every label's box and colours: `labelsInPage` needs the page's contrast helpers in place first.
+const labelsOf = async (page) => {
+  await page.evaluate((src) => { window.__helpers = new Function(`return (${src})`)() }, contrastHelpersInPage.toString())
+  return page.evaluate(labelsInPage)
 }
 
 const turnOn = async (page) => {
@@ -68,7 +85,7 @@ const turnOn = async (page) => {
 // none inside the canvas.
 async function assertAligned (page, columns, rows) {
   const { canvas, cells } = await readCells(page)
-  const labels = await page.evaluate(labelsInPage)
+  const labels = await labelsOf(page)
   const top = labels.filter((l) => l.axis === 'column' && l.side === 'start')
   const left = labels.filter((l) => l.axis === 'row' && l.side === 'start')
   assert.deepEqual(top.map((l) => l.text), Array.from({ length: columns }, (_, i) => String(i + 1)), 'columns are numbered 1..N')
@@ -127,7 +144,7 @@ async function assertBands (page, columns, rows) {
   let read
   try { read = await page.evaluate(drawnBoxInPage, handle) } finally { await handle.dispose() }
   const { area, canvas } = read
-  const labels = await page.evaluate(labelsInPage)
+  const labels = await labelsOf(page)
   const check = (axis, texts, centre, from, to, outside) => {
     const own = labels.filter((l) => l.axis === axis && l.side === 'start')
     assert.deepEqual(own.map((l) => l.text), texts, `${axis} bands are named in order`)
@@ -151,7 +168,7 @@ const switchChecked = async (page) => {
 describe('board coordinates on a square-cell grid', () => {
   it('are off by default', async () => {
     const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 9, rows: 9 }), { served: true })
-    assert.deepEqual(await page.evaluate(labelsInPage), [])
+    assert.deepEqual(await labelsOf(page), [])
     assert.equal(await switchChecked(page), false, 'the switch is there, and off')
     await context.close()
   })
@@ -166,7 +183,7 @@ describe('board coordinates on a square-cell grid', () => {
     await assertAligned(page, 9, 9)
     // The fit leaves room for the numbers: at Fit every label is inside the Board card.
     const card = await page.evaluate(() => document.querySelector('section[aria-label="Board"]').getBoundingClientRect().toJSON())
-    for (const l of await page.evaluate(labelsInPage)) {
+    for (const l of await labelsOf(page)) {
       assert.ok(l.left >= card.left && l.right <= card.right && l.top >= card.top && l.bottom <= card.bottom, `label ${l.axis} ${l.text} is inside the Board card`)
     }
     await page.getByRole('button', { name: 'Zoom in' }).click()
@@ -176,7 +193,7 @@ describe('board coordinates on a square-cell grid', () => {
     await assertAligned(page, 9, 9)
     await page.reload()
     await waitForDesk(page)
-    assert.equal(await settle(async () => (await page.evaluate(labelsInPage)).length, 36), 36, 'the labels are back after a reload')
+    assert.equal(await settle(async () => (await labelsOf(page)).length, 36), 36, 'the labels are back after a reload')
     await assertAligned(page, 9, 9)
     assert.equal(await switchChecked(page), true, 'the switch is on after a reload')
     await context.close()
@@ -188,7 +205,7 @@ describe('board coordinates on a square-cell grid', () => {
     const sizes = await page.evaluate(() => [...document.querySelectorAll('.ui-grid-coordinate')].map((n) => getComputedStyle(n).fontSize))
     assert.deepEqual(sizes, Array(36).fill(`${LABEL_PX}px`), 'every label is 19 px at text scale 1')
     const { canvas } = await readCells(page)
-    for (const l of (await page.evaluate(labelsInPage)).filter((n) => n.side === 'start')) {
+    for (const l of (await labelsOf(page)).filter((n) => n.side === 'start')) {
       const clearance = l.axis === 'column' ? canvas.top - l.bottom : canvas.left - l.right
       assert.ok(clearance >= MIN_CLEARANCE_PX, `${l.axis} ${l.text} is ${clearance} px from the canvas edge, wanted at least ${MIN_CLEARANCE_PX}`)
     }
@@ -261,7 +278,7 @@ async function assertRowNumbers (page, columns, rows) {
   let cellRows
   try { cellRows = await page.evaluate(cellRowsInPage, { canvas: handle, tolerance: SLACK_PX }) } finally { await handle.dispose() }
   assert.equal(cellRows.length, rows, 'the grid has this many rows of cells')
-  const labels = await page.evaluate(labelsInPage)
+  const labels = await labelsOf(page)
   const left = labels.filter((l) => l.axis === 'row' && l.side === 'start')
   assert.deepEqual(left.map((l) => l.text), Array.from({ length: rows }, (_, i) => String(i + 1)), 'rows are numbered 1..N from the top')
   left.forEach((l, i) => assert.ok(Math.abs(l.cy - cellRows[i]) <= SLACK_PX, `row ${l.text} is at its row's y ${cellRows[i]}, was ${l.cy}`))
@@ -279,7 +296,7 @@ describe('board coordinates on a grid that is not square', () => {
     const what = byRow ? `${rows} numbers, one per row of cells, and ${columns} letters` : `${columns} letters and ${rows} numbers as equal bands in the`
     it(`show ${what} ${gridtype} grid of size ${size} at Fit and after zooming`, async () => {
       const { context, page } = await openSolvePage(browser(), await boardLink({ columns: size, rows: size, gridtype }), { served: true })
-      assert.deepEqual(await page.evaluate(labelsInPage), [], 'off by default')
+      assert.deepEqual(await labelsOf(page), [], 'off by default')
       const check = byRow ? () => assertRowNumbers(page, columns, rows) : () => assertBands(page, columns, rows)
       await turnOn(page)
       await check()
@@ -297,7 +314,7 @@ describe('board coordinates on a grid that is not square', () => {
     const hex = await boardLink({ columns: 6, rows: 6, gridtype: 'hex' })
     const { context, page } = await openSolvePage(browser(), square, { served: true })
     await turnOn(page)
-    assert.equal((await page.evaluate(labelsInPage)).length, 24)
+    assert.equal((await labelsOf(page)).length, 24)
     const here = page.url().split('#')[0]
     await page.goto('about:blank')
     await page.goto(here + hex)
@@ -329,8 +346,8 @@ function bodyViewInPage () {
 // The width of the gutter the labels sit in, at text scale 1 (desk.css `--ui-coordinates-gutter`). A label whose centre is nearer the card's edge
 // than this lies under the other axis's labels, or is clipped by the card, so only the labels beyond it are checked against the card.
 const GUTTER_PX = 48
-// The label's font size at text scale 1 (desk.css `.ui-grid-coordinate`), and the least gap its circle leaves to the canvas: a two-character
-// circle is 37 px wide, centred in a 48 px gutter it leaves 5.5 px.
+// The label's font size at text scale 1 (desk.css `.ui-grid-coordinate`), and the least gap its circle leaves to the canvas: the widest
+// circle is centred in the gutter and leaves at least this.
 const LABEL_PX = 19
 const MIN_CLEARANCE_PX = 5
 
@@ -361,25 +378,27 @@ const scrollThird = (page) => page.evaluate((read) => new Promise((resolve) => {
 // Each label's centre along its own axis, from the canvas's top left.
 async function alongBoard (page) {
   const { canvas } = await readCells(page)
-  const labels = (await page.evaluate(labelsInPage)).filter((l) => l.side === 'start')
+  const labels = (await labelsOf(page)).filter((l) => l.side === 'start')
   return labels.map((l) => (l.axis === 'column' ? l.cx - canvas.left : l.cy - canvas.top))
 }
 
 // After a scroll, the labels still follow their cells along the board (`before` is each label's offset from the canvas, read unscrolled), and
-// every label beyond the gutter is inside the card's visible area, a column's at the card's top edge and a row's at its left edge.
+// every label whose centre is beyond the gutter is inside the card's visible area, a column's at the card's top edge and a row's at its left edge.
 async function assertSticky (page, before) {
   const view = await page.evaluate(bodyViewInPage)
-  const labels = (await page.evaluate(labelsInPage)).filter((l) => l.side === 'start')
+  const labels = (await labelsOf(page)).filter((l) => l.side === 'start')
   const along = await alongBoard(page)
   assert.equal(labels.length, before.length, 'the same labels are drawn')
   let shown = 0
   labels.forEach((l, i) => {
     assert.ok(Math.abs(along[i] - before[i]) <= SLACK_PX, `${l.axis} ${l.text} keeps its place along the board: ${along[i]} vs ${before[i]}`)
     const isColumn = l.axis === 'column'
-    const inView = isColumn ? l.cx >= view.left + GUTTER_PX && l.right <= view.right : l.cy >= view.top + GUTTER_PX && l.bottom <= view.bottom
+    const inView = isColumn ? l.cx >= view.left + GUTTER_PX && l.cx <= view.right : l.cy >= view.top + GUTTER_PX && l.cy <= view.bottom
     if (!inView) return
     shown++
-    assert.ok(l.left >= view.left - SLACK_PX && l.right <= view.right + SLACK_PX && l.top >= view.top - SLACK_PX && l.bottom <= view.bottom + SLACK_PX, `${l.axis} ${l.text} is inside the card's visible area`)
+    // The circle's centre is inside the card along its axis; across it, the whole circle is.
+    const across = isColumn ? l.top >= view.top - SLACK_PX && l.bottom <= view.bottom + SLACK_PX : l.left >= view.left - SLACK_PX && l.right <= view.right + SLACK_PX
+    assert.ok(across, `${l.axis} ${l.text} is inside the card's visible area`)
     if (isColumn) assert.ok(l.top <= view.top + GUTTER_PX + SLACK_PX, `column ${l.text} sits at the card's top edge: ${l.top} vs ${view.top}`)
     else assert.ok(l.left <= view.left + GUTTER_PX + SLACK_PX, `row ${l.text} sits at the card's left edge: ${l.left} vs ${view.left}`)
   })
@@ -441,7 +460,7 @@ describe('"Number the grid only" on a grid inside a thick frame with outside clu
     await zoomIn(page)
     await scrollThird(page)
     const view = await page.evaluate(bodyViewInPage)
-    const far = (await page.evaluate(labelsInPage)).filter((l) => l.side === 'end')
+    const far = (await labelsOf(page)).filter((l) => l.side === 'end')
     assert.equal(far.length, 18)
     for (const l of far) {
       if (l.axis === 'column') assert.ok(l.bottom <= view.bottom + SLACK_PX && l.bottom >= view.bottom - GUTTER_PX - SLACK_PX, `column ${l.text} sits at the card's bottom edge: ${l.bottom} vs ${view.bottom}`)
@@ -453,19 +472,6 @@ describe('"Number the grid only" on a grid inside a thick frame with outside clu
 
 describe('each board coordinate sits in a filled circle, inverted for the theme (#345)', () => {
   const MIN_CONTRAST = 7
-  // Runs in the page: every label's computed background and text colour as [r, g, b], and its box.
-  const circlesInPage = () => [...document.querySelectorAll('.ui-grid-coordinate')].map((node) => {
-    const style = getComputedStyle(node)
-    const rgb = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number)
-    const r = node.getBoundingClientRect()
-    const range = document.createRange()
-    range.selectNodeContents(node)
-    const textWidth = range.getBoundingClientRect().width
-    return { textWidth, axis: node.dataset.axis, side: node.dataset.side, text: node.textContent, background: rgb(style.backgroundColor), color: rgb(style.color), weight: style.fontWeight, radius: style.borderRadius, left: r.left, right: r.right, top: r.top, bottom: r.bottom }
-  })
-  // WCAG 2.x contrast ratio of two sRGB colours.
-  const luminance = (rgb) => { const [r, g, b] = rgb.map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }); return 0.2126 * r + 0.7152 * g + 0.0722 * b }
-  const contrast = (a, b) => { const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05) }
   const overlaps = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5
 
   const open = async (link, theme) => {
@@ -479,20 +485,24 @@ describe('each board coordinate sits in a filled circle, inverted for the theme 
   const boards = {
     '9x9': () => boardLink({ columns: 9, rows: 9 }),
     '12x12, two-digit rows': () => boardLink({ columns: 12, rows: 12 }),
-    'a hex grid, bands or rows': () => boardLink({ columns: 6, rows: 6, gridtype: 'hex' })
+    'a hex grid, bands or rows': () => boardLink({ columns: 6, rows: 6, gridtype: 'hex' }),
+    '20x20, cells narrower than a circle': () => boardLink({ columns: 20, rows: 20 }),
+    'a hex grid of size 20, two-letter bands': () => boardLink({ columns: 20, rows: 20, gridtype: 'hex' })
   }
 
   for (const theme of ['dark', 'light']) {
     for (const [name, link] of Object.entries(boards)) {
       it(`${name}, ${theme} theme: bold text, contrast ${MIN_CONTRAST}:1, the colours inverted, one size per axis, no overlap`, async () => {
         const { context, page } = await open(await link(), theme)
-        const labels = await page.evaluate(circlesInPage)
+        const labels = await labelsOf(page)
         assert.ok(labels.length > 0, 'labels are drawn')
         const { canvas } = await readCells(page)
         for (const l of labels) {
-          assert.ok(contrast(l.background, l.color) >= MIN_CONTRAST, `${l.axis} ${l.text}: contrast ${contrast(l.background, l.color)} of ${l.background} on ${l.color}`)
-          assert.equal(luminance(l.background) > luminance(l.color), theme === 'dark', `${l.axis} ${l.text}: the circle is ${theme === 'dark' ? 'lighter' : 'darker'} than its text`)
-          assert.ok(l.textWidth <= l.right - l.left - 4, `${l.axis} ${l.text}: its text (${l.textWidth} px) fits inside its ${l.right - l.left} px circle with a margin`)
+          assert.equal(l.backgroundAlpha, 255, `${l.axis} ${l.text}: the circle is opaque`)
+          assert.equal(l.opacity, 1, `${l.axis} ${l.text}: nothing dims it`)
+          assert.ok(l.contrast >= MIN_CONTRAST, `${l.axis} ${l.text}: contrast ${l.contrast}`)
+          assert.equal(l.circleIsLighter, theme === 'dark', `${l.axis} ${l.text}: the circle is ${theme === 'dark' ? 'lighter' : 'darker'} than its text`)
+          assert.ok(l.textWidth <= (l.right - l.left) * 0.95, `${l.axis} ${l.text}: its text (${l.textWidth} px) fits inside its ${l.right - l.left} px circle with a margin`)
           assert.ok(Number(l.weight) >= 700, `${l.axis} ${l.text} is bold`)
           assert.ok(l.radius === '50%' || parseFloat(l.radius) >= (l.right - l.left) / 2, `${l.axis} ${l.text} is round: ${l.radius}`)
         }
@@ -505,7 +515,7 @@ describe('each board coordinate sits in a filled circle, inverted for the theme 
           assert.ok(Math.abs(w - h) < 0.2, `${axis} circles are as tall as wide: ${w}x${h}`)
           own.forEach((a, i) => own.slice(i + 1).forEach((b) => assert.ok(!overlaps(a, b), `${axis} ${a.text} and ${b.text} overlap`)))
         }
-        for (const l of labels.filter((n) => n.side === 'start')) assert.ok(!overlaps(l, { left: canvas.left, right: canvas.right, top: canvas.top, bottom: canvas.bottom }), `${l.axis} ${l.text} touches the board`)
+        for (const l of labels) assert.ok(!overlaps(l, { left: canvas.left, right: canvas.right, top: canvas.top, bottom: canvas.bottom }), `${l.axis} ${l.text} touches the board`)
         await context.close()
       })
     }
@@ -513,12 +523,13 @@ describe('each board coordinate sits in a filled circle, inverted for the theme 
 
   it('swaps the colours at once when the theme changes, without a reload', async () => {
     const { context, page } = await open(await boards['9x9'](), 'dark')
-    const before = (await page.evaluate(circlesInPage))[0]
+    const before = (await labelsOf(page))[0]
     await page.evaluate(() => engine.setTheme('light'))
     await settle(() => page.evaluate(() => !document.documentElement.classList.contains('wa-dark')), true)
-    const after = (await page.evaluate(circlesInPage))[0]
-    assert.ok(luminance(before.background) > luminance(before.color), 'dark: light circle')
-    assert.ok(luminance(after.background) < luminance(after.color), 'light: dark circle')
+    const after = (await labelsOf(page))[0]
+    assert.equal(before.circleIsLighter, true, 'dark: light circle')
+    assert.equal(after.circleIsLighter, false, 'light: dark circle')
+    assert.equal(after.backgroundAlpha, 255, 'light: the circle is filled')
     await context.close()
   })
 })

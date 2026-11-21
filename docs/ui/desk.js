@@ -1207,11 +1207,13 @@
 
     // A band is about this many cells wide (#250), so a band is one to two cells wide whatever the grid's shape.
     const BAND_CELLS = 1.5;
+    // How many digit widths one bold capital letter takes up.
+    const CAPITAL_DIGIT_WIDTHS = 1.3;
     const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     // A, B, ... Z, AA, AB, ...: a grid wider than 26 bands runs on as a spreadsheet's columns do.
     const bandName = (i) => (i < LETTERS.length ? '' : bandName(Math.floor(i / LETTERS.length) - 1)) + LETTERS[i % LETTERS.length];
 
-    // 1, 2, 3... at each of `ats` (the labels of a numbered axis), and A, B, C... at each of `ats` (a band axis). A band label is approximate, so it is drawn lighter.
+    // 1, 2, 3... at each of `ats` (the labels of a numbered axis), and A, B, C... at each of `ats` (a band axis).
     const numbered = (ats) => ats.map((at, i) => ({ at, text: i + 1, band: false }));
     const lettered = (ats) => ats.map((at, i) => ({ at, text: bandName(i), band: true }));
 
@@ -1254,11 +1256,15 @@
         const isNumbered = Boolean(axes || rows);
         const box = boardBox.getBoundingClientRect();
         const gutter = coordinatesGutter();
-        // Every circle of an axis is as wide as that axis's longest label (desk.css `--ui-coord-chars`).
-        const longest = (items) => Math.max(1, ...items.map(({ text }) => String(text).length));
-        const chars = { column: longest(labels.columns), row: longest(labels.rows) };
+        // Every circle of an axis is as wide as that axis's longest label (desk.css `--ui-coord-chars`, in digit widths: a bold capital is wider than a digit),
+        // and no wider than the room between that axis's nearest labels (`--ui-coord-pitch`).
+        const digitWidths = ({ text }) => [...String(text)].reduce((sum, c) => sum + (/\d/.test(c) ? 1 : CAPITAL_DIGIT_WIDTHS), 0);
+        const longest = (items) => Math.max(1, ...items.map(digitWidths));
+        const pitch = (items) => Math.min(Infinity, ...items.slice(1).map((item, i) => Math.abs(item.at - items[i].at)));
+        const axisStyle = (items) => `--ui-coord-chars:${longest(items)};--ui-coord-pitch:${Math.min(pitch(items), 9999)}px`;
+        const styles = { column: axisStyle(labels.columns), row: axisStyle(labels.rows) };
         const label = (axis, side, { text, band }, left, top) => el('span', {
-            class: band ? 'ui-grid-coordinate ui-grid-band' : 'ui-grid-coordinate', 'data-axis': axis, 'data-side': side, style: `left:${left}px;top:${top}px;--ui-coord-chars:${chars[axis]}`
+            class: band ? 'ui-grid-coordinate ui-grid-band' : 'ui-grid-coordinate', 'data-axis': axis, 'data-side': side, style: `left:${left}px;top:${top}px;${styles[axis]}`
         }, [String(text)]);
         const sides = [['start', 0]];
         // The far sides repeat the labels of a grid that is numbered alone, on a square-cell grid or a grid of rows; the bands of any other grid are not repeated.

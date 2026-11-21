@@ -130,9 +130,12 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-card-board .ui-body > .ui-coordinates-on { --ui-coordinates-gutter: calc(48px * var(--ui-text-scale, 1)); padding: var(--ui-coordinates-gutter) 0 0 var(--ui-coordinates-gutter); box-sizing: content-box; width: auto; }
 .ui-card-board .ui-body > .ui-coordinates-four-sides { padding: var(--ui-coordinates-gutter); }
 .ui-grid-coordinates { position: absolute; inset: 0; pointer-events: none; }
-.ui-grid-coordinate { position: absolute; transform: translate(-50%, -50%); font-size: calc(19px * var(--ui-text-scale, 1)); line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; user-select: none;
-  /* A filled circle as wide as the longest label of its axis needs (`--ui-coord-chars`, set by desk.js), so one axis reads evenly; the colours are inverted for the theme (#345). */
-  display: grid; place-items: center; box-sizing: border-box; width: max(1.5em, calc(0.7em * var(--ui-coord-chars, 1) + 0.55em)); aspect-ratio: 1; border-radius: 50%; background: #111827; color: #fff; }
+.ui-grid-coordinate { position: absolute; transform: translate(-50%, -50%); line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; user-select: none;
+  /* A filled circle as wide as the longest label of its axis needs (`--ui-coord-chars`, in digit widths), so one axis reads evenly; the colours are inverted for the theme (#345).
+     Where the cells of the axis are closer than that circle (`--ui-coord-pitch`), the text and circle shrink together to fit between them. */
+  --ui-coord-em: max(1.5, calc(0.7 * var(--ui-coord-chars, 1) + 0.55));
+  font-size: min(calc(19px * var(--ui-text-scale, 1)), calc(var(--ui-coord-pitch, 9999px) * 0.92 / var(--ui-coord-em)));
+  display: grid; place-items: center; box-sizing: border-box; width: calc(var(--ui-coord-em) * 1em); aspect-ratio: 1; border-radius: 50%; background: #111827; color: #fff; }
 .ui-grid-coordinate[data-axis="column"] { transform: translate(-50%, calc(-50% + var(--ui-stick-y, 0px))); }
 .ui-grid-coordinate[data-axis="row"] { transform: translate(calc(-50% + var(--ui-stick-x, 0px)), -50%); }
 .ui-grid-coordinate[data-axis="column"][data-side="end"] { transform: translate(-50%, calc(-50% + var(--ui-stick-end-y, 0px))); }
