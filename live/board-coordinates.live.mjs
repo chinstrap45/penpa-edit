@@ -328,9 +328,9 @@ function bodyViewInPage () {
 
 // The width of the gutter the labels sit in, at text scale 1 (desk.css `--ui-coordinates-gutter`). A label whose centre is nearer the card's edge
 // than this lies under the other axis's labels, or is clipped by the card, so only the labels beyond it are checked against the card.
-const GUTTER_PX = 30
-// The label's font size at text scale 1 (desk.css `.ui-grid-coordinate`), and the least gap its box leaves to the canvas: a 19 px label centred
-// in a 30 px gutter leaves 5.5 px above a column label's box, while a 24 px gutter would leave 2.5 px.
+const GUTTER_PX = 48
+// The label's font size at text scale 1 (desk.css `.ui-grid-coordinate`), and the least gap its circle leaves to the canvas: a two-character
+// circle is 37 px wide, centred in a 48 px gutter it leaves 5.5 px.
 const LABEL_PX = 19
 const MIN_CLEARANCE_PX = 5
 
@@ -376,7 +376,7 @@ async function assertSticky (page, before) {
   labels.forEach((l, i) => {
     assert.ok(Math.abs(along[i] - before[i]) <= SLACK_PX, `${l.axis} ${l.text} keeps its place along the board: ${along[i]} vs ${before[i]}`)
     const isColumn = l.axis === 'column'
-    const inView = isColumn ? l.cx >= view.left + GUTTER_PX && l.cx <= view.right : l.cy >= view.top + GUTTER_PX && l.cy <= view.bottom
+    const inView = isColumn ? l.cx >= view.left + GUTTER_PX && l.right <= view.right : l.cy >= view.top + GUTTER_PX && l.bottom <= view.bottom
     if (!inView) return
     shown++
     assert.ok(l.left >= view.left - SLACK_PX && l.right <= view.right + SLACK_PX && l.top >= view.top - SLACK_PX && l.bottom <= view.bottom + SLACK_PX, `${l.axis} ${l.text} is inside the card's visible area`)
@@ -447,6 +447,74 @@ describe('"Number the grid only" on a grid inside a thick frame with outside clu
       if (l.axis === 'column') assert.ok(l.bottom <= view.bottom + SLACK_PX && l.bottom >= view.bottom - GUTTER_PX - SLACK_PX, `column ${l.text} sits at the card's bottom edge: ${l.bottom} vs ${view.bottom}`)
       else assert.ok(l.right <= view.right + SLACK_PX && l.right >= view.right - GUTTER_PX - SLACK_PX, `row ${l.text} sits at the card's right edge: ${l.right} vs ${view.right}`)
     }
+    await context.close()
+  })
+})
+
+describe('each board coordinate sits in a filled circle, inverted for the theme (#345)', () => {
+  const MIN_CONTRAST = 7
+  // Runs in the page: every label's computed background and text colour as [r, g, b], and its box.
+  const circlesInPage = () => [...document.querySelectorAll('.ui-grid-coordinate')].map((node) => {
+    const style = getComputedStyle(node)
+    const rgb = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number)
+    const r = node.getBoundingClientRect()
+    return { axis: node.dataset.axis, side: node.dataset.side, text: node.textContent, background: rgb(style.backgroundColor), color: rgb(style.color), weight: style.fontWeight, radius: style.borderRadius, left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+  })
+  // WCAG 2.x contrast ratio of two sRGB colours.
+  const luminance = (rgb) => { const [r, g, b] = rgb.map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }); return 0.2126 * r + 0.7152 * g + 0.0722 * b }
+  const contrast = (a, b) => { const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05) }
+  const overlaps = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5
+
+  const open = async (link, theme) => {
+    const opened = await openSolvePage(browser(), link, { served: true })
+    await turnOn(opened.page)
+    await opened.page.evaluate((t) => engine.setTheme(t), theme)
+    await settle(() => opened.page.evaluate(() => document.documentElement.classList.contains('wa-dark')), theme === 'dark')
+    return opened
+  }
+
+  const boards = {
+    '9x9': () => boardLink({ columns: 9, rows: 9 }),
+    '12x12, two-digit rows': () => boardLink({ columns: 12, rows: 12 }),
+    'a hex grid, bands or rows': () => boardLink({ columns: 6, rows: 6, gridtype: 'hex' })
+  }
+
+  for (const theme of ['dark', 'light']) {
+    for (const [name, link] of Object.entries(boards)) {
+      it(`${name}, ${theme} theme: bold text, contrast ${MIN_CONTRAST}:1, the colours inverted, one size per axis, no overlap`, async () => {
+        const { context, page } = await open(await link(), theme)
+        const labels = await page.evaluate(circlesInPage)
+        assert.ok(labels.length > 0, 'labels are drawn')
+        const { canvas } = await readCells(page)
+        for (const l of labels) {
+          assert.ok(contrast(l.background, l.color) >= MIN_CONTRAST, `${l.axis} ${l.text}: contrast ${contrast(l.background, l.color)} of ${l.background} on ${l.color}`)
+          assert.equal(luminance(l.background) > luminance(l.color), theme === 'dark', `${l.axis} ${l.text}: the circle is ${theme === 'dark' ? 'lighter' : 'darker'} than its text`)
+          assert.ok(Number(l.weight) >= 700, `${l.axis} ${l.text} is bold`)
+          assert.ok(l.radius === '50%' || parseFloat(l.radius) >= (l.right - l.left) / 2, `${l.axis} ${l.text} is round: ${l.radius}`)
+        }
+        for (const axis of ['column', 'row']) {
+          const own = labels.filter((l) => l.axis === axis)
+          if (!own.length) continue
+          const sizes = new Set(own.map((l) => `${(l.right - l.left).toFixed(1)}x${(l.bottom - l.top).toFixed(1)}`))
+          assert.equal(sizes.size, 1, `every ${axis} circle has one size, got ${[...sizes]}`)
+          const [w, h] = [...sizes][0].split('x').map(Number)
+          assert.ok(Math.abs(w - h) < 0.2, `${axis} circles are as tall as wide: ${w}x${h}`)
+          own.forEach((a, i) => own.slice(i + 1).forEach((b) => assert.ok(!overlaps(a, b), `${axis} ${a.text} and ${b.text} overlap`)))
+        }
+        for (const l of labels.filter((n) => n.side === 'start')) assert.ok(!overlaps(l, { left: canvas.left, right: canvas.right, top: canvas.top, bottom: canvas.bottom }), `${l.axis} ${l.text} touches the board`)
+        await context.close()
+      })
+    }
+  }
+
+  it('swaps the colours at once when the theme changes, without a reload', async () => {
+    const { context, page } = await open(await boards['9x9'](), 'dark')
+    const before = (await page.evaluate(circlesInPage))[0]
+    await page.evaluate(() => engine.setTheme('light'))
+    await settle(() => page.evaluate(() => !document.documentElement.classList.contains('wa-dark')), true)
+    const after = (await page.evaluate(circlesInPage))[0]
+    assert.ok(luminance(before.background) > luminance(before.color), 'dark: light circle')
+    assert.ok(luminance(after.background) < luminance(after.color), 'light: dark circle')
     await context.close()
   })
 })

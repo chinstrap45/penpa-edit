@@ -1254,8 +1254,11 @@
         const isNumbered = Boolean(axes || rows);
         const box = boardBox.getBoundingClientRect();
         const gutter = coordinatesGutter();
+        // Every circle of an axis is as wide as that axis's longest label (desk.css `--ui-coord-chars`).
+        const longest = (items) => Math.max(1, ...items.map(({ text }) => String(text).length));
+        const chars = { column: longest(labels.columns), row: longest(labels.rows) };
         const label = (axis, side, { text, band }, left, top) => el('span', {
-            class: band ? 'ui-grid-coordinate ui-grid-band' : 'ui-grid-coordinate', 'data-axis': axis, 'data-side': side, style: `left:${left}px;top:${top}px`
+            class: band ? 'ui-grid-coordinate ui-grid-band' : 'ui-grid-coordinate', 'data-axis': axis, 'data-side': side, style: `left:${left}px;top:${top}px;--ui-coord-chars:${chars[axis]}`
         }, [String(text)]);
         const sides = [['start', 0]];
         // The far sides repeat the labels of a grid that is numbered alone, on a square-cell grid or a grid of rows; the bands of any other grid are not repeated.
