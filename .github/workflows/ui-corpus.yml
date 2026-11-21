@@ -3,7 +3,8 @@ name: UI corpus
 # The UI driver's nightly run (#80): every recording replays through real mouse and keyboard on Penpa+'s page and on
 # `solve.html`, compared with the engine driver (`live/ui-replay-part.mjs`). Every PR replays only a sample, inside the
 # seam's budget; this is the rest (the Safety net map's standing ruling, #6). A recording that still differs is `todo`
-# against its ticket and fails nothing; a new difference fails the run, and GitHub mails the failed scheduled run.
+# against its ticket and fails nothing; a new difference fails the run, and the `report` job files one issue naming it, or
+# comments on the open one (#324). A green night says so on that issue; a run that compared nothing counts as red.
 on:
   schedule:
     - cron: '47 5 * * *'
@@ -19,6 +20,33 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-tests
       # A full solve's comparison takes tens of seconds on a loaded runner, past the seam's 60 s per test.
-      - run: node --test --test-concurrency=4 --test-timeout=180000 "live/ui-replay-*.live.mjs"
+      # The log goes to a file for the report job; `shell: bash` runs with pipefail, which keeps node's exit as the step's.
+      - shell: bash
+        run: |
+          node --test --test-concurrency=4 --test-timeout=180000 "live/ui-replay-*.live.mjs" 2>&1 | tee "$RUNNER_TEMP/ui-corpus.log"
         env:
           REPLAY_UI_CORPUS: all
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-corpus-log
+          path: ${{ runner.temp }}/ui-corpus.log
+          if-no-files-found: ignore
+
+  report:
+    needs: ui-corpus
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: ui-corpus-log
+          path: ${{ runner.temp }}/logs
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/ui-corpus-issue.sh "$RUNNER_TEMP/logs/ui-corpus.log" "${{ needs.ui-corpus.result }}" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
