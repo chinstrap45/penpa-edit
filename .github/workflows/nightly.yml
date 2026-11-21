@@ -40,3 +40,16 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
         run: bash .github/scripts/nightly-seam-issue.sh "$RUNNER_TEMP/logs" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+  # A workflow that never started cannot report itself (#324): this checks that the UI corpus's last scheduled run exists.
+  ui-corpus-ran:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/ui-corpus-ran.sh "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
