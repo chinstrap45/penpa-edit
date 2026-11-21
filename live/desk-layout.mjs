@@ -1,4 +1,5 @@
 // The layout constants and reads the live tests of solve.html's desk share. Not a check itself, so `live/**/*.live.mjs` skips it.
+import { afterChange } from './page.mjs'
 import { settle } from './settle.mjs'
 
 // Box edges may differ by rounding.
@@ -12,10 +13,12 @@ export const MOUSE_MIN_HEIGHT_PX = 140
 export const MODE_MIN_HEIGHT_PX = 170
 
 // Reads `inPage` until two reads in a row agree, and returns the last: the page lays out after it renders, so a read
-// is taken once nothing moves.
+// is taken once nothing moves. Each read follows two rendered frames, since a ResizeObserver runs only in a frame: on a
+// loaded box two reads can both land before the frame that moves the page (#323).
 export async function steady (page, inPage, arg) {
   let last = null
   await settle(async () => {
+    await afterChange(page)
     const now = JSON.stringify(await page.evaluate(inPage, arg))
     const same = now === last
     last = now
