@@ -222,10 +222,11 @@
                 [...(shortcut ? [el('span', { class: 'ui-chip-num' }, [shortcut]), ' '] : []), label]);
             const unpin = el('button', { type: 'button', class: 'ui-chip-unpin', 'aria-label': `Unpin ${label}`, title: `Unpin ${label}` });
             unpin.innerHTML = REMOVE_ICON;
-            main.addEventListener('click', () => {
+            const choose = () => {
                 applyPin(pin);
                 main.blur();
-            });
+            };
+            main.addEventListener('click', choose);
             unpin.addEventListener('click', () => {
                 pins = pins.filter((p) => p !== pin);
                 save();
@@ -239,7 +240,15 @@
                 // Firefox starts no drag without some data.
                 e.dataTransfer.setData('text/plain', label);
             });
-            node.addEventListener('dragend', () => { dragged = null; });
+            // A press that moved a few pixels before the release starts a drag, and a drag suppresses `click`: one that ends on
+            // the chip's own button is the solver's click.
+            node.addEventListener('dragend', (e) => {
+                dragged = null;
+                const { left, right, top, bottom } = main.getBoundingClientRect();
+                if (e.clientX >= left && e.clientX <= right && e.clientY >= top && e.clientY <= bottom) {
+                    choose();
+                }
+            });
             node.addEventListener('dragover', (e) => {
                 if (dragged) {
                     e.preventDefault();
