@@ -1211,7 +1211,7 @@
     // A, B, ... Z, AA, AB, ...: a grid wider than 26 bands runs on as a spreadsheet's columns do.
     const bandName = (i) => (i < LETTERS.length ? '' : bandName(Math.floor(i / LETTERS.length) - 1)) + LETTERS[i % LETTERS.length];
 
-    // 1, 2, 3... at each of `ats` (the labels of a numbered axis), and A, B, C... at each of `ats` (a band axis). A band label is approximate, so it is drawn lighter.
+    // 1, 2, 3... at each of `ats` (the labels of a numbered axis), and A, B, C... at each of `ats` (a band axis).
     const numbered = (ats) => ats.map((at, i) => ({ at, text: i + 1, band: false }));
     const lettered = (ats) => ats.map((at, i) => ({ at, text: bandName(i), band: true }));
 

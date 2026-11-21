@@ -135,7 +135,6 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-grid-coordinate[data-axis="row"] { transform: translate(calc(-50% + var(--ui-stick-x, 0px)), -50%); }
 .ui-grid-coordinate[data-axis="column"][data-side="end"] { transform: translate(-50%, calc(-50% + var(--ui-stick-end-y, 0px))); }
 .ui-grid-coordinate[data-axis="row"][data-side="end"] { transform: translate(calc(-50% + var(--ui-stick-end-x, 0px)), -50%); }
-.ui-grid-band { opacity: .75; }
 .ui-dark .ui-grid-coordinate { color: #f3f4f6; }
 .ui-card-rules .ui-body { --ui-rules-text: 14px; max-height: 520px; font-size: calc(var(--ui-rules-text) * var(--ui-text-scale, 1)); color: #3b3e45; white-space: pre-wrap; tab-size: 2; overflow-wrap: anywhere; }
 /* Each rules line is a block; a list item's marker is its own flex item, so a wrapped line hangs under the text. */
