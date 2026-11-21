@@ -72,6 +72,13 @@ describe('a press on a chip', () => {
     }
   }
 
+  it('sets user-select: none on every Pinned and Recent chip', async () => {
+    const { page } = opened
+    const styles = await page.locator('.ui-pins .ui-chip, .ui-recent .ui-chip').evaluateAll((chips) => chips.map((chip) => getComputedStyle(chip).userSelect))
+    assert.equal(styles.length >= PINNED.length + RECENT.length, true, `chips found: ${styles.length}`)
+    assert.deepEqual([...new Set(styles)], ['none'])
+  })
+
   it('selects no text when a chip is double-clicked', async () => {
     const { page } = opened
     for (const card of ['Pinned', 'Recent']) {
