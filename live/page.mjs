@@ -380,7 +380,7 @@ export async function waitForTool (page, want, message = 'the tool settles') {
   return tool
 }
 
-// Two animation frames: the bridge's `change` fires in the first, and the UI has drawn it by the second.
+// Two animation frames: the bridge's `change` fires in the first, and the UI has drawn it by the second. A ResizeObserver also runs in a frame, so this waits for a layout change the page reacts to.
 export const afterChange = (page) => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 
 // Fails unless the engine reports fewer than 5 changes in one second with nobody touching the page (a "nothing happened in

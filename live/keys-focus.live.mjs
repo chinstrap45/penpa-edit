@@ -118,6 +118,7 @@ describe('with Settings open', () => {
     const before = await boardAndTool(page)
     for (let i = 0; i < TABS_PAST_THE_DIALOG; i++) await page.keyboard.press('Tab')
     // Each Tab queued a timeout that returns focus to the dialog. One still queued would refocus the dialog after the next test blurs it (#323).
+    // The 150 ms timer always runs after those zero-delay ones, whatever the box's load: the wait is an ordering barrier, not a duration.
     await afterTimeouts(page)
     assert.equal(await settle(() => focusIsInDialog(page), true), true, 'focus is still in the dialog')
     await page.keyboard.press('5')
