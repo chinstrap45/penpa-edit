@@ -20,9 +20,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-tests
       # A full solve's comparison takes tens of seconds on a loaded runner, past the seam's 60 s per test.
-      # The log goes to a file for the report job; `pipefail` keeps node's exit as the step's.
-      - run: |
-          set -o pipefail
+      # The log goes to a file for the report job; `shell: bash` runs with pipefail, which keeps node's exit as the step's.
+      - shell: bash
+        run: |
           node --test --test-concurrency=4 --test-timeout=180000 "live/ui-replay-*.live.mjs" 2>&1 | tee "$RUNNER_TEMP/ui-corpus.log"
         env:
           REPLAY_UI_CORPUS: all

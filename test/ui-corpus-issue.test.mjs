@@ -3,7 +3,8 @@
 // run is red too. Through a stub `gh`; the workflow's own run on GitHub is proven only by a scheduled run.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
@@ -31,11 +32,11 @@ const DIFFERING_LOG = [
   ''
 ].join('\n')
 
-function runReport ({ log, result, ...stub }) {
+function runReport ({ log, result, env: extraEnv, ...stub }) {
   const { dir, env, calls } = stubGh(stub)
   const logFile = join(dir, 'ui-corpus.log')
   if (log !== undefined) writeFileSync(logFile, log)
-  const { status, stderr } = spawnSync('bash', [REPORT, logFile, result, RUN_URL], { env, encoding: 'utf8' })
+  const { status, stderr } = spawnSync('bash', [REPORT, logFile, result, RUN_URL], { env: { ...env, ...extraEnv }, encoding: 'utf8' })
   return { status, stderr, writes: calls().filter(([, verb]) => verb !== 'list') }
 }
 
@@ -64,11 +65,14 @@ describe('a red night', () => {
     assert.match(writes[0][9], /No recording is named in the log; read the run\./)
   })
 
-  it('is filed when the run left no log at all', () => {
-    const { writes } = runReport({ result: 'failure' })
-    assert.equal(writes[0][1], 'create')
-    assert.match(writes[0][9], /No recording is named in the log; read the run\./)
-  })
+  for (const result of ['failure', 'success']) {
+    it(`is filed, saying the log is missing, when a ${result} run left no log`, () => {
+      const { writes } = runReport({ result })
+      assert.equal(writes[0][1], 'create')
+      assert.match(writes[0][9], /log is missing/)
+      assert.doesNotMatch(writes[0][9], /compared no recording/)
+    })
+  }
 
   for (const result of ['cancelled', 'skipped']) {
     it(`is filed when the run's result is ${result}`, () => {
@@ -77,6 +81,34 @@ describe('a red night', () => {
       assert.match(writes[0][9], new RegExp(`result was ${result}`))
     })
   }
+})
+
+// node's own report of a differing recording, read under the C locale a runner might not set UTF-8 in.
+describe('the report on node\'s real output', () => {
+  const fixture = [
+    "import { describe, it } from 'node:test'",
+    "describe('the UI driver on solve.html', () => {",
+    `  it(${JSON.stringify(TEST('genre/real-diff'))}, () => { throw new Error('differs') })`,
+    `  it(${JSON.stringify(TEST('genre/real-same'))}, () => {})`,
+    '})'
+  ].join('\n')
+  const nodeLog = () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ui-corpus-fixture-'))
+    writeFileSync(join(dir, 'fixture.test.mjs'), fixture)
+    return spawnSync(process.execPath, ['--test', join(dir, 'fixture.test.mjs')], { encoding: 'utf8', env: { ...process.env, NODE_TEST_CONTEXT: undefined, LC_ALL: 'C' } }).stdout
+  }
+
+  it('names the differing recording once and not the one that agreed', () => {
+    const { writes } = runReport({ log: nodeLog(), result: 'failure', env: { LC_ALL: 'C' } })
+    assert.match(writes[0][9], /- `genre\/real-diff`\n/)
+    assert.doesNotMatch(writes[0][9], /real-same/)
+  })
+
+  it('counts both recordings compared on a green night', () => {
+    const log = nodeLog().replace(/✖/g, '✔')
+    const { writes } = runReport({ log, result: 'success', listOutput: `31\t${TITLE}\n`, env: { LC_ALL: 'C' } })
+    assert.match(writes[0][6], /2 comparisons/)
+  })
 })
 
 describe('a night that compared nothing', () => {
@@ -130,6 +162,21 @@ describe('a night the workflow did not run', () => {
 })
 
 describe('the workflows', () => {
+  it('has the corpus step run under pipefail, so a differing recording fails the job the report reads', () => {
+    assert.match(workflow('ui-corpus.yml'), /- shell: bash\n {8}run: \|\n {10}node --test .*\| tee /)
+  })
+
+  it('has the report download the artifact the corpus uploads', () => {
+    const corpus = workflow('ui-corpus.yml')
+    const [, uploaded] = /upload-artifact@[^\n]*\n\s+with:\n\s+name: (\S+)/.exec(corpus)
+    assert.match(corpus, new RegExp(`download-artifact@[^\\n]*\\n(?:.*\\n)*?\\s+name: ${uploaded}\\n`))
+  })
+
+  it('has the check that the corpus ran run on every night, with no condition', () => {
+    const job = /\n {2}ui-corpus-ran:\n((?: {4}.*\n| *\n)*)/.exec(workflow('nightly.yml'))[1]
+    assert.doesNotMatch(job, /^ {4}if:/m)
+  })
+
   it('has the UI corpus report its run, even when the run failed', () => {
     const corpus = workflow('ui-corpus.yml')
     assert.match(corpus, /needs: ui-corpus\n\s+if: always\(\)/)
