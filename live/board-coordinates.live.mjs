@@ -458,7 +458,10 @@ describe('each board coordinate sits in a filled circle, inverted for the theme 
     const style = getComputedStyle(node)
     const rgb = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number)
     const r = node.getBoundingClientRect()
-    return { axis: node.dataset.axis, side: node.dataset.side, text: node.textContent, background: rgb(style.backgroundColor), color: rgb(style.color), weight: style.fontWeight, radius: style.borderRadius, left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+    const range = document.createRange()
+    range.selectNodeContents(node)
+    const textWidth = range.getBoundingClientRect().width
+    return { textWidth, axis: node.dataset.axis, side: node.dataset.side, text: node.textContent, background: rgb(style.backgroundColor), color: rgb(style.color), weight: style.fontWeight, radius: style.borderRadius, left: r.left, right: r.right, top: r.top, bottom: r.bottom }
   })
   // WCAG 2.x contrast ratio of two sRGB colours.
   const luminance = (rgb) => { const [r, g, b] = rgb.map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }); return 0.2126 * r + 0.7152 * g + 0.0722 * b }
@@ -489,6 +492,7 @@ describe('each board coordinate sits in a filled circle, inverted for the theme 
         for (const l of labels) {
           assert.ok(contrast(l.background, l.color) >= MIN_CONTRAST, `${l.axis} ${l.text}: contrast ${contrast(l.background, l.color)} of ${l.background} on ${l.color}`)
           assert.equal(luminance(l.background) > luminance(l.color), theme === 'dark', `${l.axis} ${l.text}: the circle is ${theme === 'dark' ? 'lighter' : 'darker'} than its text`)
+          assert.ok(l.textWidth <= l.right - l.left - 4, `${l.axis} ${l.text}: its text (${l.textWidth} px) fits inside its ${l.right - l.left} px circle with a margin`)
           assert.ok(Number(l.weight) >= 700, `${l.axis} ${l.text} is bold`)
           assert.ok(l.radius === '50%' || parseFloat(l.radius) >= (l.right - l.left) / 2, `${l.axis} ${l.text} is round: ${l.radius}`)
         }
