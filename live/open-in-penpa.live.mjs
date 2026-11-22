@@ -84,6 +84,26 @@ describe('the ChinStrap button on index.html', () => {
     await context.close()
   })
 
+  it('is on a Clone of a solve, and opens solve.html with its entries', async () => {
+    const { context, page } = await openWithEntries()
+    await open(page).click()
+    await waitForPenpa(page)
+    await page.evaluate(typeDigitInPage, { index: PENPA_CELL, digit: '5' })
+    const madeThere = await entered(page)
+    // Clone's link, as Penpa+'s Clone button makes it in solve mode; its address is the fork's, so only its `#` is kept.
+    const hash = await page.evaluate(() => { const link = pu.maketext_duplicate() + '&l=solvedup'; return link.slice(link.indexOf('#')) })
+    assert.equal(new URLSearchParams(hash.slice(1)).get('m'), 'edit', 'a Clone link is in edit mode')
+    // A fresh load: from index.html's own `#` link, a `#` change alone would keep the page and its button.
+    const cloneLink = new URL('/index.html' + hash, page.url()).href
+    await page.goto('about:blank')
+    await page.goto(cloneLink)
+    await waitForPenpa(page)
+    await chinStrap(page).click()
+    await waitForDesk(page)
+    assert.deepEqual(await settle(() => entered(page), madeThere), madeThere, 'the solve page shows what the Clone had')
+    await context.close()
+  })
+
   it('is not on index.html in edit mode', async () => {
     const { context, page } = await openPenpa(browser(), '', { served: true })
     assert.equal(await page.locator('#top_button #savetext').count(), 1, 'Penpa+\'s top row is on the page')
