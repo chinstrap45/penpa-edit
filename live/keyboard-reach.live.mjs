@@ -3,7 +3,7 @@
 // page's `document.activeElement` (a Web Awesome control is its host element).
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
-import { board, currentTool, openSolvePage, setTool, solveLinkOfImport, useBrowser } from './page.mjs'
+import { afterChange, board, currentTool, openSolvePage, setTool, solveLinkOfImport, useBrowser, waitForTool } from './page.mjs'
 import { clickCell } from './replay.mjs'
 import { settle } from './settle.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
@@ -49,7 +49,12 @@ describe('keyboard reach on the solve page', () => {
   let opened
   before(async () => {
     opened = await openSolvePage(browser(), await solveLinkOfImport(browser(), IMPORTS['sudoku-9x9']))
-    for (const tool of [...UNPINNED_TOOLS, NORMAL_TOOL]) await setTool(opened.page, tool)
+    // Recent notes one tool per change, and two tools set inside one frame make one change.
+    for (const tool of [...UNPINNED_TOOLS, NORMAL_TOOL]) {
+      await setTool(opened.page, tool)
+      await waitForTool(opened.page, tool)
+      await afterChange(opened.page)
+    }
     await opened.page.getByRole('region', { name: 'Recent' }).getByRole('button', { name: /Corner/ }).first().waitFor()
   })
   after(async () => { await opened?.context.close() })
