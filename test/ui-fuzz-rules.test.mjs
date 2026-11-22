@@ -1,3 +1,4 @@
+import fc from 'fast-check'
 // The UI fuzz's rules (`live/ui-fuzz/rules.mjs`, #195) on hand-made snapshots: each rule fires on a bad page and holds on a
 // good one, without a browser. Also its unpin action (`live/ui-fuzz/actions.mjs`, #295) on a fake page.
 import assert from 'node:assert/strict'
@@ -323,14 +324,22 @@ describe('the actions inside a closable card (#342)', () => {
     Pinned: ['unpin', 'pin pick', 'pin drag', 'preset load', 'preset save', 'preset star', 'preset delete'],
     Recent: ['recent pick', 'recent pin']
   }
-  // A page whose cards are all closed: any lookup of a control inside one throws, as a wait for a missing control would.
-  const closedPage = { evaluate: async () => [], getByRole: () => ({ isVisible: async () => false }) }
+  // A page where only the card `closedName` is closed, and nothing but asking whether a card is open works: a step that
+  // looks for a control, or asks the engine, before checking its card throws, as a wait for a missing control would.
+  const pageWithClosed = (closedName) => ({
+    evaluate: async () => { throw new Error('asked the page before checking the card') },
+    getByRole: (role, { name }) => {
+      if (role !== 'region') throw new Error(`looked for a ${role} before checking the card`)
+      return { isVisible: async () => name !== closedName }
+    }
+  })
 
   for (const [name, kinds] of Object.entries(INSIDE)) {
     for (const kind of kinds) {
-      it(`${kind} skips, touching nothing, when the ${name} card is closed`, async () => {
+      it(`${kind} skips, touching nothing else, when the ${name} card is closed and the others are open`, async () => {
         const action = KINDS.find((k) => k.kind === kind)
-        assert.equal(await action.run(closedPage, kind === 'pin drag' || kind === 'mode search' ? [0, 1] : 0), 'card closed')
+        // An argument of the shape the kind draws, so the skip is the check's and not a failure to unpack one.
+        assert.equal(await action.run(pageWithClosed(name), fc.sample(action.arg, 1)[0]), 'card closed')
       })
     }
   }

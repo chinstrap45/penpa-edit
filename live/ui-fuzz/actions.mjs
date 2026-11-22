@@ -123,11 +123,14 @@ async function clickNth (locator, pick, none) {
   return (await clickReachable(target)) ?? name
 }
 
-// What a step that acts inside a closed card resolves to: a closed card's controls are gone from the page (#334), so the step does nothing.
+// What a step that needs a closed card resolves to: a closed card and its controls are gone from the page (#334), so the step does nothing.
 const CARD_CLOSED = 'card closed'
 
+// Whether the card `name` is open.
+const isOpen = (page, name) => card(page, name).isVisible()
+
 // `run`, but resolving to CARD_CLOSED, running nothing, when the card `name` is closed (#342).
-const inOpenCard = (name, run) => async (page, arg) => await card(page, name).isVisible() ? run(page, arg) : CARD_CLOSED
+const inOpenCard = (name, run) => async (page, arg) => await isOpen(page, name) ? run(page, arg) : CARD_CLOSED
 
 // The centre of a card's heading, where a drag takes hold of the card; null when the card is closed.
 async function headingCentre (page, name) {
@@ -308,7 +311,7 @@ export const KINDS = [
     kind: 'pin key',
     area: 'pinned',
     weight: 2,
-    // The key as typed (`z`); a chip shows it in capitals.
+    // The key as typed (`z`); a chip shows it in capitals. A key press looks for no control, so a closed Pinned card cannot time it out (#342).
     arg: fc.constantFrom(...PIN_KEYS.map((key) => key.toLowerCase())),
     label: (key) => `press pin key ${key.toUpperCase()}`,
     run: (page, key) => page.keyboard.press(key)
@@ -419,7 +422,7 @@ export const KINDS = [
     arg: fc.tuple(fc.nat({ max: CARDS.length - 1 }), fc.nat({ max: HANDLES.length - 1 }), MOVE, MOVE),
     label: ([c, h, dx, dy]) => `resize the ${CARDS[c]} card from its ${HANDLES[h]} edge by ${MOVES[dx]} ${MOVES[dy]}`,
     run: async (page, [c, h, dx, dy]) => {
-      if (!await card(page, CARDS[c]).isVisible()) return CARD_CLOSED
+      if (!await isOpen(page, CARDS[c])) return CARD_CLOSED
       const box = await card(page, CARDS[c]).getByTestId(`resize-${HANDLES[h]}`).boundingBox()
       await mouseDrag(page, { x: box.x + box.width / 2, y: box.y + box.height / 2 }, MOVES[dx], MOVES[dy])
     }
