@@ -1,7 +1,7 @@
 // The desk nudges, never refits (#344): after a window resize, a reload or a card that grows, a card that overlaps another
 // or falls outside the window moves back, and a card that needed no move stays. The four lists are the failures the nightly
 // UI fuzz found, shrunk, run through the fuzz's own rules (`cards-do-not-overlap`, `cards-inside-window`,
-// `reload-keeps-layout-and-pins`). The boxes of a hand-made layout are read in `laptop-desk.live.mjs`.
+// `reload-keeps-layout-and-pins`). The last one is #369's: a reload leaves a card where a dragged card covers it. The boxes of a hand-made layout are read in `laptop-desk.live.mjs`.
 import { describe, it } from 'node:test'
 import { useBrowser } from './page.mjs'
 import { CARDS, HANDLES, MOVES, scriptedList, WINDOW_SIZES } from './ui-fuzz/actions.mjs'
@@ -44,7 +44,7 @@ const LISTS = [
   ]]
 ]
 
-describe('the desk nudges cards back, never refits (#344)', () => {
+describe('the desk nudges cards back, never refits (#344, #369)', () => {
   for (const [title, name, steps] of LISTS) {
     it(title, async () => {
       await runScript({ openTarget: openTarget(browser()), puzzle: puzzleNamed(name), actions: scriptedList(steps) })
