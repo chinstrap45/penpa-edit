@@ -121,7 +121,7 @@ function wipeStorageInPage () {
 // A context for Penpa+'s pages, answering its network loads, with `served` and `setup` as `openPenpa` takes them.
 async function penpaContext (browser, { served, setup, contextOptions }) {
   const context = await browser.newContext(contextOptions)
-  // Penpa+'s only network loads are Google Tag Manager's: answered empty, so a run needs no network and counts as no visit.
+  // Answers every network load empty, so a run needs no network and counts as no visit to anyone.
   await context.route(/^https?:\/\//, (route) => route.fulfill({ status: 200, body: '' }))
   if (served) {
     await serveDocs(context, PENPA_ORIGIN)

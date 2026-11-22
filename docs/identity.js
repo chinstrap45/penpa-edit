@@ -16,9 +16,7 @@ const Identity = {
     // Usage Button Amendments
     addUsageButtons: {
         // "Submission Rules for GMPuzzles": "https://tinyurl.com/GMPuzzlesFormatting"
-    },
-
-    googleTag: 'G-2WQYM10ZE7'
+    }
 };
 
 (function() {
@@ -30,19 +28,5 @@ const Identity = {
         button.classList.add('button');
         button.textContent = buttonName;
         usageButtons.appendChild(button);
-    }
-
-    if (Identity.googleTag) {
-        let script = document.createElement("script");
-        script.type = "text/javascript";
-        script.src = "https://www.googletagmanager.com/gtag/js?id=" + Identity.googleTag;
-        script.async = true;
-        document.head.appendChild(script);
-
-        window.dataLayer = window.dataLayer || [];
-
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-        gtag('config', Identity.googleTag);
     }
 })();
