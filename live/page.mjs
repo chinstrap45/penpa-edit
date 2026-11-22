@@ -430,3 +430,24 @@ export function contrastHelpersInPage () {
   const ratio = (a, b) => { const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05) }
   return { luminance, parse, over, ratio }
 }
+
+// Runs in the page: the product of the opacities of a node and its flat-tree ancestors, which dims what the node shows.
+export function opacityOfInPage (node) {
+  let product = 1
+  for (let n = node; n; n = n.assignedSlot ?? n.parentElement ?? n.getRootNode()?.host ?? null) {
+    if (n.nodeType === 1) product *= Number(getComputedStyle(n).opacity)
+  }
+  return product
+}
+
+// Runs in the page: the colour a node's own box shows, composited over its ancestors in the flat tree (a slotted node sits in its slot).
+export function groundOfInPage (node, parse, over) {
+  const layers = []
+  for (let n = node; n; n = n.assignedSlot ?? n.parentElement ?? n.getRootNode()?.host ?? null) {
+    if (n.nodeType !== 1) continue
+    const bg = parse(getComputedStyle(n).backgroundColor)
+    if (bg[3] > 0) layers.push(bg)
+    if (bg[3] === 255) break
+  }
+  return layers.reduceRight((under, top) => over(top, under), [255, 255, 255, 255])
+}

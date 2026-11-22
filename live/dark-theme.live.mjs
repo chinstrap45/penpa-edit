@@ -3,7 +3,7 @@
 // page's computed styles and the board's pixels, so a CSS change that looks wrong fails here.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { boardCanvasInPage, contrastHelpersInPage, makeNumberSolveLink, openSolvePage, useBrowser, waitForDesk } from './page.mjs'
+import { boardCanvasInPage, contrastHelpersInPage, groundOfInPage, makeNumberSolveLink, opacityOfInPage, openSolvePage, useBrowser, waitForDesk } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -34,27 +34,6 @@ async function openIn (theme) {
   // The colours ease to the new theme's; read them only once the easing is over.
   await opened.page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
   return opened
-}
-
-// Runs in the page: the product of the opacities of a node and its flat-tree ancestors, which dims what the node shows.
-function opacityOfInPage (node) {
-  let product = 1
-  for (let n = node; n; n = n.assignedSlot ?? n.parentElement ?? n.getRootNode()?.host ?? null) {
-    if (n.nodeType === 1) product *= Number(getComputedStyle(n).opacity)
-  }
-  return product
-}
-
-// Runs in the page: the colour a node's own box shows, composited over its ancestors in the flat tree (a slotted node sits in its slot).
-function groundOfInPage (node, parse, over) {
-  const layers = []
-  for (let n = node; n; n = n.assignedSlot ?? n.parentElement ?? n.getRootNode()?.host ?? null) {
-    if (n.nodeType !== 1) continue
-    const bg = parse(getComputedStyle(n).backgroundColor)
-    if (bg[3] > 0) layers.push(bg)
-    if (bg[3] === 255) break
-  }
-  return layers.reduceRight((under, top) => over(top, under), [255, 255, 255, 255])
 }
 
 describe('the board in the dark theme', () => {
