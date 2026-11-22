@@ -1,3 +1,4 @@
+import fc from 'fast-check'
 // The UI fuzz's rules (`live/ui-fuzz/rules.mjs`, #195) on hand-made snapshots: each rule fires on a bad page and holds on a
 // good one, without a browser. Also its unpin action (`live/ui-fuzz/actions.mjs`, #295) on a fake page.
 import assert from 'node:assert/strict'
@@ -296,6 +297,7 @@ describe('the unpin action (#295)', () => {
     const log = { looked: [], clicked: 0 }
     const chipButtons = { count: async () => chips, nth: () => { log.clicked++; throw new Error('clicked a chip') } }
     const region = {
+      isVisible: async () => true,
       locator: (selector) => { log.looked.push(selector); return selector === UNPIN_SELECTOR ? chipButtons : { count: async () => 0 } },
       getByRole: (role, { name }) => { log.looked.push(`${role} ${name}`); return { count: async () => 1, nth: () => { log.clicked++; throw new Error('clicked Unpin all') } } }
     }
@@ -313,4 +315,32 @@ describe('the unpin action (#295)', () => {
     await assert.rejects(unpin.run(page, 1), /clicked a chip/)
     assert.deepEqual(log.looked, [UNPIN_SELECTOR])
   })
+})
+
+describe('the actions inside a closable card (#342)', () => {
+  // The kinds that click a control inside a card, by the card they need.
+  const INSIDE = {
+    Mode: ['mode pick', 'mode search', 'pin toggle'],
+    Pinned: ['unpin', 'pin pick', 'pin drag', 'preset load', 'preset save', 'preset star', 'preset delete'],
+    Recent: ['recent pick', 'recent pin']
+  }
+  // A page where only the card `closedName` is closed, and nothing but asking whether a card is open works: a step that
+  // looks for a control, or asks the engine, before checking its card throws, as a wait for a missing control would.
+  const pageWithClosed = (closedName) => ({
+    evaluate: async () => { throw new Error('asked the page before checking the card') },
+    getByRole: (role, { name }) => {
+      if (role !== 'region') throw new Error(`looked for a ${role} before checking the card`)
+      return { isVisible: async () => name !== closedName }
+    }
+  })
+
+  for (const [name, kinds] of Object.entries(INSIDE)) {
+    for (const kind of kinds) {
+      it(`${kind} skips, touching nothing else, when the ${name} card is closed and the others are open`, async () => {
+        const action = KINDS.find((k) => k.kind === kind)
+        // An argument of the shape the kind draws, so the skip is the check's and not a failure to unpack one.
+        assert.equal(await action.run(pageWithClosed(name), fc.sample(action.arg, 1)[0]), 'card closed')
+      })
+    }
+  }
 })

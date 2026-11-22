@@ -123,6 +123,15 @@ async function clickNth (locator, pick, none) {
   return (await clickReachable(target)) ?? name
 }
 
+// What a step that needs a closed card resolves to: a closed card and its controls are gone from the page (#334), so the step does nothing.
+const CARD_CLOSED = 'card closed'
+
+// Whether the card `name` is open.
+const isOpen = (page, name) => card(page, name).isVisible()
+
+// `run`, but resolving to CARD_CLOSED, running nothing, when the card `name` is closed (#342).
+const inOpenCard = (name, run) => async (page, arg) => await isOpen(page, name) ? run(page, arg) : CARD_CLOSED
+
 // The centre of a card's heading, where a drag takes hold of the card; null when the card is closed.
 async function headingCentre (page, name) {
   const section = card(page, name)
@@ -179,13 +188,13 @@ export const KINDS = [
     weight: 3,
     arg: PICK,
     label: (pick) => `pick tool ${pick} in the Mode card`,
-    run: async (page, pick) => {
+    run: inOpenCard('Mode', async (page, pick) => {
       const tools = await page.evaluate(() => engine.listTools())
       const tool = tools[pick % tools.length]
       if (!await reachable(card(page, 'Mode').getByRole('combobox', { name: 'Tool' }))) return COVERED
       await pickInModeCard(page, tool)
       return tool.name
-    }
+    })
   },
   {
     kind: 'click',
@@ -256,7 +265,7 @@ export const KINDS = [
     weight: 2,
     arg: fc.tuple(PICK, PICK),
     label: ([tool, word]) => `search the Mode card for word ${word} of tool ${tool} and press Enter`,
-    run: async (page, [pick, wordPick]) => {
+    run: inOpenCard('Mode', async (page, [pick, wordPick]) => {
       const tools = await page.evaluate(() => engine.listTools())
       const words = tools[pick % tools.length].name.split(/[^\p{L}\p{N}]+/u).filter((w) => w !== '')
       const word = words[wordPick % words.length]
@@ -268,7 +277,7 @@ export const KINDS = [
       // Enter with no match keeps the list open; Escape leaves the field either way.
       await field.press('Escape')
       return word
-    }
+    })
   },
   {
     kind: 'pin toggle',
@@ -276,11 +285,11 @@ export const KINDS = [
     weight: 2,
     arg: fc.constant(null),
     label: () => 'pin or unpin the current tool in the Mode card',
-    run: async (page) => {
+    run: inOpenCard('Mode', async (page) => {
       const toggle = card(page, 'Mode').getByRole('button', { name: /^(Pin|Unpin) / })
       if (!await toggle.count() || await isDisabled(toggle.first())) return 'no pin button'
       return clickNth(toggle, 0)
-    }
+    })
   },
   {
     kind: 'unpin',
@@ -288,7 +297,7 @@ export const KINDS = [
     weight: 1,
     arg: PICK,
     label: (pick) => `unpin pin ${pick} in the Pinned card`,
-    run: (page, pick) => clickNth(pinnedCard(page).locator(UNPIN_SELECTOR), pick, 'no pin')
+    run: inOpenCard('Pinned', (page, pick) => clickNth(pinnedCard(page).locator(UNPIN_SELECTOR), pick, 'no pin'))
   },
   {
     kind: 'pin pick',
@@ -296,13 +305,13 @@ export const KINDS = [
     weight: 2,
     arg: PICK,
     label: (pick) => `pick pin ${pick} in the Pinned card`,
-    run: (page, pick) => clickNth(pinnedCard(page).locator('.ui-pins .ui-chip-main'), pick, 'no pin')
+    run: inOpenCard('Pinned', (page, pick) => clickNth(pinnedCard(page).locator('.ui-pins .ui-chip-main'), pick, 'no pin'))
   },
   {
     kind: 'pin key',
     area: 'pinned',
     weight: 2,
-    // The key as typed (`z`); a chip shows it in capitals.
+    // The key as typed (`z`); a chip shows it in capitals. A key press looks for no control, so a closed Pinned card cannot time it out (#342).
     arg: fc.constantFrom(...PIN_KEYS.map((key) => key.toLowerCase())),
     label: (key) => `press pin key ${key.toUpperCase()}`,
     run: (page, key) => page.keyboard.press(key)
@@ -313,7 +322,7 @@ export const KINDS = [
     weight: 1,
     arg: fc.tuple(PICK, PICK),
     label: ([from, to]) => `drag pin ${from} onto pin ${to}`,
-    run: async (page, [from, to]) => {
+    run: inOpenCard('Pinned', async (page, [from, to]) => {
       const chips = pinnedCard(page).locator('.ui-pins .ui-chip')
       const count = await chips.count()
       if (count < 2) return 'fewer than two pins'
@@ -322,7 +331,7 @@ export const KINDS = [
       const box = await target.boundingBox()
       // Dropped on the target's left edge, so the dragged pin goes before it.
       await chips.nth(from % count).dragTo(target, { targetPosition: { x: 2, y: box.height / 2 } })
-    }
+    })
   },
   {
     kind: 'recent pick',
@@ -330,7 +339,7 @@ export const KINDS = [
     weight: 2,
     arg: PICK,
     label: (pick) => `pick tool ${pick} in the Recent card`,
-    run: (page, pick) => clickNth(card(page, 'Recent').locator('.ui-recent .ui-chip-main'), pick, 'nothing recent')
+    run: inOpenCard('Recent', (page, pick) => clickNth(card(page, 'Recent').locator('.ui-recent .ui-chip-main'), pick, 'nothing recent'))
   },
   {
     kind: 'recent pin',
@@ -338,7 +347,7 @@ export const KINDS = [
     weight: 1,
     arg: PICK,
     label: (pick) => `pin tool ${pick} from the Recent card`,
-    run: (page, pick) => clickNth(card(page, 'Recent').getByRole('button', { name: /^Pin / }), pick, 'nothing recent')
+    run: inOpenCard('Recent', (page, pick) => clickNth(card(page, 'Recent').getByRole('button', { name: /^Pin / }), pick, 'nothing recent'))
   },
   {
     kind: 'preset load',
@@ -346,7 +355,7 @@ export const KINDS = [
     weight: 1,
     arg: PICK,
     label: (pick) => `load preset ${pick}`,
-    run: async (page, pick) => {
+    run: inOpenCard('Pinned', async (page, pick) => {
       const name = await inPresetList(page, async (list) => {
         const options = list.getByRole('option')
         // The option's name, which leaves out the note Puzzle defaults shows under its name (pin-presets.js, `aria-hidden`).
@@ -359,7 +368,7 @@ export const KINDS = [
       if (name === COVERED) return name
       await choosePreset(page, name)
       return name
-    }
+    })
   },
   {
     kind: 'preset save',
@@ -367,12 +376,12 @@ export const KINDS = [
     weight: 1,
     arg: fc.nat({ max: 3 }),
     label: (n) => `save the pins as preset Fuzz ${n}`,
-    run: async (page, n) => {
+    run: inOpenCard('Pinned', async (page, n) => {
       const save = saveButton(page)
       if (await isDisabled(save)) return 'save is off'
       if (!await reachable(save)) return COVERED
       await savePreset(page, `Fuzz ${n}`)
-    }
+    })
   },
   {
     kind: 'preset star',
@@ -380,7 +389,7 @@ export const KINDS = [
     weight: 1,
     arg: PICK,
     label: (pick) => `star or unstar preset ${pick}`,
-    run: (page, pick) => inPresetList(page, (list) => clickNth(list.getByRole('button', { name: /^Favourite / }), pick, 'no preset'))
+    run: inOpenCard('Pinned', (page, pick) => inPresetList(page, (list) => clickNth(list.getByRole('button', { name: /^Favourite / }), pick, 'no preset')))
   },
   {
     kind: 'preset delete',
@@ -388,11 +397,11 @@ export const KINDS = [
     weight: 1,
     arg: fc.tuple(PICK, fc.boolean()),
     label: ([pick, undo]) => `delete saved preset ${pick}${undo ? ' and undo it' : ''}`,
-    run: (page, [pick, undo]) => inPresetList(page, async (list) => {
+    run: inOpenCard('Pinned', (page, [pick, undo]) => inPresetList(page, async (list) => {
       const deleted = await clickNth(list.getByRole('button', { name: /^Delete preset / }), pick, 'no saved preset')
       if (undo && deleted.startsWith('Delete preset ')) await pinnedCard(page).getByRole('button', { name: /^Undo delete of / }).click()
       return deleted
-    })
+    }))
   },
   {
     kind: 'card drag',
@@ -402,7 +411,7 @@ export const KINDS = [
     label: ([c, dx, dy]) => `drag the ${CARDS[c]} card by ${MOVES[dx]} ${MOVES[dy]}`,
     run: async (page, [c, dx, dy]) => {
       const from = await headingCentre(page, CARDS[c])
-      if (!from) return 'card closed'
+      if (!from) return CARD_CLOSED
       await mouseDrag(page, from, MOVES[dx], MOVES[dy])
     }
   },
@@ -413,7 +422,7 @@ export const KINDS = [
     arg: fc.tuple(fc.nat({ max: CARDS.length - 1 }), fc.nat({ max: HANDLES.length - 1 }), MOVE, MOVE),
     label: ([c, h, dx, dy]) => `resize the ${CARDS[c]} card from its ${HANDLES[h]} edge by ${MOVES[dx]} ${MOVES[dy]}`,
     run: async (page, [c, h, dx, dy]) => {
-      if (!await card(page, CARDS[c]).isVisible()) return 'card closed'
+      if (!await isOpen(page, CARDS[c])) return CARD_CLOSED
       const box = await card(page, CARDS[c]).getByTestId(`resize-${HANDLES[h]}`).boundingBox()
       await mouseDrag(page, { x: box.x + box.width / 2, y: box.y + box.height / 2 }, MOVES[dx], MOVES[dy])
     }
@@ -426,7 +435,7 @@ export const KINDS = [
     label: ([c, how]) => `drag the ${CARDS[c]} card and ${how === 'Escape' ? 'press Escape' : how === 'resize' ? 'resize the window' : 'leave the window'} halfway`,
     run: async (page, [c, how]) => {
       const from = await headingCentre(page, CARDS[c])
-      if (!from) return 'card closed'
+      if (!from) return CARD_CLOSED
       const midway = {
         Escape: () => page.keyboard.press('Escape'),
         resize: () => page.setViewportSize(otherSize(page)),
