@@ -290,11 +290,13 @@ describe('the desk with a link that carries no rules', () => {
   })
   afterEach(async () => { await opened?.context.close() })
 
-  it('keeps the empty Rules card\'s box after its top edge is dragged up and a reload (#343)', async () => {
-    await drag(page, await handleCentre(page, 'Rules', 'top'), 0, -240)
-    const resized = await boxOf(page, 'Rules')
-    await page.reload()
-    await card(page, 'Rules').waitFor()
-    assert.deepEqual(await settle(() => boxOf(page, 'Rules'), resized), resized)
-  })
+  for (const [edge, dy] of [['top', -240], ['bottom', 240]]) {
+    it(`keeps the empty Rules card's box after its ${edge} edge is dragged away from it and a reload (#343)`, async () => {
+      await drag(page, await handleCentre(page, 'Rules', edge), 0, dy)
+      const resized = await boxOf(page, 'Rules')
+      await page.reload()
+      await card(page, 'Rules').waitFor()
+      assert.deepEqual(await settle(() => boxOf(page, 'Rules'), resized), resized)
+    })
+  }
 })

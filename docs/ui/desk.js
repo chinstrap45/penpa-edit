@@ -117,7 +117,8 @@
 
     // A card's height is kept when the solver sized it, except the Rules card of a link with no rules: its one-line height
     // belongs to that link, and the layout is shared by every puzzle.
-    const keepsHeight = (id, node) => node.classList.contains('is-sized') && !(id === 'rules' && isRulesEmpty(node));
+    const isEmptyRulesCard = (id, node) => id === 'rules' && isRulesEmpty(node);
+    const keepsHeight = (id, node) => node.classList.contains('is-sized') && !isEmptyRulesCard(id, node);
 
     // The Rules card's body: one block per line, and a note when the link carries no rules.
     function showRules(body, rules) {
@@ -430,7 +431,7 @@
             const { node } = cards[id];
             node.style.height = '';
             node.classList.remove('is-sized');
-            if (saved[id]?.h && !(id === 'rules' && isRulesEmpty(node))) {
+            if (saved[id]?.h && !isEmptyRulesCard(id, node)) {
                 setHeight(node, saved[id].h);
             }
         });
@@ -658,13 +659,9 @@
 
     // A card's automatic height where it sits, on its own: Mode and Mouse as tall as their tools need, Rules its text, and
     // Board down to the columns' bottom; never past that bottom, nor under the card's minimum. Pinned's
-    // automatic height is no height set at all. A Rules card with no rules is one line tall, under its minimum, as
-    // `rulesHeightFor` fits it (#288).
+    // automatic height is no height set at all. A Rules card with no rules is one line tall, as `rulesHeightFor` fits it (#288).
     function automaticHeight(desk, cards, id) {
         const { node } = cards[id];
-        if (id === 'rules' && isRulesEmpty(node)) {
-            return rulesCardHeight(cards.rules, node.offsetWidth);
-        }
         const content = { mode: fit.modeCardHeight, mouse: fit.mouseCardHeight, rules: (w) => rulesCardHeight(cards.rules, w) }[id];
         const toBottom = desk.clientHeight - TOP_MARGIN_PX - node.offsetTop;
         return Math.max(minHeightOf(id, cards[id]), Math.min(content ? content(node.offsetWidth) : toBottom, toBottom));
@@ -1082,7 +1079,7 @@
                     const from = { x: node.offsetLeft, y: node.offsetTop, w: node.offsetWidth, h: node.offsetHeight };
                     const minHeight = minHeightOf(id, cards[id]);
                     // An empty Rules card's height is not kept (#204), so a resize leaves it its one line.
-                    const maxHeight = id === 'rules' && isRulesEmpty(node) ? minHeight : Infinity;
+                    const maxHeight = isEmptyRulesCard(id, node) ? minHeight : Infinity;
                     trackPointer(e, handle, (dx, dy) => {
                         // Every edge stops at the desk's edge; a moving left or top edge keeps the opposite edge where it was.
                         if (edges.includes('right')) {
