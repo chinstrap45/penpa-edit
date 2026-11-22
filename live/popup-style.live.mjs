@@ -11,27 +11,29 @@ const BUTTON_PROPS = ['fontFamily', 'backgroundColor', 'color', 'borderRadius']
 
 // Runs in the page. The computed values of a Penpa popup (the answer check's kind: a title, a text and a confirm button).
 async function popupStyleInPage ([panelProps, buttonProps]) {
+  const read = (node, props) => Object.fromEntries(props.map((p) => [p, getComputedStyle(node)[p]]))
   Swal.fire({ title: 'Congratulations!', text: 'You solved it.', icon: 'success' })
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-  const read = (node, props) => Object.fromEntries(props.map((p) => [p, getComputedStyle(node)[p]]))
+  // The popup's own animations and the button's box-shadow transition must be over before a value is read.
+  await Promise.all(document.getAnimations().map((a) => a.finished))
   return {
     panel: read(document.querySelector('.swal2-popup'), panelProps),
-    button: read(document.querySelector('.swal2-confirm'), buttonProps)
+    title: read(document.querySelector('.swal2-title'), ['fontFamily']),
+    text: read(document.querySelector('.swal2-html-container'), ['fontFamily']),
+    button: read(document.querySelector('.swal2-confirm'), buttonProps),
+    focused: read(document.querySelector('.swal2-confirm'), ['boxShadow'])
   }
 }
 
-// Runs in the page. The values of the page's own dialog: its panel, and a brand button, which is what a dialog's main action is.
+// Runs in the page, with the Settings dialog open. The values of that dialog's panel, and of a brand button, which is what a dialog's main action is.
 async function pageDialogStyleInPage ([panelProps, buttonProps]) {
-  const dialog = document.createElement('wa-dialog')
-  dialog.label = 'Reference'
+  const read = (node, props) => Object.fromEntries(props.map((p) => [p, getComputedStyle(node)[p]]))
+  const dialog = document.querySelector('wa-dialog[label="Settings"]')
   const ok = document.createElement('wa-button')
-  ok.slot = 'footer'
   ok.variant = 'brand'
   ok.textContent = 'OK'
   dialog.append(ok)
-  document.body.append(dialog)
-  await Promise.all([dialog.updateComplete, ok.updateComplete])
-  const read = (node, props) => Object.fromEntries(props.map((p) => [p, getComputedStyle(node)[p]]))
+  await ok.updateComplete
   return {
     panel: read(dialog.shadowRoot.querySelector('[part~="dialog"]'), panelProps),
     button: read(ok.shadowRoot.querySelector('[part~="base"]'), buttonProps)
@@ -45,10 +47,33 @@ describe('a Penpa popup', () => {
       try {
         await page.evaluate((t) => engine.setTheme(t), theme)
         await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+        await page.getByRole('button', { name: 'Settings' }).click()
+        await page.getByRole('dialog', { name: 'Settings' }).waitFor()
         const want = await page.evaluate(pageDialogStyleInPage, [PANEL_PROPS, BUTTON_PROPS])
+        await page.keyboard.press('Escape')
+        await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
         const got = await page.evaluate(popupStyleInPage, [PANEL_PROPS, BUTTON_PROPS])
         assert.deepEqual(got.panel, want.panel)
         assert.deepEqual(got.button, want.button)
+        assert.equal(got.title.fontFamily, want.panel.fontFamily)
+        assert.equal(got.text.fontFamily, want.panel.fontFamily)
+        assert.equal(got.focused.boxShadow, 'none', 'no SweetAlert purple ring on a focused button')
+        // A keyboard focus gets the page's focus ring, as a wa-button's.
+        await page.evaluate(() => document.querySelector('.swal2-confirm').blur())
+        // After a key press the browser rings a script's focus as it does a keyboard's.
+        await page.keyboard.press('Shift')
+        await page.evaluate(() => document.querySelector('.swal2-confirm').focus())
+        const ring = await page.evaluate(() => {
+          const confirm = document.querySelector('.swal2-confirm')
+          const { outlineStyle, outlineWidth, outlineColor } = getComputedStyle(confirm)
+          const probe = Object.assign(document.createElement('div'), { style: 'color: var(--wa-color-focus)' })
+          document.body.append(probe)
+          const focusColor = getComputedStyle(probe).color
+          probe.remove()
+          return { focused: document.activeElement === confirm, outlineStyle, outlineWidth, outlineColor, focusColor }
+        })
+        assert.equal(ring.focused, true, 'the confirm button holds focus')
+        assert.deepEqual([ring.outlineStyle, ring.outlineWidth, ring.outlineColor], ['solid', '3px', ring.focusColor])
       } finally {
         await context.close()
       }
