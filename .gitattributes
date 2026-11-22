@@ -11,6 +11,7 @@ research/** merge=ours
 adr/** merge=ours
 userscript/** merge=ours
 live/** merge=ours
+docs/identity.js merge=ours
 docs/js/header_text.js merge=ours
 docs/js/recorder.js merge=ours
 docs/js/engine_bridge.js merge=ours
