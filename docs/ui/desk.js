@@ -863,8 +863,8 @@
     // A right-column card that changes height after the layout (Pinned with another row of chips) lays the column out
     // again, while the solver has moved or resized none of its cards (#181). In a column the solver changed, a card the
     // solver never touched moves down from under the card above it (#199). Never while the solver drags, which would undo
-    // the drag's resize.
-    function restackRight(desk, cards) {
+    // the drag's resize. On a card's `first` size report, a card the solver dragged over this one does not push it down (#369).
+    function restackRight(desk, cards, { first = false } = {}) {
         if (isDragging) {
             return;
         }
@@ -879,7 +879,8 @@
             let above = null;
             shownIds(cards, RIGHT_COLUMN).forEach((id) => {
                 const { node } = cards[id];
-                const clear = above && above.offsetTop + above.offsetHeight + CARD_GAP_PX;
+                const pushes = above && (!first || saved[above.id]?.fitted);
+                const clear = pushes && above.node.offsetTop + above.node.offsetHeight + CARD_GAP_PX;
                 // Below the desk's bottom it would leave the window, so the card the solver put it under stays over it.
                 const fits = clear + minHeightOf(id, cards[id]) <= desk.clientHeight - EDGE_MARGIN_PX;
                 if (saved[id]?.fitted && clear && node.offsetTop < clear && fits) {
@@ -891,7 +892,7 @@
                     }
                     keepFitted(desk, cards, [id]);
                 }
-                above = node;
+                above = { id, node };
             });
         }
     }
@@ -1472,7 +1473,14 @@
         });
         makeMovable(desk.bar, desk.desk, desk.cards);
         watchHeading(desk.bar);
-        const restack = new ResizeObserver(() => restackRight(desk.desk, desk.cards));
+        // A card's first report is the size it opened with. Restacking on it under a card the solver dragged over this one would
+        // move the card out from under it, and a reload would not open on the layout it saved (#369).
+        const reported = new Set();
+        const restack = new ResizeObserver((entries) => {
+            const first = entries.some(({ target }) => !reported.has(target));
+            entries.forEach(({ target }) => reported.add(target));
+            restackRight(desk.desk, desk.cards, { first });
+        });
         RIGHT_COLUMN.forEach((id) => restack.observe(desk.cards[id].node));
         const growth = new ResizeObserver(() => keepGrowthClear(desk.desk, desk.cards));
         Object.values(desk.cards).forEach(({ node }) => growth.observe(node));
