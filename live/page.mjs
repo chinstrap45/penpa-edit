@@ -71,10 +71,12 @@ export function jsRequest (file) {
 // `url` opens that address (plus `query`) instead of the checkout's page, `solve: true` opens `solve.html` in place of the
 // default page, `ready` is the page function that says the page is up (default: `pu` exists), and `setup(context)` runs
 // before the page opens.
-// `contextOptions` go to `browser.newContext`. `dialogs` holds the message of every native dialog the page opened, each
-// dismissed, and `errors` every page error and `console.error` so far.
-export async function openPenpa (browser, query = '', { cookies = [], served = false, solve = false, url, ready = () => typeof pu !== 'undefined', setup, contextOptions } = {}) {
+// `contextOptions` go to `browser.newContext`. Every page opens as a visitor who has seen solve.html's tour, unless `tour`
+// is true. `dialogs` holds the message of every native dialog the page opened, each dismissed, and `errors` every page
+// error and `console.error` so far.
+export async function openPenpa (browser, query = '', { cookies = [], served = false, solve = false, url, ready = () => typeof pu !== 'undefined', setup, contextOptions, tour = false } = {}) {
   const context = await penpaContext(browser, { served, setup, contextOptions })
+  if (!tour) await context.addInitScript(markTourSeenInPage, { key: TOUR_KEY, seen: TOUR_SEEN })
   if (cookies.length) await context.addCookies(cookies)
   const page = await context.newPage()
   const errors = []
@@ -129,6 +131,12 @@ function wipeStorageInPage () {
   indexedDB.deleteDatabase('localforage')
 }
 
+// Runs in the page, before any of its scripts: marks the tour seen, so its dimmed backdrop takes no test's clicks.
+function markTourSeenInPage ({ key, seen }) {
+  if (location.protocol === 'about:') return
+  localStorage.setItem(key, seen)
+}
+
 // A context for Penpa+'s pages, answering its network loads, with `served` and `setup` as `openPenpa` takes them.
 async function penpaContext (browser, { served, setup, contextOptions }) {
   const context = await browser.newContext(contextOptions)
@@ -169,6 +177,9 @@ export function shadeInPage (cell) {
 // empty cell in the given's row.
 // The localStorage key `engine_bridge.js` keeps the solve page's theme under.
 export const THEME_KEY = 'chinstrap-solve-theme-v1'
+// The localStorage key `ui/tour.js` marks the tour seen under, once it is skipped or finished.
+export const TOUR_KEY = 'chinstrap-solve-tour-v1'
+export const TOUR_SEEN = 'seen'
 
 export const GIVEN_CELL = 0
 export const ANSWER_CELL = 1
