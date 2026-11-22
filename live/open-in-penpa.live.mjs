@@ -33,7 +33,7 @@ async function openWithEntries () {
   assert.equal(Object.keys(made.number).length, 1, 'a digit is on the solve page')
   assert.equal(Object.keys(made.numberS).length, 1, 'a corner mark is on the solve page')
   assert.equal(Object.keys(made.surface).length, 1, 'a cell is shaded on the solve page')
-  return { ...opened, made }
+  return { ...opened, made, link }
 }
 
 describe('the Penpa+ button', () => {
@@ -72,7 +72,7 @@ describe('the Penpa+ button', () => {
 
 describe('the ChinStrap button on index.html', () => {
   it('opens solve.html with every entry made on index.html', async () => {
-    const { context, page } = await openWithEntries()
+    const { context, page, link } = await openWithEntries()
     await open(page).click()
     await waitForPenpa(page)
     await page.evaluate(typeDigitInPage, { index: PENPA_CELL, digit: '5' })
@@ -80,6 +80,7 @@ describe('the ChinStrap button on index.html', () => {
     await chinStrap(page).click()
     await waitForDesk(page)
     assert.equal(new URL(page.url()).pathname, '/solve.html', 'the page is the solve page')
+    assert.equal(new URL(page.url()).hash, link, 'the address is the link, without the Penpa+ button\'s mark (#376)')
     assert.deepEqual(await settle(() => entered(page), madeThere), madeThere, 'the solve page shows what index.html had')
     await context.close()
   })
