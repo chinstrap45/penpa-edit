@@ -56,6 +56,26 @@ describe('the solve UI files', () => {
   })
 })
 
+// The stream fit was withdrawn (#341): no streamer setup code ships. Its message types, its page marker, its card class and
+// its engine calls are what a return would bring back.
+const STREAM_FIT_NAMES = /chinstrap:stream|data-stream-fit|stream-fit|is-stream\b|\bfitInk\b|\bgetInkRect\b/
+
+const streamFitLines = (text) => text.split('\n').flatMap((lineText, i) => (STREAM_FIT_NAMES.test(lineText) ? [i + 1] : []))
+
+describe('the shipped page', () => {
+  it('holds no stream fit code', () => {
+    const files = [...uiFiles(UI_DIR), join(ROOT, 'docs/js/engine_bridge.js'), join(ROOT, 'docs/solve.html')]
+    const found = files.flatMap((file) => streamFitLines(readFileSync(file, 'utf8')).map((line) => `${relative(ROOT, file)}:${line}`))
+    assert.deepEqual(found, [])
+  })
+
+  for (const planted of ["'chinstrap:stream-fit-ready'", 'data-stream-fit="ready"', '"./ui/stream-fit.js"', 'node.classList.add("is-stream")', 'engine.fitInk(w, h)', 'engine.getInkRect()']) {
+    it(`finds ${planted} on a planted line`, () => {
+      assert.deepEqual(streamFitLines(`const fine = 1\n${planted}\n`), [2])
+    })
+  }
+})
+
 describe('the check', () => {
   it('reads Penpa+\'s element ids off index.html', () => {
     assert.equal(ids.has('dvique'), true)
