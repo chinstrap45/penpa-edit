@@ -500,9 +500,10 @@
                 right = Math.min(right, other.offsetLeft - DESK_MARGIN_PX);
             }
         });
+        const nudged = [];
         if (right - left >= MIN_SIZE.board[0]) {
             Object.assign(board.style, { left: `${left}px`, width: `${right - left}px` });
-            keepDeskChange(desk, cards, 'board');
+            nudged.push('board');
         }
         // A card moves at most once, so this ends.
         const moved = new Set();
@@ -518,9 +519,15 @@
             if (found) {
                 moved.add(found[0]);
                 moveClear(desk, cards, ...found);
-                keepDeskChange(desk, cards, found[0]);
+                nudged.push(found[0]);
             }
         });
+        nudged.forEach((id) => keepDeskChange(desk, cards, id));
+        // A fitted card's place is kept in memory only; where the solver has a layout kept, it takes the nudge too, so a reload
+        // opens on the nudged cards.
+        if (nudged.length && localStorage.getItem(LAYOUT_KEY) !== null) {
+            writeLayout();
+        }
     }
 
     // Card `id` CARD_GAP_PX below card `anchor`, shrunk to the room above the desk's bottom.
