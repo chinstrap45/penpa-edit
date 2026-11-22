@@ -1,5 +1,6 @@
 // The solve UI (docs/ui/) reaches Penpa+ only through `engine`: no UI file may name Penpa+'s puzzle object, its settings, its
-// timer, its popup library or an element id of its page. A Node check, since only a grep can see a name that does nothing in silence.
+// timer, its popup library or an element id of its page. The shipped page also holds no stream fit code. A Node check, since
+// only a grep can see a name that does nothing in silence.
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -54,6 +55,43 @@ describe('the solve UI files', () => {
       findViolations(readFileSync(file, 'utf8'), ids).map((v) => `${relative(ROOT, file)}:${v.line} names ${v.name}`))
     assert.deepEqual(violations, [])
   })
+})
+
+// No streamer setup code ships. Each part is a name a return of it would bring back, with a line that only that part catches.
+const STREAM_FIT_PARTS = [
+  { name: 'a stream-fit message type, marker or file', pattern: /stream-?fit/i, planted: ["'chinstrap:stream-fit-ready'", 'document.documentElement.dataset.streamFit = READY_MARKER', '"./ui/stream-fit.js"'] },
+  { name: 'the stream card class', pattern: /\bis-stream\b/, planted: ['node.classList.add("is-stream")'] },
+  { name: 'the desk\'s stream switch', pattern: /\b(streamRefit|isStreaming)\b/, planted: ['if (isStreaming()) streamRefit()'] },
+  { name: 'the engine\'s ink fit', pattern: /\bfitInk\b/, planted: ['engine.fitInk(w, h)'] },
+  { name: 'the engine\'s ink rect', pattern: /\bgetInkRect\b/, planted: ['engine.getInkRect()'] }
+]
+
+const streamFitLines = (text) => text.split('\n').flatMap((lineText, i) => (STREAM_FIT_PARTS.some((part) => part.pattern.test(lineText)) ? [i + 1] : []))
+
+// The files the shipped page runs: the solve UI, the engine bridge and the solve page.
+const shippedFiles = () => [...uiFiles(UI_DIR), join(ROOT, 'docs/js/engine_bridge.js'), join(ROOT, 'docs/solve.html')]
+
+describe('the shipped page', () => {
+  it('reads the files the page runs', () => {
+    const read = shippedFiles().map((file) => relative(ROOT, file))
+    for (const file of ['docs/ui/desk.js', 'docs/ui/desk.css', 'docs/js/engine_bridge.js', 'docs/solve.html']) {
+      assert.equal(read.includes(file), true, `${file} is read`)
+    }
+  })
+
+  it('holds no stream fit code', () => {
+    const found = shippedFiles().flatMap((file) => streamFitLines(readFileSync(file, 'utf8')).map((line) => `${relative(ROOT, file)}:${line}`))
+    assert.deepEqual(found, [])
+  })
+
+  for (const part of STREAM_FIT_PARTS) {
+    for (const planted of part.planted) {
+      it(`finds ${part.name} on the planted line ${planted}`, () => {
+        assert.equal(part.pattern.test(planted), true)
+        assert.deepEqual(streamFitLines(`const fine = 1\n${planted}\n`), [2])
+      })
+    }
+  }
 })
 
 describe('the check', () => {
