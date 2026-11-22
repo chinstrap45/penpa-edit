@@ -935,10 +935,13 @@
     }
 
     // A card's smallest height: MIN_SIZE's, and for Rules at least one line of its text at the size it shows, which the
-    // text scale and its own - and + change.
+    // text scale and its own - and + change. A Rules card with no rules is exactly the one line a reload gives it (#343).
     function minHeightOf(id, { node, body }) {
         if (id !== 'rules') {
             return MIN_SIZE[id][1];
+        }
+        if (isRulesEmpty(node)) {
+            return rulesCardHeight({ node, body }, node.offsetWidth);
         }
         const style = getComputedStyle(body);
         // A rules line's own least height (desk.css's .ui-rules-line) can exceed the line height.
@@ -1078,13 +1081,15 @@
                     }
                     const from = { x: node.offsetLeft, y: node.offsetTop, w: node.offsetWidth, h: node.offsetHeight };
                     const minHeight = minHeightOf(id, cards[id]);
+                    // An empty Rules card's height is not kept (#204), so a resize leaves it its one line.
+                    const maxHeight = id === 'rules' && isRulesEmpty(node) ? minHeight : Infinity;
                     trackPointer(e, handle, (dx, dy) => {
                         // Every edge stops at the desk's edge; a moving left or top edge keeps the opposite edge where it was.
                         if (edges.includes('right')) {
                             node.style.width = `${Math.max(minWidth, Math.min(desk.clientWidth - from.x, from.w + dx))}px`;
                         }
                         if (edges.includes('bottom')) {
-                            setHeight(node, Math.max(minHeight, Math.min(desk.clientHeight - from.y, from.h + dy)));
+                            setHeight(node, Math.max(minHeight, Math.min(maxHeight, desk.clientHeight - from.y, from.h + dy)));
                         }
                         if (edges.includes('left')) {
                             const width = Math.min(from.x + from.w, Math.max(minWidth, from.w - dx));
@@ -1092,7 +1097,7 @@
                             node.style.left = `${from.x + from.w - width}px`;
                         }
                         if (edges.includes('top')) {
-                            const height = Math.min(from.y + from.h, Math.max(minHeight, from.h - dy));
+                            const height = Math.min(maxHeight, from.y + from.h, Math.max(minHeight, from.h - dy));
                             setHeight(node, height);
                             node.style.top = `${from.y + from.h - height}px`;
                         }
