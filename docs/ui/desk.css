@@ -2,6 +2,9 @@
 
 body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4dc; }
 
+/* The page dialogs' font and text colour; Penpa's popups sit outside `.ui-root`, so they name them too. */
+:root { --ui-font: system-ui, -apple-system, "Segoe UI", sans-serif; --ui-ink: #23262c; }
+.wa-dark { --ui-ink: #e3e6eb; }
 .ui-root {
     --ui-bar-height: 60px;
     --ui-bar-padding: 14px;
@@ -11,8 +14,8 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
     position: fixed;
     inset: 0;
     z-index: 10;
-    color: #23262c;
-    font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ui-ink);
+    font: 13px/1.35 var(--ui-font);
 }
 .ui-root h1, .ui-root h2 { font: inherit; }
 
@@ -409,3 +412,12 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 .ui-shortcuts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .ui-shortcut kbd { display: inline-block; min-width: 2.2em; padding: 1px 6px; margin-right: 4px; border: 1px solid #ddd7c8; border-radius: 4px; font: 12px ui-monospace, monospace; text-align: center; }
 .ui-dark .ui-shortcut kbd { border-color: #3a3f4b; }
+
+/* Penpa's SweetAlert popups (the answer check's, a link error's) take the page dialog's look. solve.html alone loads this
+   sheet, so index.html's popups keep SweetAlert's own. */
+.swal2-container .swal2-popup { font-family: var(--ui-font); background: var(--wa-color-surface-raised); color: var(--ui-ink); border-radius: var(--wa-border-radius-l); }
+.swal2-container .swal2-title, .swal2-container .swal2-html-container { color: inherit; }
+.swal2-container .swal2-styled.swal2-confirm { font-family: var(--ui-font); background: var(--wa-color-brand-fill-loud); color: var(--wa-color-brand-on-loud); border-radius: var(--wa-border-radius-m); }
+/* SweetAlert rings a focused button in its purple; a wa-button rings only a keyboard focus, in the page's focus colour. */
+.swal2-container .swal2-styled:is(:focus, :focus-visible) { box-shadow: none; }
+.swal2-container .swal2-styled:focus-visible { outline: var(--wa-focus-ring); outline-offset: var(--wa-focus-ring-offset); }
