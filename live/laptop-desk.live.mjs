@@ -545,6 +545,38 @@ describe('the desk holds together', () => {
     })
   }
 
+  it('nudges a laptop-sized custom layout into a smaller window: no card over another or outside it, and a card that fit stays put (#344)', async () => {
+    const page = await open(LAPTOPS[2])
+    await deskSettled(page)
+    await dragFrom(page, await headPoint(page, 'Recent'), 0, -60)
+    const before = await deskSettled(page)
+    await page.setViewportSize(LAPTOPS[1])
+    const read = await deskSettled(page)
+    assert.deepEqual(cardOverlaps(read), [])
+    for (const name of CARDS) {
+      const { x, y, w, h } = read.cards[name]
+      assert.equal(x >= -SLACK_PX && y >= -SLACK_PX && x + w <= LAPTOPS[1].width + SLACK_PX && y + h <= LAPTOPS[1].height + SLACK_PX, true, `${name} inside the window: ${JSON.stringify(read.cards[name])}`)
+    }
+    // The card the solver placed keeps its gaps to the desk's bottom and right edges, as a window resize keeps them.
+    const gaps = ({ desk, cards: { Recent } }) => ({ bottom: desk.y + desk.h - (Recent.y + Recent.h), right: desk.x + desk.w - (Recent.x + Recent.w), size: [Recent.w, Recent.h] })
+    assert.deepEqual(gaps(read), gaps(before), 'Recent needed no move, and keeps its gaps and size')
+  })
+
+  it('keeps the solver\'s layout when a smaller window puts a card over another: nudged apart, never refitted (#344)', async () => {
+    const page = await open(LAPTOPS[2])
+    await deskSettled(page)
+    await dragFrom(page, await headPoint(page, 'Mouse'), 0, 300)
+    const kept = await keptLayout(page)
+    const { Mouse: placed } = (await deskSettled(page)).cards
+    await page.setViewportSize({ width: 1280, height: 720 })
+    const read = await deskSettled(page)
+    assert.deepEqual(cardOverlaps(read), [])
+    assert.notEqual(await keptLayout(page), null, 'the layout the solver made is still kept')
+    assert.notEqual(kept, null)
+    assert.equal(JSON.parse(await keptLayout(page)).mouse.placed, 1, 'Mouse is still the solver\'s card')
+    assert.deepEqual({ x: read.cards.Mouse.x, w: read.cards.Mouse.w }, { x: placed.x, w: placed.w }, 'and it keeps its column and width')
+  })
+
   it('opens on the mended layout after a reload, once a smaller window had it fitted again', async () => {
     opened = await openSolvePage(browser(), KILLER, { contextOptions: { viewport: WIDE } })
     const { page } = opened
@@ -555,7 +587,10 @@ describe('the desk holds together', () => {
     const mended = (await deskSettled(page)).cards
     await page.reload()
     await waitForDesk(page)
-    assert.deepEqual(await settle(() => cardsOf(page), mended), mended)
+    // To the pixel: an empty Rules card's height is its text's, whole pixels while mended and a fraction after a reload (#204).
+    const whole = (cards) => JSON.stringify(cards, (key, value) => (typeof value === 'number' ? Math.round(value) : value))
+    const reloaded = await settle(async () => whole(await cardsOf(page)), whole(mended))
+    assert.equal(reloaded, whole(mended))
   })
 
   // This and the one-line Rules test held before #199 too (#181's restack and minimums); they keep its acceptance checks.
