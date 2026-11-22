@@ -17,8 +17,8 @@
         // One short line each, saying only what differs from Penpa+'s page (Chris, 2026-11-22).
         const STOPS = [
             [cards.board.head, 'Drag a card by its title, resize from any edge, close with ×. Layout is kept.'],
-            [cards.mode.node, 'Mode offers every tool this grid supports. There is no Penpa Lite.'],
-            [cards.pins.node, 'Pin tools here; Recent keeps the last ones. Z X C V replace the Tab cycle.'],
+            [cards.mode.node, 'Mode offers every tool this grid supports.'],
+            [cards.pins.node, 'Pin tools here; Z X C V pick the first four. Recent keeps the last ones.'],
             [cards.mouse.node, 'Hold Shift for Corner marks or Ctrl for Centre marks.'],
             [bar.querySelector('.ui-try'), 'Try starts a trial; then Keep or Discard what you entered.'],
             [cards.rules.head.querySelector('.ui-rules-text'), 'The Rules card has its own text size.'],
