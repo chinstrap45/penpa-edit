@@ -21,6 +21,10 @@ The words this repo uses for Penpa+ and our changes to it. Terms come from Penpa
 - **First release**: the fork's ChinStrap-branded solve UI, live on Pages, solving everything Penpa+ solves; edit links go to upstream.
 - **MVP**: the ChinStrap solve page behind a flag, over the engine as it stands, on every grid type and mode; the first
   milestone before the First release. Not "prototype" (the throwaway variants on `prototype/solve-ui`).
+- **Shared MVP**: the MVP as other solvers first use it, before the engine split: the default solve page for solve links,
+  ChinStrap-branded, reached by fork links. The First release later is the same page on the split engine.
+- **Tour**: the solve page's walk, shown once on a first visit, through what differs from Penpa+'s page, one stop per
+  difference; skippable and replayed from Settings.
 - **Board coordinates**: the Settings switch that labels the board's columns and rows in a gutter outside the canvas, so a solver can name a place
   in chat. When the board is scrolled in its card the labels stay at the card's top and left edges, over the cells. A square-cell grid gets its own row and column numbers. A hex, triangle, pyramid or truncated-square grid gets one number per row of cells and letters across as bands (#350), repeated on the far sides like a square grid's numbers; every other shape gets reference bands.
   "Number the grid only" (on by default, a sub-option of the switch) numbers only the grid inside the thick frame from 1, leaves the clue margin around it unlabelled, and repeats the numbers on the right and bottom edges; off, the whole canvas is numbered on the top and left only.
