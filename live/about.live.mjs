@@ -98,7 +98,7 @@ describe('the About group in Settings', () => {
     }
   })
 
-  it('brings Shift+Tab that leaves the dialog back to its last control, an About link', async () => {
+  it('brings Shift+Tab that leaves the dialog back inside it, reaching an About link', async () => {
     const { context, page } = await open('light')
     try {
       await page.getByRole('button', { name: 'Settings' }).click()

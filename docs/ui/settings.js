@@ -65,6 +65,8 @@
     const PENPA_URL = 'https://github.com/swaroopg92/penpa-edit';
     const PENPA_LICENCE_URL = `${PENPA_URL}/blob/master/LICENSE`;
     const FORK_URL = 'https://github.com/caneff/penpa-edit';
+    const DISCORD_URL = 'https://discord.com/users/184770560356646923';
+    const REDIRECT_SCRIPT_URL = 'https://raw.githubusercontent.com/caneff/penpa-edit/master/userscript/penpa-redirect.user.js';
 
     const newTabLink = (href, text) => el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, [text]);
 
@@ -190,8 +192,12 @@
                 el('p', {}, ['New Features/Upgrades - Copyright (c) 2020 Swaroop Guggilam']),
                 el('p', {}, ['This fork\'s source: ', newTabLink(FORK_URL, 'caneff/penpa-edit')])])]);
 
+        const contactFooter = el('div', { class: 'ui-settings-about ui-settings-footer' }, [
+            el('p', {}, ['Questions, bugs or suggestions? Message me on Discord: ', newTabLink(DISCORD_URL, '@ChinStrap')]),
+            el('p', {}, ['Opening Penpa+ links here: ', newTabLink(REDIRECT_SCRIPT_URL, 'install the Redirect script')])]);
+
         const dialog = el('wa-dialog', { label: 'Settings' }, [...GROUPS.map(([title, rows]) => el('fieldset', { class: 'ui-settings-group' },
-            [el('legend', {}, [title]), ...rows.map((row) => (specialRows.get(row) ?? control(row)))])), pageGroup, pinsGroup, aboutGroup]);
+            [el('legend', {}, [title]), ...rows.map((row) => (specialRows.get(row) ?? control(row)))])), pageGroup, pinsGroup, aboutGroup, contactFooter]);
         // The controls show what the engine and the UI hold each time the dialog opens, so they never go stale. Done before
         // the dialog opens, not on its `wa-show`, which can come after the visitor's first click.
         function openDialog() {
