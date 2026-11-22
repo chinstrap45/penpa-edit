@@ -562,6 +562,19 @@ describe('the desk holds together', () => {
     assert.deepEqual(gaps(read), gaps(before), 'Recent needed no move, and keeps its gaps and size')
   })
 
+  it('keeps the solver\'s layout when a smaller window puts a card over another: nudged apart, never refitted (#344)', async () => {
+    const page = await open(LAPTOPS[2])
+    await deskSettled(page)
+    await dragFrom(page, await headPoint(page, 'Mouse'), 0, 300)
+    const kept = await keptLayout(page)
+    await page.setViewportSize({ width: 1280, height: 720 })
+    const read = await deskSettled(page)
+    assert.deepEqual(cardOverlaps(read), [])
+    assert.notEqual(await keptLayout(page), null, 'the layout the solver made is still kept')
+    assert.notEqual(kept, null)
+    assert.equal(JSON.parse(await keptLayout(page)).mouse.placed, 1, 'Mouse is still the solver\'s card')
+  })
+
   it('opens on the mended layout after a reload, once a smaller window had it fitted again', async () => {
     opened = await openSolvePage(browser(), KILLER, { contextOptions: { viewport: WIDE } })
     const { page } = opened
