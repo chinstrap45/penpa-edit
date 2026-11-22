@@ -19,6 +19,9 @@
     const TOOL_TREE = '[role=tree]';
     // A control the board still takes keys from while it has focus.
     const PLAIN_CONTROL = 'button, wa-button, .ui-card';
+    // The keys that press a focused button. Penpa+ cancels Space's default, which would stop the press (#377).
+    const BUTTON = 'button, wa-button';
+    const PRESS_KEYS = [' ', 'Enter'];
     const BOARD = '.ui-card-board canvas';
     const HAND_BACK_BUTTON = '.ui-bar wa-button, .ui-head wa-button';
     const DIALOG_CONTROL = 'a[href], wa-button, wa-input, wa-select, wa-switch, wa-checkbox, button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -156,6 +159,9 @@
             }
             // From a control Tab is the browser's, so the bar, the card buttons and the chips can be reached.
             if (e.key === 'Tab' && !isBodyOrBoard(elementsOf(e.composedPath()))) {
+                return 'browser';
+            }
+            if (PRESS_KEYS.includes(e.key) && elementsOf(e.composedPath()).some((node) => node.matches(BUTTON))) {
                 return 'browser';
             }
             return answerOfHandlers(e);

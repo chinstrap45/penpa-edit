@@ -7,8 +7,6 @@
     const { el, onDeskReady } = window.uiKit;
 
     const MAX_ENTRIES = 5;
-    // A button the mouse reaches and Tab does not.
-    const OUT_OF_TAB_ORDER = { tabindex: '-1' };
 
     onDeskReady(({ cards, fitToTools }) => {
         const tools = engine.listTools();
@@ -31,14 +29,13 @@
 
         function chip(entry, current) {
             const main = el('button', {
-                type: 'button', class: 'ui-chip-main', 'aria-pressed': String(current), ...tooltipAttrs(toolOf(entry)), ...OUT_OF_TAB_ORDER
+                type: 'button', class: 'ui-chip-main', 'aria-pressed': String(current), ...tooltipAttrs(toolOf(entry))
             }, [chipLabel(toolOf(entry))]);
             main.addEventListener('click', () => {
                 engine.setTool({ mode: entry.mode, submode: entry.submode, ...(entry.style === null ? {} : { style: entry.style }) });
                 main.blur();
             });
             const pin = window.pinBoard.toggleButton(() => entry).node;
-            pin.setAttribute('tabindex', OUT_OF_TAB_ORDER.tabindex);
             return el('div', { class: `ui-chip${current ? ' is-current' : ''}` }, [main, pin]);
         }
 

@@ -1,5 +1,5 @@
 // The Recent card of `solve.html` (#97): the last five tools the solver used that are not pinned, newest first, as pin chips without a shortcut key or ×,
-// outside the Tab cycle; a click on one makes it current and gives the keys back to the board. The UI is found by role and
+// outside the Tab cycle but in the page's Tab order; a click on one makes it current and gives the keys back to the board. The UI is found by role and
 // accessible name, the tool by `engine.getTool()`; the keys and clicks are real.
 import assert from 'node:assert/strict'
 import { before, after, describe, it } from 'node:test'
@@ -56,7 +56,7 @@ describe('the Recent card', () => {
     assert.deepEqual(await settle(() => recentNames(page), expected), expected)
   })
 
-  it('never lands Tab on an entry, with pins or without', async () => {
+  it('with pins, Tab from the board steps them and lands on no entry; without pins, Tab reaches the entries (#377)', async () => {
     const { page } = opened
     assert.notEqual(await recentChips(page).count(), 0, 'there are entries to land on')
     for (let i = 0; i < 3; i++) {
@@ -69,10 +69,12 @@ describe('the Recent card', () => {
     }
     // With no pin the browser keeps Tab, and moves focus along the page.
     await page.evaluate(() => document.activeElement?.blur())
-    for (let i = 0; i < 40; i++) {
+    let landed = 0
+    for (let i = 0; i < 40 && !landed; i++) {
       await page.keyboard.press('Tab')
-      assert.equal(await recentCard(page).locator('.ui-body :focus').count(), 0, `Tab press ${i + 1} without pins`)
+      landed = await recentCard(page).locator('.ui-body :focus').count()
     }
+    assert.equal(landed, 1, 'Tab without pins reached an entry')
     // Tab can stop in the Mode card's picker, whose open list floats over Recent; leaving it closes the list for the next test.
     await page.evaluate(() => document.activeElement?.blur())
   })
