@@ -17,7 +17,9 @@
             type: 'text', role: 'combobox', 'aria-label': label, 'aria-autocomplete': 'list', 'aria-expanded': 'false',
             'aria-controls': listId, spellcheck: 'false', autocomplete: 'off', class: 'ui-search', placeholder
         });
-        const list = el('div', { role: 'listbox', id: listId, 'aria-label': listLabel, class: 'ui-list', hidden: '' });
+        // Out of the Tab order: Chromium makes a scrolling list a Tab stop, and Tab into it leaves the field, which hides the list
+        // and drops focus to the page (#377).
+        const list = el('div', { role: 'listbox', id: listId, 'aria-label': listLabel, class: 'ui-list', tabindex: '-1', hidden: '' });
         const node = el('div', { class: 'ui-picker' }, [input, list]);
         window.floatList(input, list);
 
