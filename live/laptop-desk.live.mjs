@@ -545,6 +545,23 @@ describe('the desk holds together', () => {
     })
   }
 
+  it('nudges a laptop-sized custom layout into a smaller window: no card over another or outside it, and a card that fit stays put (#344)', async () => {
+    const page = await open(LAPTOPS[2])
+    await deskSettled(page)
+    await dragFrom(page, await headPoint(page, 'Recent'), 0, -60)
+    const before = await deskSettled(page)
+    await page.setViewportSize(LAPTOPS[1])
+    const read = await deskSettled(page)
+    assert.deepEqual(cardOverlaps(read), [])
+    for (const name of CARDS) {
+      const { x, y, w, h } = read.cards[name]
+      assert.equal(x >= -SLACK_PX && y >= -SLACK_PX && x + w <= LAPTOPS[1].width + SLACK_PX && y + h <= LAPTOPS[1].height + SLACK_PX, true, `${name} inside the window: ${JSON.stringify(read.cards[name])}`)
+    }
+    // The card the solver placed keeps its gaps to the desk's bottom and right edges, as a window resize keeps them.
+    const gaps = ({ desk, cards: { Recent } }) => ({ bottom: desk.y + desk.h - (Recent.y + Recent.h), right: desk.x + desk.w - (Recent.x + Recent.w), size: [Recent.w, Recent.h] })
+    assert.deepEqual(gaps(read), gaps(before), 'Recent needed no move, and keeps its gaps and size')
+  })
+
   it('opens on the mended layout after a reload, once a smaller window had it fitted again', async () => {
     opened = await openSolvePage(browser(), KILLER, { contextOptions: { viewport: WIDE } })
     const { page } = opened

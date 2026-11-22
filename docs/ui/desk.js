@@ -481,8 +481,8 @@
 
     // Cards put over each other by a smaller window or by places kept from another puzzle, not by the solver: the Board card
     // narrows into the room between the cards beside it, and when that leaves an overlap, or too narrow a board, the desk
-    // is fitted again, as on a fresh desk: the kept layout goes too, so a reload opens on the same one. `before` holds the
-    // pairs (`overlappingPairs`) that already overlapped, which stay.
+    // is fitted again, as on a fresh desk: the kept layout goes too, so a reload opens on the same one. A narrowed Board is
+    // kept as it is. `before` holds the pairs (`overlappingPairs`) that already overlapped, which stay.
     function repairOverlaps(desk, cards, before) {
         const isNew = () => [...overlappingPairs(cards)].filter(([key]) => !before.has(key)).map(([, pair]) => pair);
         if (!isNew().length) {
@@ -501,6 +501,8 @@
         });
         if (right - left >= MIN_SIZE.board[0]) {
             Object.assign(board.style, { left: `${left}px`, width: `${right - left}px` });
+            // Kept, so a reload opens on the narrowed Board and not on the width that overlapped.
+            keepDeskChange(desk, cards, 'board');
         }
         if (isNew().length) {
             startFit();
@@ -848,7 +850,9 @@
             shownIds(cards, RIGHT_COLUMN).forEach((id) => {
                 const { node } = cards[id];
                 const clear = above && above.offsetTop + above.offsetHeight + CARD_GAP_PX;
-                if (saved[id]?.fitted && clear && node.offsetTop < clear) {
+                // Below the desk's bottom it would leave the window, so the card the solver put it under stays over it.
+                const fits = clear + minHeightOf(id, cards[id]) <= desk.clientHeight - EDGE_MARGIN_PX;
+                if (saved[id]?.fitted && clear && node.offsetTop < clear && fits) {
                     node.style.top = `${clear}px`;
                     // Setting `top` alone leaves the card's height running past the desk's bottom.
                     const room = desk.clientHeight - EDGE_MARGIN_PX - clear;
@@ -915,7 +919,7 @@
     }
 
     // The cards changed size: each that grew while the solver was not dragging (a pin, a preset's undo line, a tool's
-    // option rows) moves the cards it newly covers out from under it. A card that was closed is placed by the layout as
+    // option rows) moves the cards it newly covers out from under it, and a Board it newly reaches narrows away. A card that was closed is placed by the layout as
     // it opens, so its first height is no growth.
     function keepGrowthClear(desk, cards) {
         const grown = shownIds(cards).filter((id) => heightsSeen.has(id) && cards[id].node.offsetHeight > heightsSeen.get(id))
@@ -925,10 +929,27 @@
         if (isDragging) {
             return;
         }
+        // The pairs that overlap now, less each grown card's with a card its old box did not certainly meet. The card grew
+        // down from its top or up from its bottom, so the old box is read both ways, and a pair is old only if both meet.
+        const before = overlappingPairs(cards);
+        grown.forEach(([id, height]) => {
+            const box = boxOf(cards[id].node);
+            const oldBoxes = [{ ...box, bottom: box.top + height }, { ...box, top: box.bottom - height }];
+            before.forEach((pair, key) => {
+                const other = boxOf(cards[pair.find((card) => card !== id)].node);
+                if (pair.includes(id) && !oldBoxes.every((was) => boxesMeet(other, was))) {
+                    before.delete(key);
+                }
+            });
+        });
         grown.forEach(([id, height]) => {
             const { node } = cards[id];
             clearBelow(desk, cards, id, { ...boxOf(node), bottom: node.offsetTop + height });
         });
+        // A card that grew upward (Recent, kept to its column's bottom) can reach a card beside it, which narrows away.
+        if (grown.length) {
+            repairOverlaps(desk, cards, before);
+        }
     }
 
     // A card's smallest height: MIN_SIZE's, and for Rules at least one line of its text at the size it shows, which the
@@ -1390,7 +1411,9 @@
                 if (refitTimer === null) {
                     refit();
                 } else {
+                    const before = overlappingPairs(desk.cards);
                     relayout();
+                    repairOverlaps(desk.desk, desk.cards, before);
                 }
                 clearTimeout(refitTimer);
                 refitTimer = setTimeout(() => {
@@ -1403,10 +1426,9 @@
             }
             const before = overlappingPairs(desk.cards);
             relayout();
+            // The automatic cards are fitted again first, so only what the solver placed is left to nudge.
+            fitAutomatic(desk.desk, desk.cards);
             repairOverlaps(desk.desk, desk.cards, before);
-            if (!isFitted) {
-                fitAutomatic(desk.desk, desk.cards);
-            }
         });
         makeMovable(desk.bar, desk.desk, desk.cards);
         watchHeading(desk.bar);
