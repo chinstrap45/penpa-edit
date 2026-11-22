@@ -296,6 +296,7 @@ describe('the unpin action (#295)', () => {
     const log = { looked: [], clicked: 0 }
     const chipButtons = { count: async () => chips, nth: () => { log.clicked++; throw new Error('clicked a chip') } }
     const region = {
+      isVisible: async () => true,
       locator: (selector) => { log.looked.push(selector); return selector === UNPIN_SELECTOR ? chipButtons : { count: async () => 0 } },
       getByRole: (role, { name }) => { log.looked.push(`${role} ${name}`); return { count: async () => 1, nth: () => { log.clicked++; throw new Error('clicked Unpin all') } } }
     }
@@ -313,4 +314,24 @@ describe('the unpin action (#295)', () => {
     await assert.rejects(unpin.run(page, 1), /clicked a chip/)
     assert.deepEqual(log.looked, [UNPIN_SELECTOR])
   })
+})
+
+describe('the actions inside a closable card (#342)', () => {
+  // The kinds that click a control inside a card, by the card they need.
+  const INSIDE = {
+    Mode: ['mode pick', 'mode search', 'pin toggle'],
+    Pinned: ['unpin', 'pin pick', 'pin drag', 'preset load', 'preset save', 'preset star', 'preset delete'],
+    Recent: ['recent pick', 'recent pin']
+  }
+  // A page whose cards are all closed: any lookup of a control inside one throws, as a wait for a missing control would.
+  const closedPage = { evaluate: async () => [], getByRole: () => ({ isVisible: async () => false }) }
+
+  for (const [name, kinds] of Object.entries(INSIDE)) {
+    for (const kind of kinds) {
+      it(`${kind} skips, touching nothing, when the ${name} card is closed`, async () => {
+        const action = KINDS.find((k) => k.kind === kind)
+        assert.equal(await action.run(closedPage, kind === 'pin drag' || kind === 'mode search' ? [0, 1] : 0), 'card closed')
+      })
+    }
+  }
 })
