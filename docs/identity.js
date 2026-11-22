@@ -1,11 +1,11 @@
 const Identity = {
     // For messages speaking in the first person
-    appOwner: "Swaroop",
+    appOwner: "ChinStrap",
     // For dismissing popups
     okButtonText: "ok 🙂",
     // Titles specific to popup types
-    errorTitle: "Swaroop says",
-    infoTitle: "Swaroop says",
+    errorTitle: "ChinStrap says",
+    infoTitle: "ChinStrap says",
 
     solveTitle: undefined,
     solveDefaultMessage: "Congratulations 🙂", // Default - Congratulations 🙂
