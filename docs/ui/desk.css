@@ -365,6 +365,7 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 .ui-dark .ui-settings-group legend, .ui-dark .ui-settings-note, .ui-dark .ui-help { color: #a9b0bd; }
 .ui-settings-about { color: #5f5b4c; font-size: 12px; display: grid; gap: 6px; }
 .ui-settings-about p { margin: 0; }
+.ui-settings-footer { margin-top: 12px; }
 .ui-dark .ui-settings-about { color: #a9b0bd; }
 .ui-dark .ui-tag { background: #2f3c5c; color: #b7caff; }
 
