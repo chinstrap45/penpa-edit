@@ -36,7 +36,8 @@ function readEngineState() {
     const INPUT_EVENTS = ['mousedown', 'mousemove', 'mouseup', 'mouseout', 'dblclick', 'keydown', 'click'];
 
     const otherParams = location.search.slice(1).split('&').filter((p) => p && p !== 'record=1');
-    const source = (otherParams.length ? '?' + otherParams.join('&') : '') + location.hash;
+    // The Penpa+ button's mark (solve_forward.js, #376) only keeps a link on index.html, so the link replayed from leaves it out.
+    const source = withoutPenpaMark((otherParams.length ? '?' + otherParams.join('&') : '') + location.hash);
     const steps = [];
     let hookedPu = null;
     // Nonzero inside a wrapped call, so a call the engine makes from inside another (mode_set's submode_check) is not

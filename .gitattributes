@@ -17,6 +17,7 @@ docs/js/recorder.js merge=ours
 docs/js/engine_bridge.js merge=ours
 docs/js/progress_autosave.js merge=ours
 docs/js/chinstrap_button.js merge=ours
+docs/js/solve_forward.js merge=ours
 docs/js/penpa_layer.js merge=ours
 docs/solve.html merge=ours
 docs/gallery.html merge=ours
