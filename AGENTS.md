@@ -5,8 +5,8 @@ The fork is splitting from upstream (Chris, 2026-11-09): upstream's engine files
 being merged; the UI becomes ours, rebuilt against an engine API; `docs/js/class_p.js` is split step by step into the two.
 The plan is the `/wayfinder` map on the tracker. A Tampermonkey script, `userscript/penpa-redirect.user.js`, sends every
 `swaroopg92.github.io/penpa-edit/` link to the fork with its query and `#` data unchanged, so shared puzzle links open here (Chris,
-2026-11-09). It is for Chris's own use until the upstream sync has run for a couple of weeks; then it may be released, branded
-ChinStrap, Chris's setter name (Chris, 2026-11-09). Penpa+'s MIT copyright lines stay.
+2026-11-09). It is released with the Shared MVP (Chris, 2026-11-22); ChinStrap is Chris's setter name, and the page's identity
+only stops naming Swaroop or upstream as its owner, with no self-promotion (Chris, 2026-11-22). Penpa+'s MIT copyright lines stay.
 
 - **Read `docs/agents.md` first**: upstream's architecture overview and its four rules for AI agents (minimal modifications, readability, no
   guessing, document new code). They hold here too.
@@ -105,6 +105,7 @@ Before you write or review code: read `CODING_STANDARDS.md`.
   with the command that replays it (naming its puzzle), and a run that checked no list printed as "gave no verdict" with exit 1.
 - **Playwright** is an approved dev dependency (Chris, 2026-11-09).
 - **fast-check** is an approved dev dependency, for the solve.html UI fuzz (#195) (Chris, 2026-11-16).
+- **axe-core** is an approved dev dependency, for the solve page's WCAG AA contrast check (Chris, 2026-11-22).
 - **CI runs on GitHub Actions here**, an exception to the local-CI rule: the repo is public, so Actions minutes are free, and
   the nightly upstream merge (#3) must run unattended (Chris, 2026-11-09).
 - **The test plan** is `research/fork-audit-2026-11.md` § Test plan: each audit bug gets a red test, marked `todo` with its
