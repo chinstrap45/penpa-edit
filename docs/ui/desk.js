@@ -1472,16 +1472,7 @@
         });
         makeMovable(desk.bar, desk.desk, desk.cards);
         watchHeading(desk.bar);
-        // A card's first report is the size it opened with, not a change: restacking on it would move a card the solver left
-        // under a card they dragged over it, so a reload would not open on the layout it saved.
-        const reported = new Set();
-        const restack = new ResizeObserver((entries) => {
-            const changed = entries.some(({ target }) => reported.has(target));
-            entries.forEach(({ target }) => reported.add(target));
-            if (changed) {
-                restackRight(desk.desk, desk.cards);
-            }
-        });
+        const restack = new ResizeObserver(() => restackRight(desk.desk, desk.cards));
         RIGHT_COLUMN.forEach((id) => restack.observe(desk.cards[id].node));
         const growth = new ResizeObserver(() => keepGrowthClear(desk.desk, desk.cards));
         Object.values(desk.cards).forEach(({ node }) => growth.observe(node));

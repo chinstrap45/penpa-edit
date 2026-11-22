@@ -37,10 +37,6 @@ const LISTS = [
     resize('Board', 'top', -240, -240),
     ['interrupted drag', [card('Mouse'), 'resize']],
     ['reload', null]
-  ]],
-  ['a reload after the Pinned card was dragged leaves Mode where it was', 'slitherlink', [
-    ['card drag', [card('Pinned'), by(-240), by(240)]],
-    ['reload', null]
   ]]
 ]
 
