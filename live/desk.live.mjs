@@ -278,3 +278,25 @@ describe('the desk', () => {
     assert.equal(await settle(async () => { const w = (await boardAgainstCard(page)).w; return w < grown && w > small.w }, true), true)
   })
 })
+
+describe('the desk with a link that carries no rules', () => {
+  let opened
+  let page
+
+  beforeEach(async () => {
+    opened = await openSolvePage(browser(), await newBoardSolveLink(browser()))
+    page = opened.page
+    await settle(async () => (await boardAgainstCard(page)).inside, true)
+  })
+  afterEach(async () => { await opened?.context.close() })
+
+  for (const [edge, dy] of [['top', -240], ['bottom', 240]]) {
+    it(`keeps the empty Rules card's box after its ${edge} edge is dragged away from it and a reload (#343)`, async () => {
+      await drag(page, await handleCentre(page, 'Rules', edge), 0, dy)
+      const resized = await boxOf(page, 'Rules')
+      await page.reload()
+      await card(page, 'Rules').waitFor()
+      assert.deepEqual(await settle(() => boxOf(page, 'Rules'), resized), resized)
+    })
+  }
+})
