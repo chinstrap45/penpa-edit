@@ -24,9 +24,10 @@ async function openInChinStrap() {
     }
 }
 
-// Only a solve link gets the button: solve.html has no setter.
+// Only a link Penpa+ opens as a solve gets the button, a solve's Clone (`l=solvedup`) included: solve.html has no setter.
 function addChinStrapButton() {
-    if (linkParams().get('m') !== 'solve') {
+    const params = linkParams();
+    if (params.get('m') !== 'solve' && params.get('l') !== 'solvedup') {
         return;
     }
     const button = document.createElement('button');
