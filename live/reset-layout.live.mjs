@@ -3,6 +3,7 @@
 // Read through the cards' bounding boxes, the board canvas's drawn size and the bodies' scroll sizes.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
+import { overlaps } from './desk-layout.mjs'
 import { linkFromNewBoard, listedTools, openSolvePage, resetLayoutInSettings, shareOf, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
 
@@ -54,8 +55,6 @@ function readDeskInPage (names) {
     scroll: { Mouse: scroll('Mouse'), Rules: scroll('Rules') }
   }
 }
-
-const overlaps = (a, b) => a.x < b.x + b.w - 0.5 && b.x < a.x + a.w - 0.5 && a.y < b.y + b.h - 0.5 && b.y < a.y + a.h - 0.5
 
 function assertCardsOnDesk (read) {
   for (const name of CARDS) {
