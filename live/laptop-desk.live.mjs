@@ -417,7 +417,7 @@ describe('the desk holds together', () => {
 
   const deskSettled = (page) => steady(page, readDeskInPage, CARDS)
   // The layout the desk keeps in localStorage, as text, or null when none is kept.
-  const keptLayout = (page) => page.evaluate(() => localStorage.getItem(LAYOUT_KEY))
+  const keptLayout = (page) => page.evaluate((key) => localStorage.getItem(key), LAYOUT_KEY)
   const cardsOf = async (page) => (await page.evaluate(readDeskInPage, CARDS)).cards
 
   async function dragFrom (page, point, dx, dy) {
