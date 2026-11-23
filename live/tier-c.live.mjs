@@ -96,7 +96,7 @@ describe('tier C', () => {
     it('reads a Replay link in the older ? form', async () => {
       const { replayLink } = await answerRun(browser(), puzzles.starbattle, generateSolve(puzzles.starbattle, RECORDING_SEED))
       const hashed = await convertReplayLink(browser(), replayLink)
-      const queried = await convertReplayLink(browser(), 'https://caneff.github.io/penpa-edit/?' + replayLink.slice(1))
+      const queried = await convertReplayLink(browser(), 'https://chinstrap45.github.io/penpa-edit/?' + replayLink.slice(1))
       assert.deepEqual(queried.steps, hashed.steps)
     })
 

@@ -8,7 +8,7 @@ import { settle } from './settle.mjs'
 const browser = useBrowser()
 
 const UPSTREAM = 'https://swaroopg92.github.io/penpa-edit/'
-const FORK = 'https://caneff.github.io/penpa-edit/'
+const FORK = 'https://chinstrap45.github.io/penpa-edit/'
 
 // Opens bare solve.html: the paste box shows, no desk is built.
 async function openBare () {

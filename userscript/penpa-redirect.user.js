@@ -1,18 +1,18 @@
 // ==UserScript==
 // @name         Penpa+ to caneff's fork
-// @namespace    https://github.com/caneff/penpa-edit
-// @version      1.1.0
+// @namespace    https://github.com/chinstrap45/penpa-edit
+// @version      1.2.0
 // @description  Opens every Penpa+ link on caneff's fork, with the same query and # data; a solve link opens on the fork's solve page.
 // @match        https://swaroopg92.github.io/penpa-edit/*
 // @run-at       document-start
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/caneff/penpa-edit/master/userscript/penpa-redirect.user.js
-// @downloadURL  https://raw.githubusercontent.com/caneff/penpa-edit/master/userscript/penpa-redirect.user.js
+// @updateURL    https://raw.githubusercontent.com/chinstrap45/penpa-edit/master/userscript/penpa-redirect.user.js
+// @downloadURL  https://raw.githubusercontent.com/chinstrap45/penpa-edit/master/userscript/penpa-redirect.user.js
 // ==/UserScript==
 
 (function () {
   const UPSTREAM_URL = 'https://swaroopg92.github.io/penpa-edit/'
-  const FORK_URL = 'https://caneff.github.io/penpa-edit/'
+  const FORK_URL = 'https://chinstrap45.github.io/penpa-edit/'
 
   if (location.href.startsWith(UPSTREAM_URL)) {
     const tail = location.href.slice(UPSTREAM_URL.length)

@@ -15,7 +15,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
   - Type: omit `--type`. This is a user-account repo (`gh api users/caneff --jq .type` is `User`), and types are unavailable there.
 - **Close**: `gh issue close <number> --comment "..."`
 
-Pass `--repo caneff/penpa-edit` on every `gh` call but `gh api`, which rejects the flag and names the repo in its path; the samples on this page omit it for length. Without it `gh issue view` can print nothing and exit 0 (worktrees, cwd outside the clone).
+Pass `--repo chinstrap45/penpa-edit` on every `gh` call but `gh api`, which rejects the flag and names the repo in its path; the samples on this page omit it for length. Without it `gh issue view` can print nothing and exit 0 (worktrees, cwd outside the clone).
 
 ## Grilling gate on new tickets
 

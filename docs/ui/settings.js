@@ -64,9 +64,9 @@
 
     const PENPA_URL = 'https://github.com/swaroopg92/penpa-edit';
     const PENPA_LICENCE_URL = `${PENPA_URL}/blob/master/LICENSE`;
-    const FORK_URL = 'https://github.com/caneff/penpa-edit';
+    const FORK_URL = 'https://github.com/chinstrap45/penpa-edit';
     const DISCORD_URL = 'https://discord.com/users/184770560356646923';
-    const REDIRECT_SCRIPT_URL = 'https://raw.githubusercontent.com/caneff/penpa-edit/master/userscript/penpa-redirect.user.js';
+    const REDIRECT_SCRIPT_URL = 'https://raw.githubusercontent.com/chinstrap45/penpa-edit/master/userscript/penpa-redirect.user.js';
 
     const newTabLink = (href, text) => el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, [text]);
 
@@ -196,7 +196,7 @@
                 el('p', {}, ['Penpa+ is under the ', newTabLink(PENPA_LICENCE_URL, 'MIT licence'), ':']),
                 el('p', {}, ['Original Work/Project Initiator - Copyright (c) 2019 Opt-Pan']),
                 el('p', {}, ['New Features/Upgrades - Copyright (c) 2020 Swaroop Guggilam']),
-                el('p', {}, ['This fork\'s source: ', newTabLink(FORK_URL, 'caneff/penpa-edit')])])]);
+                el('p', {}, ['This fork\'s source: ', newTabLink(FORK_URL, 'chinstrap45/penpa-edit')])])]);
 
         const contactFooter = el('div', { class: 'ui-settings-about ui-settings-footer' }, [
             el('p', {}, ['Questions, bugs or suggestions? Message me on Discord: ', newTabLink(DISCORD_URL, '@ChinStrap')]),
