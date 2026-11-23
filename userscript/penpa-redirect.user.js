@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Penpa+ to caneff's fork
+// @name         Penpa+ to ChinStrap
 // @namespace    https://github.com/chinstrap45/penpa-edit
 // @version      1.2.0
-// @description  Opens every Penpa+ link on caneff's fork, with the same query and # data; a solve link opens on the fork's solve page.
+// @description  Opens every Penpa+ link on the ChinStrap fork, with the same query and # data; a solve link opens on its solve page.
 // @match        https://swaroopg92.github.io/penpa-edit/*
 // @run-at       document-start
 // @grant        none
