@@ -238,8 +238,8 @@ export const UI_PLANTS = [
     id: 'pin-keys-x-and-c-swapped',
     bug: 'pin keys X and C select each other\'s pin, each chip still showing its own key',
     file: 'pins.js',
-    find: 'const SHORTCUT_SLOT_BY_CODE = { KeyZ: 0, KeyX: 1, KeyC: 2, KeyV: 3 };',
-    replace: 'const SHORTCUT_SLOT_BY_CODE = { KeyZ: 0, KeyX: 2, KeyC: 1, KeyV: 3 };',
+    find: 'const SHORTCUT_SLOT_BY_CODE = { KeyZ: 0, KeyX: 1, KeyC: 2, KeyV: 3 }',
+    replace: 'const SHORTCUT_SLOT_BY_CODE = { KeyZ: 0, KeyX: 2, KeyC: 1, KeyV: 3 }',
     focus: ['pinned'],
     caughtBy: /^rules? broken after step \d+ \(.*\): pin-keys-select-their-pin: pressing [XC] left /,
     last: /^press pin key [XC]/
