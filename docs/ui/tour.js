@@ -25,7 +25,7 @@
       [cards.mouse.node, 'Hold Shift for Corner marks or Ctrl for Centre marks.'],
       [bar.querySelector('.ui-try'), 'Try starts a trial; then Keep or Discard what you entered.'],
       [cards.rules.head.querySelector('.ui-rules-text'), 'The Rules card has its own text size.', cards.rules.node],
-      [bar.querySelector('.ui-open-penpa'), 'Penpa+ opens this puzzle there; its ChinStrap button brings you back.']
+      [bar.querySelector('.ui-open-penpa'), 'Penpa+ opens this puzzle there; its Back to new UI button brings you back.']
     ]
 
     const text = el('p', { class: 'ui-tour-text', id: 'ui-tour-text' })
