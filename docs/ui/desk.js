@@ -498,7 +498,7 @@
         return pairs;
     }
 
-    // Cards newly put over each other, by a smaller window, places kept from another puzzle or a card that grew, not by the
+    // Cards newly put over each other, by a smaller window (at a resize or when a saved layout opens), places kept from another puzzle or a card that grew, not by the
     // solver, nudged apart and never refitted (#344): the Board card narrows into the room between the cards beside it, and
     // each overlap left (or one a too narrow Board leaves) moves the lower of its two cards below the other, or above it, shrunk
     // to the room there is at least. What moved is kept, so a reload opens on the same layout. `before` holds the pairs
