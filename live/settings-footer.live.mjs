@@ -1,7 +1,7 @@
-// Settings ends with where to send questions and bugs, and where to get the Redirect script (#380).
+// Settings ends with where to send questions and bugs, and where to read about the Redirect script (#380).
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { RAW_SCRIPT_URL } from '../test/redirect-urls.mjs'
+import { SCRIPT_ENTRY_URL } from '../test/redirect-urls.mjs'
 import { AKARI_SOLVE, openSolvePage, useBrowser } from './page.mjs'
 
 const browser = useBrowser()
@@ -18,16 +18,16 @@ describe('the footer of Settings', () => {
       const footer = dialog.locator('.ui-settings-footer')
       assert.match(await footer.textContent(), /Questions, bugs or suggestions\? Message me on Discord: @ChinStrap/)
       const links = await footer.getByRole('link').evaluateAll((nodes) => nodes.map((n) => [n.href, n.target, n.rel]))
-      assert.deepEqual(links, [[DISCORD_URL, '_blank', 'noopener noreferrer'], [RAW_SCRIPT_URL, '_blank', 'noopener noreferrer']])
+      assert.deepEqual(links, [[DISCORD_URL, '_blank', 'noopener noreferrer'], [SCRIPT_ENTRY_URL, '_blank', 'noopener noreferrer']])
 
       const cardBoxes = () => page.evaluate(() => [...document.querySelectorAll('.ui-card')].map((card) => {
         const { left, top, width, height } = card.getBoundingClientRect()
         return [card.id || card.getAttribute('aria-label'), left, top, width, height]
       }))
       const before = await cardBoxes()
-      for (const name of ['@ChinStrap', 'install the Redirect script']) {
+      for (const name of ['@ChinStrap', 'the Redirect script']) {
         const opened = context.waitForEvent('page')
-        await footer.getByRole('link', { name }).click()
+        await footer.getByRole('link', { name, exact: true }).click()
         const tab = await opened
         await tab.close()
       }
