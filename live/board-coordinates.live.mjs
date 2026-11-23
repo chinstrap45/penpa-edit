@@ -353,6 +353,7 @@ const stickOffsetsInPage = () => {
 // while the coordinates are on), which would hide a missing scroll listener.
 const scrollThird = (page) => page.evaluate((read) => new Promise((resolve) => {
   const body = document.querySelector('section[aria-label="Board"] .ui-body')
+  // eslint-disable-next-line no-new-func -- runs a function's source in the page
   body.addEventListener('scroll', () => resolve(new Function(`return (${read})()`)()), { once: true })
   body.scrollLeft = (body.scrollWidth - body.clientWidth) / 3
   body.scrollTop = (body.scrollHeight - body.clientHeight) / 3

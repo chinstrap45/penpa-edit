@@ -32,8 +32,18 @@ const EDGE = [3, 2]
 
 // Each mode's family, `research/penpa-mode-key-map.md` § Families, as the recording's directory.
 const FAMILY = {
-  sudoku: 'value', number: 'value', surface: 'paint', multicolor: 'paint', line: 'path', lineE: 'path', wall: 'path',
-  symbol: 'stamp', special: 'stamp', cage: 'stamp', combi: 'genre-tool', move: 'move'
+  sudoku: 'value',
+  number: 'value',
+  surface: 'paint',
+  multicolor: 'paint',
+  line: 'path',
+  lineE: 'path',
+  wall: 'path',
+  symbol: 'stamp',
+  special: 'stamp',
+  cage: 'stamp',
+  combi: 'genre-tool',
+  move: 'move'
 }
 // One Shape tool on each of `key_number`'s two paths: a plain variant number, and one from `onoff_symbolmode_list`.
 const SHAPE_TOOLS = ['circle_L', 'cross']

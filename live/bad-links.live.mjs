@@ -58,6 +58,7 @@ async function linkWithHeader (edit) {
   const hash = await page.evaluate((editSource) => {
     const lines = decrypt_data(pu.maketext().split('p=')[1].split('&')[0]).split('\n')
     const header = lines[0].split(',')
+    // eslint-disable-next-line no-new-func -- runs the page's own edit source
     new Function('header', editSource)(header)
     lines[0] = header.join(',')
     return '#m=edit&p=' + encrypt_data(lines.join('\n'))

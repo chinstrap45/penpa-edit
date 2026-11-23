@@ -27,7 +27,6 @@ const EDGE_MARGIN_PX = 8
 // The share of the left column Rules stops at when Mouse needs the rest (Chris, 2026-11-17).
 const RULES_SHARE = 0.55
 
-
 // The Icebreaker rules four times over: more than Rules can show at a laptop size.
 const LONG_RULES = { ...ICEBREAKER, rules: Array(4).fill(ICEBREAKER.rules).join('\n\n') }
 // The long rules with only Line's three Mouse rows to show.

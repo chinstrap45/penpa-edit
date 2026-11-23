@@ -26,7 +26,6 @@ const allTabs = async () => {
 const link = (tabSet) => newBoardSolveLink(browser(), tabSet)
 const openSolve = (hash) => openSolvePage(browser(), hash)
 
-
 const offered = (page) => presetList(page).getByRole('option').allInnerTexts()
 const groupTitles = (page) => presetList(page).getByRole('group').evaluateAll((groups) => groups.map((g) => g.getAttribute('aria-label')))
 const optionsOfGroup = (page, title) => presetList(page).getByRole('group', { name: title }).getByRole('option').allInnerTexts()
@@ -58,7 +57,6 @@ const seedSavedPresets = async (page, presets) => {
   await page.reload()
   await waitForDesk(page)
 }
-
 
 const chipCount = (page) => pinChips(page).getByRole('button', { name: /^Unpin / }).count()
 

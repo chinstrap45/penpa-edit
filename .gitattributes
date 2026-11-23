@@ -45,3 +45,4 @@ test/redirect-urls.mjs merge=ours
 .github/actions/** merge=ours
 .github/scripts/** merge=ours
 test/ui-corpus-issue.test.mjs merge=ours
+test/lint.test.mjs merge=ours

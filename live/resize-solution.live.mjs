@@ -62,6 +62,7 @@ function resizeInPage ({ tag, names, marksSource, boxes, resize: [method, sign] 
   newBoard(tag)
   const cell = (x, y) => pu.conflicts.xy_to_index(x, y)
   const edge = (x, y) => `${pu.point[cell(x, y)].surround[1]},${pu.point[cell(x, y)].surround[2]}`
+  // eslint-disable-next-line no-new-func -- reads the marks from the page's own script text
   const marks = new Function('return ' + marksSource)()
   for (const name of names) marks[name](pu.pu_a, cell, edge)
   for (const id of boxes) document.getElementById(id).checked = true

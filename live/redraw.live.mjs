@@ -46,7 +46,7 @@ describe('redraw', () => {
     const { draws, logged, inked, conflicts } = await redraw({ tags: ['alphabet', 'classic'], value: '1' })
     assert.deepEqual(logged, [])
     assert.deepEqual(conflicts, [[0, 0], [1, 0]])
-    assert.notEqual(draws, 0, "pu.draw ran")
+    assert.notEqual(draws, 0, 'pu.draw ran')
     assert.ok(inked > 0, 'the board has non-white pixels')
   })
 
@@ -60,7 +60,7 @@ describe('redraw', () => {
     const { draws, logged, inked } = await redraw({ tags: ['classic'], value: '1', breakCheck: true })
     assert.equal(logged.length, 1)
     assert.match(logged[0], /check failed/)
-    assert.notEqual(draws, 0, "pu.draw ran")
+    assert.notEqual(draws, 0, 'pu.draw ran')
     assert.ok(inked > 0, 'the board has non-white pixels')
   })
 })

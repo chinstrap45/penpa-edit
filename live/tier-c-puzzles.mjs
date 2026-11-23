@@ -20,9 +20,6 @@ export const IMPORTS = {
 }
 const STARS = 2
 
-// Chance, out of 1, that another piece of noise comes before the next correct entry.
-const NOISE = 0.4
-
 // ---- Sudoku ----
 
 // The rows and columns of a box of an n×n sudoku.

@@ -64,7 +64,10 @@ function runMerge (dir) {
     cwd: dir, env: { ...GIT_ENV, GITHUB_OUTPUT: output }, encoding: 'utf8'
   })
   return {
-    status, stderr, report: readFileSync(report, 'utf8'), output: readFileSync(output, 'utf8'),
+    status,
+    stderr,
+    report: readFileSync(report, 'utf8'),
+    output: readFileSync(output, 'utf8'),
     ownedCommits: readFileSync(owned, 'utf8')
   }
 }

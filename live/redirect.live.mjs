@@ -7,7 +7,6 @@ import { FORK_URL, REDIRECT_SCRIPT, UPSTREAM_URL } from '../test/redirect-urls.m
 import { AKARI_SOLVE, openPenpa, serveDocs, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
 
-
 const browser = useBrowser()
 
 describe('an upstream solve link with the Redirect script', () => {

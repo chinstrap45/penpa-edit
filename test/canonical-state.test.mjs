@@ -4,11 +4,11 @@ import { describe, it } from 'node:test'
 import { canonicalState } from '../live/canonical-state.mjs'
 
 // A hand-built engine state as `readEngineState` returns it, with `pu_a` and `pu_a_col` given by the caller.
-function engineState ({ pu_a = {}, pu_a_col = {} } = {}) {
+function engineState ({ pu_a: puA = {}, pu_a_col: puAcol = {} } = {}) {
   const board = (props) => ({ command_undo: [], command_redo: [], command_replay: [], ...props })
   return {
-    pu_a: board(pu_a),
-    pu_a_col: board(pu_a_col),
+    pu_a: board(puA),
+    pu_a_col: board(puAcol),
     mode: { qa: 'pu_a', edit_mode: 'number', submode: '1', style: 2, orientation: 'R' },
     selection: [],
     conflict_cells: [],

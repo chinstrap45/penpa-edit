@@ -1,4 +1,4 @@
-// The narrowed seam command (`live/run-narrowed.mjs`, #316): the unit tests, then the live files CI would run for the
+// The narrowed seam command (`live/run-narrowed.mjs`, #316): the lint, the unit tests, then the live files CI would run for the
 // same change. `--list` names what it would run.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
@@ -18,23 +18,23 @@ const listed = (dir, ...args) => {
 }
 
 describe('node live/run-narrowed.mjs --list', () => {
-  it('names the unit tests and the live files CI would run for a change under docs/ui/', () => {
+  it('names the lint, the unit tests and the live files CI would run for a change under docs/ui/', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/ui/pins.js'), '// two\n')
     const { suites, said } = listed(dir, '--changed', 'master')
-    assert.deepEqual(suites, ['npm test', PINS])
+    assert.deepEqual(suites, ['npm run lint', 'npm test', PINS])
     assert.match(said, /all on the skip list/)
   })
 
   it('adds the engine side for an edit to a script the page loads', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/js/class_p.js'), '// two\n')
-    assert.deepEqual(listed(dir, '--changed', 'master').suites, ['npm test', ENGINE, PINS, UI])
+    assert.deepEqual(listed(dir, '--changed', 'master').suites, ['npm run lint', 'npm test', ENGINE, PINS, UI])
   })
 
   it('runs the full set with no --changed, and says so', () => {
     const { suites, said } = listed(scratchRepo().dir)
-    assert.deepEqual(suites, ['npm test', ENGINE, PINS, UI])
+    assert.deepEqual(suites, ['npm run lint', 'npm test', ENGINE, PINS, UI])
     assert.match(said, /the full set/)
   })
 
@@ -42,7 +42,7 @@ describe('node live/run-narrowed.mjs --list', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/ui/pins.js'), '// two\n')
     const { suites, said } = listed(dir, '--changed', 'no-such-ref')
-    assert.deepEqual(suites, ['npm test', ENGINE, PINS, UI])
+    assert.deepEqual(suites, ['npm run lint', 'npm test', ENGINE, PINS, UI])
     assert.match(said, /change detection failed .*: the full set/)
   })
 
@@ -63,7 +63,8 @@ function runnableRepo () {
   for (const file of [ENGINE, UI, PINS]) writeFileSync(join(dir, file), `import { appendFileSync } from 'node:fs'\nappendFileSync(process.env.RAN_LOG, '${file}\\n')\n`)
   git('add', '-A')
   git('commit', '-q', '-m', 'live files that record a run')
-  const bin = tree({ 'npm': '#!/bin/sh\necho "$@" >> "$FAKE_NPM_LOG"\nexit "${FAKE_NPM_STATUS:-0}"\n' })
+  // eslint-disable-next-line no-template-curly-in-string -- shell variables, not a template
+  const bin = tree({ npm: '#!/bin/sh\necho "$@" >> "$FAKE_NPM_LOG"\nexit "${FAKE_NPM_STATUS:-0}"\n' })
   chmodSync(join(bin, 'npm'), 0o755)
   // The logs sit outside the repo: an untracked file in it would count as a changed file.
   const env = { ...ENV, PATH: `${bin}:${ENV.PATH}`, FAKE_NPM_LOG: join(bin, 'npm.log'), RAN_LOG: join(bin, 'ran.log') }
@@ -71,12 +72,12 @@ function runnableRepo () {
 }
 
 describe('node live/run-narrowed.mjs', () => {
-  it('runs the unit tests, then only the live files for the change', () => {
+  it('runs the lint and the unit tests, then only the live files for the change', () => {
     const { dir, env, ran } = runnableRepo()
     writeFileSync(join(dir, 'docs/ui/pins.js'), '// two\n')
     const out = run(dir, ['--changed', 'master'], env)
     assert.equal(out.status, 0, out.stdout + out.stderr)
-    assert.equal(readFileSync(env.FAKE_NPM_LOG, 'utf8').trim(), 'test')
+    assert.equal(readFileSync(env.FAKE_NPM_LOG, 'utf8').trim(), 'run lint\ntest')
     assert.deepEqual(ran(), [PINS])
   })
 
@@ -97,7 +98,7 @@ describe('node live/run-narrowed.mjs', () => {
     const { dir } = runnableRepo()
     const out = run(dir, [], { ...ENV, PATH: '/nonexistent' })
     assert.notEqual(out.status, 0)
-    assert.match(out.stderr, /npm test: .*ENOENT/)
+    assert.match(out.stderr, /npm run lint: .*ENOENT/)
   })
 })
 

@@ -65,59 +65,61 @@ function assertTopOfBoard (read) {
   assert.equal(read.inHead, false, `banner in the Board header: ${label}`)
 }
 
-for (const viewport of DESK_WIDTHS) for (const [name, linkOf] of Object.entries(PUZZLES)) {
-  describe(`the tool-change banner on ${name} at ${viewport.width}x${viewport.height}`, () => {
-    let opened
-    before(async () => { opened = await openSolvePage(browser(), await linkOf(browser()), { contextOptions: { viewport } }) })
-    after(async () => { await opened?.context.close() })
+for (const viewport of DESK_WIDTHS) {
+  for (const [name, linkOf] of Object.entries(PUZZLES)) {
+    describe(`the tool-change banner on ${name} at ${viewport.width}x${viewport.height}`, () => {
+      let opened
+      before(async () => { opened = await openSolvePage(browser(), await linkOf(browser()), { contextOptions: { viewport } }) })
+      after(async () => { await opened?.context.close() })
 
-    it('shows inside the board, centred in its top quarter, and out of the Board header, for each tool change', async () => {
-      for (const tool of TOOLS) {
-        await changeTool(opened.page, tool)
-        assertTopOfBoard(await readBanner(opened.page))
-      }
-    })
+      it('shows inside the board, centred in its top quarter, and out of the Board header, for each tool change', async () => {
+        for (const tool of TOOLS) {
+          await changeTool(opened.page, tool)
+          assertTopOfBoard(await readBanner(opened.page))
+        }
+      })
 
-    it('has the board, not the banner, under the pointer at its centre', async () => {
-      await changeTool(opened.page, TOOLS[1])
-      const read = await readBanner(opened.page)
-      assert.equal(read.hit, 'canvas', JSON.stringify(read))
-    })
+      it('has the board, not the banner, under the pointer at its centre', async () => {
+        await changeTool(opened.page, TOOLS[1])
+        const read = await readBanner(opened.page)
+        assert.equal(read.hit, 'canvas', JSON.stringify(read))
+      })
 
-    it('takes the pin colour of a pinned tool and the neutral colour of an unpinned one', async () => {
-      const { page } = opened
-      await page.evaluate(() => window.pinBoard.replace([{ mode: 'line', submode: '1', style: null }]))
-      await changeTool(page, TOOLS[2])
-      const unpinned = await readBanner(page)
-      await changeTool(page, TOOLS[0])
-      const pinned = await readBanner(page)
-      assert.equal(pinned.colour, pinned.toolColour, JSON.stringify(pinned))
-      assert.equal(unpinned.colour, unpinned.toolColour, JSON.stringify(unpinned))
-      assert.notEqual(pinned.colour, unpinned.colour, 'a pinned tool and an unpinned one differ in colour')
-    })
+      it('takes the pin colour of a pinned tool and the neutral colour of an unpinned one', async () => {
+        const { page } = opened
+        await page.evaluate(() => window.pinBoard.replace([{ mode: 'line', submode: '1', style: null }]))
+        await changeTool(page, TOOLS[2])
+        const unpinned = await readBanner(page)
+        await changeTool(page, TOOLS[0])
+        const pinned = await readBanner(page)
+        assert.equal(pinned.colour, pinned.toolColour, JSON.stringify(pinned))
+        assert.equal(unpinned.colour, unpinned.toolColour, JSON.stringify(unpinned))
+        assert.notEqual(pinned.colour, unpinned.colour, 'a pinned tool and an unpinned one differ in colour')
+      })
 
-    it('stays on the visible part of a zoomed board, scrolled to each far corner', async () => {
-      const { page } = opened
-      const zoomIn = page.getByRole('button', { name: 'Zoom in' })
-      // The button disables at the zoom limit.
-      for (let step = 0; step < ZOOM_STEPS && await zoomIn.isEnabled(); step++) await zoomIn.click()
-      for (const { corner, tool } of [{ corner: { x: 1, y: 1 }, tool: TOOLS[3] }, { corner: { x: 0, y: 0 }, tool: TOOLS[1] }]) {
-        await page.evaluate(({ x, y }) => {
-          const body = document.querySelector('section[aria-label="Board"] .ui-body')
-          body.scrollLeft = x * body.scrollWidth
-          body.scrollTop = y * body.scrollHeight
-        }, corner)
-        await changeTool(page, tool)
-        const read = await readBanner(page)
-        const label = JSON.stringify(read)
-        assert.equal(within(read.banner, read.view), true, `banner inside the card body's visible part: ${label}`)
-        assert.equal(within(read.banner, read.canvas), true, `banner on the board: ${label}`)
-        assert.equal(read.canvas.left < read.view.left - SLACK_PX || read.canvas.right > read.view.right + SLACK_PX, true, `the board overflows the view: ${label}`)
-        const shown = { left: Math.max(read.view.left, read.canvas.left), right: Math.min(read.view.right, read.canvas.right) }
-        assert.equal(Math.abs(centreX(read.banner) - centreX(shown)) <= SLACK_PX, true, `banner centred across the board's visible part: ${label}`)
-      }
+      it('stays on the visible part of a zoomed board, scrolled to each far corner', async () => {
+        const { page } = opened
+        const zoomIn = page.getByRole('button', { name: 'Zoom in' })
+        // The button disables at the zoom limit.
+        for (let step = 0; step < ZOOM_STEPS && await zoomIn.isEnabled(); step++) await zoomIn.click()
+        for (const { corner, tool } of [{ corner: { x: 1, y: 1 }, tool: TOOLS[3] }, { corner: { x: 0, y: 0 }, tool: TOOLS[1] }]) {
+          await page.evaluate(({ x, y }) => {
+            const body = document.querySelector('section[aria-label="Board"] .ui-body')
+            body.scrollLeft = x * body.scrollWidth
+            body.scrollTop = y * body.scrollHeight
+          }, corner)
+          await changeTool(page, tool)
+          const read = await readBanner(page)
+          const label = JSON.stringify(read)
+          assert.equal(within(read.banner, read.view), true, `banner inside the card body's visible part: ${label}`)
+          assert.equal(within(read.banner, read.canvas), true, `banner on the board: ${label}`)
+          assert.equal(read.canvas.left < read.view.left - SLACK_PX || read.canvas.right > read.view.right + SLACK_PX, true, `the board overflows the view: ${label}`)
+          const shown = { left: Math.max(read.view.left, read.canvas.left), right: Math.min(read.view.right, read.canvas.right) }
+          assert.equal(Math.abs(centreX(read.banner) - centreX(shown)) <= SLACK_PX, true, `banner centred across the board's visible part: ${label}`)
+        }
+      })
     })
-  })
+  }
 }
 
 describe('the tool-change banner with board coordinates on', () => {

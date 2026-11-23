@@ -271,6 +271,7 @@ export function plantIn (source, plant) {
   if (scope.indexOf(find, at + 1) !== -1) throw new Error(`${plant.id}: its line is in ${plant.handler ?? plant.file} more than once`)
   const planted = source.slice(0, start + at) + replace + source.slice(start + at + find.length)
   try {
+    // eslint-disable-next-line no-new -- the constructor throws on a syntax error, which is the check
     new Script(planted, { filename: plant.file })
   } catch (e) {
     throw new Error(`${plant.id}: ${plant.file} does not parse with it in: ${e.message}`)

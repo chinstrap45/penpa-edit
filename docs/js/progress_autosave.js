@@ -7,44 +7,44 @@
 // PenpaProgress.save does not wait for its write, so this repeats its conditions and its stored text (the duplicate
 // link with `&l=solvedup`) and awaits the write itself. A failed write rejects.
 // MVP gap: a second copy of PenpaProgress.save's conditions, until the engine API owns saving.
-async function saveProgressNow() {
-    if (!pu.url || !UserSettings.save_current_puzzle || pu.mmode !== 'solve' || pu.replay ||
+async function saveProgressNow () {
+  if (!pu.url || !UserSettings.save_current_puzzle || pu.mmode !== 'solve' || pu.replay ||
         !(await PenpaProgress.canSaveProgress())) {
-        return false;
-    }
-    await localforage.setItem(PenpaProgress.getHash(pu.url), pu.maketext_duplicate() + '&l=solvedup');
-    return true;
+    return false
+  }
+  await localforage.setItem(PenpaProgress.getHash(pu.url), pu.maketext_duplicate() + '&l=solvedup')
+  return true
 }
 
 // MVP gap: patches Puzzle's methods until the engine API reports changes. Puzzle.record logs every edit; undo and redo move the log without calling it,
 // and reset_board (Restart) clears it without calling it either. mode_set is no trigger: it calls the sub-mode and style methods itself.
 // The tool is part of the saved text, and a reload restores it only from a save made after it changed. The save waits one task so the change's
 // own call has finished, and several changes in that task make one save.
-const AUTOSAVE_TRIGGERS = ['record', 'undo', 'redo', 'reset_board', 'submode_check', 'subsymbolmode', 'subcombimode', 'stylemode_check'];
-function startProgressAutosave() {
-    let saveQueued = false;
-    const saveSoon = () => {
-        if (saveQueued) {
-            return;
-        }
-        saveQueued = true;
-        setTimeout(async () => {
-            saveQueued = false;
-            try {
-                await saveProgressNow();
-            } catch (err) {
-                console.error("progress autosave: could not save to local storage:", err);
-            }
-        }, 0);
-    };
-    for (const name of AUTOSAVE_TRIGGERS) {
-        const original = Puzzle.prototype[name];
-        Puzzle.prototype[name] = function (...args) {
-            const result = original.apply(this, args);
-            saveSoon();
-            return result;
-        };
+const AUTOSAVE_TRIGGERS = ['record', 'undo', 'redo', 'reset_board', 'submode_check', 'subsymbolmode', 'subcombimode', 'stylemode_check']
+function startProgressAutosave () {
+  let saveQueued = false
+  const saveSoon = () => {
+    if (saveQueued) {
+      return
     }
+    saveQueued = true
+    setTimeout(async () => {
+      saveQueued = false
+      try {
+        await saveProgressNow()
+      } catch (err) {
+        console.error('progress autosave: could not save to local storage:', err)
+      }
+    }, 0)
+  }
+  for (const name of AUTOSAVE_TRIGGERS) {
+    const original = Puzzle.prototype[name]
+    Puzzle.prototype[name] = function (...args) {
+      const result = original.apply(this, args)
+      saveSoon()
+      return result
+    }
+  }
 }
 
-startProgressAutosave();
+startProgressAutosave()
