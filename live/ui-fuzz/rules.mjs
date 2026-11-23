@@ -186,8 +186,11 @@ export const RULES = [
         if (!is || is.shown !== was.shown) return [`the reload ${was.shown ? 'closed' : 'opened'} ${was.name}`]
         const expected = {
           ...was.rect,
-          // Recent's bottom stays on the desk's bottom, so a Recent that gets shorter ends lower (#306).
-          y: was.rect.y + above(was.rect).reduce((sum, c) => sum + grew(c.name), 0) - (was.name === RECENT_CARD ? grew(was.name) : 0),
+          // Recent's bottom stays on the desk's bottom, so a Recent that gets shorter ends lower, and the cards above it
+          // do not move it (#306, #392). A Recent of the same height may still stack under them.
+          y: was.name === RECENT_CARD && grew(was.name) !== 0
+            ? was.rect.y - grew(was.name)
+            : was.rect.y + above(was.rect).reduce((sum, c) => sum + grew(c.name), 0),
           height: was.rect.height + grew(was.name)
         }
         // A card whose rectangle is as it was never moved, whatever the column above it did.
