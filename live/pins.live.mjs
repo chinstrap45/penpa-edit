@@ -261,6 +261,25 @@ describe('the mouse wheel over the board', () => {
   })
 })
 
+describe('the mouse wheel over a zoomed board', () => {
+  let opened
+  before(async () => { opened = await openSolve(['Line Normal', 'Surface']) })
+  after(async () => { await opened?.context.close() })
+
+  it('scrolls the board and changes no pin once the board overflows its card', async () => {
+    const { page } = opened
+    const body = page.locator('section[aria-label="Board"] .ui-body')
+    for (let i = 0; i < 12; i += 1) await page.getByRole('region', { name: 'Board' }).getByRole('button', { name: 'Zoom in' }).click()
+    assert.equal(await settle(() => body.evaluate((node) => node.scrollHeight > node.clientHeight), true), true, 'the zoomed board overflows')
+    await setTool(page, { mode: 'line', submode: '1' })
+    const box = await body.boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.wheel(0, 100)
+    assert.equal(await settle(() => body.evaluate((node) => node.scrollTop > 0), true), true, 'the board scrolled')
+    assert.equal((await currentTool(page)).mode, 'line')
+  })
+})
+
 describe('the mouse wheel over the Rules card', () => {
   let opened
   before(async () => {
