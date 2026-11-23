@@ -479,6 +479,25 @@
         return pairs;
     }
 
+    // The pairs of `overlappingPairs`' shape the solver left over each other: both cards placed by the solver in a desk of
+    // the same size, their saved boxes overlapping there (a card saved with no height has its current one). A kept layout
+    // does not say which overlaps are deliberate, so the open recomputes them; any other pair is the window's doing.
+    function deliberateOverlaps(cards) {
+        const boxSaved = (id) => {
+            const { x, y, w, h = cards[id].node.offsetHeight } = saved[id];
+            return { left: x, top: y, right: x + w, bottom: y + h };
+        };
+        const isPlaced = (id) => saved[id]?.x !== undefined && !saved[id].fitted;
+        const ids = shownIds(cards).filter(isPlaced);
+        const pairs = new Map();
+        ids.forEach((a, i) => ids.slice(i + 1).forEach((b) => {
+            if (saved[a].vw === saved[b].vw && saved[a].vh === saved[b].vh && boxesMeet(boxSaved(a), boxSaved(b))) {
+                pairs.set(`${a}/${b}`, [a, b]);
+            }
+        }));
+        return pairs;
+    }
+
     // Cards newly put over each other, by a smaller window, places kept from another puzzle or a card that grew, not by the
     // solver, nudged apart and never refitted (#344): the Board card narrows into the room between the cards beside it, and
     // each overlap left (or one a too narrow Board leaves) moves the lower of its two cards below the other, or above it, shrunk
@@ -1434,6 +1453,7 @@
         openLayout();
         fitPending = Object.keys(saved).length === 0;
         layout(desk);
+        repairOverlaps(desk.desk, desk.cards, deliberateOverlaps(desk.cards));
         const relayout = () => layout(desk);
         // The cards laid out again by `step`, and the pairs it newly put over each other nudged apart.
         const nudged = (step) => {
