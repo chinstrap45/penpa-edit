@@ -10,8 +10,8 @@ const browser = useBrowser()
 const LAPTOP = { width: 1366, height: 768 }
 const PENPA_URL = 'https://github.com/swaroopg92/penpa-edit'
 const PENPA_LICENCE_URL = `${PENPA_URL}/blob/master/LICENSE`
-const FORK_URL = 'https://github.com/caneff/penpa-edit'
-const FORK_LINK_TEXT = 'caneff/penpa-edit'
+const FORK_URL = 'https://github.com/chinstrap45/penpa-edit'
+const FORK_LINK_TEXT = 'chinstrap45/penpa-edit'
 // Shift+Tab presses from a freshly opened dialog that are enough to leave it, whatever holds focus first.
 const FIRST_TAB_STOPS_TO_LEAVE = 4
 
@@ -98,7 +98,7 @@ describe('the About group in Settings', () => {
     }
   })
 
-  it('brings Shift+Tab that leaves the dialog back to its last control, an About link', async () => {
+  it('brings Shift+Tab that leaves the dialog back inside it, reaching an About link', async () => {
     const { context, page } = await open('light')
     try {
       await page.getByRole('button', { name: 'Settings' }).click()

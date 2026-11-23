@@ -46,6 +46,7 @@
             stages.push(engine.getState().historyLength);
             renderHistory();
         });
+        tryButton.node.classList.add('ui-try');
         const trialDepth = el('span', { class: 'ui-trial-depth' });
         const keep = textButton('Keep', 'End this trial and keep what you entered in it', () => keepStages(1));
         const discard = textButton('Discard', 'Undo everything entered since this trial began, and end it', () => discardStages(1));
@@ -92,8 +93,9 @@
         const pause = iconButton(ICONS.pause, 'Pause', () => (engine.getTimer().covered ? engine.startTimer() : engine.pauseTimer()), PAUSE_KEY);
 
         // index.html reads the progress back from the store by the same link, so the link and a finished save carry it. Saving on
-        // unload alone loses the race with the navigation, and with no save the progress would be gone from both pages.
-        const goToPenpa = () => { location.href = `index.html${location.search}${location.hash}`; };
+        // unload alone loses the race with the navigation, and with no save the progress would be gone from both pages. The
+        // link is marked so index.html does not forward it straight back here (#376).
+        const goToPenpa = () => { location.href = `index.html${withPenpaMark(location.search + location.hash)}`; };
         const openInPenpa = textButton('Penpa+', 'Open this puzzle in Penpa+', async () => {
             if (await engine.saveProgress()) {
                 goToPenpa();
@@ -101,6 +103,8 @@
                 notSavedDialog.open = true;
             }
         });
+
+        openInPenpa.node.classList.add('ui-open-penpa');
 
         const notSavedDialog = confirmDialog({
             label: 'Progress is not being saved',

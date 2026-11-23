@@ -8,7 +8,9 @@ import { settle } from './settle.mjs'
 const browser = useBrowser()
 
 const UPSTREAM = 'https://swaroopg92.github.io/penpa-edit/'
-const FORK = 'https://caneff.github.io/penpa-edit/'
+const FORK = 'https://chinstrap45.github.io/penpa-edit/'
+// The fork's address before the move to chinstrap45: a link shared then still opens (spec #373).
+const OLD_FORK = 'https://caneff.github.io/penpa-edit/'
 
 // Opens bare solve.html: the paste box shows, no desk is built.
 async function openBare () {
@@ -40,6 +42,7 @@ describe('solve.html with no puzzle data', () => {
     ['fork host, solve.html', `${FORK}solve.html${AKARI_SOLVE}`, AKARI_SOLVE],
     ['upstream host, puzzle in the query', `${UPSTREAM}?${AKARI_SOLVE.slice(1)}`, AKARI_SOLVE],
     ['fork host, puzzle in the query', `${FORK}solve.html?${AKARI_SOLVE.slice(1)}`, AKARI_SOLVE],
+    ['fork\'s old host, solve.html', `${OLD_FORK}solve.html${AKARI_SOLVE}`, AKARI_SOLVE],
     ['upstream host, puzzle and answer in the query', `${UPSTREAM}?${AKARI_SOLVE.slice(1)}${ANSWER}`, AKARI_SOLVE + ANSWER],
     ['upstream host, a query without p= and the puzzle in the #', `${UPSTREAM}?fbclid=abc${AKARI_SOLVE}`, AKARI_SOLVE],
     ['upstream host, a query whose parameter only ends in p=, and the puzzle in the #', `${UPSTREAM}?sp=1${AKARI_SOLVE}`, AKARI_SOLVE],
@@ -114,7 +117,7 @@ describe('the paste page\'s look (#193)', () => {
       assert.equal(look.buttonTag, 'WA-BUTTON')
       assert.equal(look.upgraded, true)
       assert.equal(await bare.page.getByRole('heading', { name: 'ChinStrap solve page' }).count(), 1)
-      assert.match(look.pageText, /https:\/\/caneff\.github\.io\/penpa-edit\/\S*[?#]\S*p=/, 'an example link')
+      assert.match(look.pageText, /https:\/\/chinstrap45\.github\.io\/penpa-edit\/\S*[?#]\S*p=/, 'an example link')
     } finally { await bare.context.close() }
   })
 

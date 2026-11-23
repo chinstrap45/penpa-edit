@@ -1,7 +1,9 @@
 // Opening Penpa+ in headless Chromium for a test. Not a check itself, so `live/**/*.live.mjs` skips it.
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { after, afterEach, before } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import vm from 'node:vm'
 import { chromium } from 'playwright'
 import { settle } from './settle.mjs'
 
@@ -13,6 +15,15 @@ const SOLVE_URL = new URL('../docs/solve.html', import.meta.url).href
 
 // Where a test that needs cookies is served `docs/` from.
 export const PENPA_ORIGIN = 'https://penpa.test'
+
+// The mark the solve page's Penpa+ button adds to the link it opens, so index.html does not forward it back to the solve
+// page (#376), and the function that adds it: read from the shipped script, so a test marks a link as the page does.
+const solveForward = vm.runInNewContext(
+  readFileSync(new URL('../docs/js/solve_forward.js', import.meta.url), 'utf8') + ';({ PENPA_MARK, withPenpaMark })', {})
+export const PENPA_MARK = solveForward.PENPA_MARK
+
+// `query` marked when it is a solve link (`m=solve` in its query or `#` data), so a test of Penpa+'s own page stays on it.
+export const markedForPenpa = (query) => query.split(/[?#&]/).includes('m=solve') ? solveForward.withPenpaMark(query) : query
 
 // `pu.maketext_solve()` after importing Akari 1 of `test/public/puzz_link_parser.js`, whose snapshot holds 13 numbers.
 export const AKARI_SOLVE = '#m=solve&p=1VTtb7pIEP7uX9Hs124QBC2SNBff2qRpvXq1P68SY1BRUHQtL63BtH97Z3bxcNE2l7vchwvszOwzy+zMss9Er4kTulRT8dVNChoeQzP5qJg1PtTs6ftx4FoXtJHEHgvB8OJ4G1nl8jZJh+lQCfzNqrz9zVk5oV/WVHwVZaF4iq8slZUSKLGqGfoE124p/f3mhs6dIHLp3cuy2V413juNP8vVoa4/d+eXy3bveTkb/NJ6ql8O1W5gbh4e283g8jYdPniNN7fj1h4jNvUC15k56XBwtws2N+bCm2utO69lzp2NGr2a/fpbs3d9XbKzGkYlm2iEkgoMjYw+yZStJz75tAnPmlB9VNqnf1j7dGzZow+aPuemmZtP1p7oKrEMSnRNKF2oGleGIVSdq6pQNeEzxawuPq+Lz+sVoTAKxO9m8W1yQegVT1XsJAOwWgZgBwnAPGQANpcAzE0CMEsJwHzh+A5TzNvW8ikmZeRTqMPW8ylmeFgMdWnWHuQLl304SprqXLa5VLmscnnP13S4HHDZ4tLgssbXXOHPKJVsXVxb+an+/zC8nE9JOHemLlzPFltvWeTHLoErSSIWjCPhG7s7ZxoTS5Dn2CNhm2Q9cUMJChjbAknPRTi4JNBfbFjonnUh6M4W34VC15lQExbOCjm9O0Eg18J7kgRN/XAayFAMZD2eO2HI3iVk7cSeBEycGPpX5PlbOZK7KRxm7MgpitYgxc6P46NEdoQPuPcVamD/qFtpg6a3wKOjXkPTHjSQBytrOdhEbELgr1OyToLYn7KAwb4ZBgTgX1fA7OTmgPvRaglQU8HuZjaYL2CK4xrfC+TRstM+JZhAk3+NJlmzN6hAJIhzkRQAR6cEzRDKTWZslWRLNSRx4x+UAZEOZaApykDrTBlY3b8u4692XqigPvoQf0z9m31edOP/qHftMmaz8Ady584ifIbigP7A8iPvOfwbQh95i/gJezHZUwIDeobDgBZpDNApkwE8ITNg3/AZoxYpjVkVWY1bnRAbtzrm9uEijUoc+AI='
@@ -60,10 +71,12 @@ export function jsRequest (file) {
 // `url` opens that address (plus `query`) instead of the checkout's page, `solve: true` opens `solve.html` in place of the
 // default page, `ready` is the page function that says the page is up (default: `pu` exists), and `setup(context)` runs
 // before the page opens.
-// `contextOptions` go to `browser.newContext`. `dialogs` holds the message of every native dialog the page opened, each
-// dismissed, and `errors` every page error and `console.error` so far.
-export async function openPenpa (browser, query = '', { cookies = [], served = false, solve = false, url, ready = () => typeof pu !== 'undefined', setup, contextOptions } = {}) {
+// `contextOptions` go to `browser.newContext`. solve.html's tour is skipped on every page of the context as it shows,
+// unless `tour` is true. `dialogs` holds the message of every native dialog the page opened, each dismissed, and `errors` every page
+// error and `console.error` so far.
+export async function openPenpa (browser, query = '', { cookies = [], served = false, solve = false, url, ready = () => typeof pu !== 'undefined', setup, contextOptions, tour = false } = {}) {
   const context = await penpaContext(browser, { served, setup, contextOptions })
+  if (!tour) context.on('page', skipTourOnEveryLoad)
   if (cookies.length) await context.addCookies(cookies)
   const page = await context.newPage()
   const errors = []
@@ -71,7 +84,7 @@ export async function openPenpa (browser, query = '', { cookies = [], served = f
   onErrors(page, (e) => errors.push(e))
   const dialogs = []
   page.on('dialog', async (d) => { dialogs.push(d.message()); await d.dismiss() })
-  await page.goto((url ?? penpaAddress(served, solve)) + query)
+  await page.goto((url ?? penpaAddress(served, solve)) + (solve ? query : markedForPenpa(query)))
   await page.waitForFunction(ready)
   return { context, page, dialogs, errors }
 }
@@ -98,7 +111,7 @@ export async function openReloader (browser, { served = false, setup, contextOpt
       await context.clearCookies()
       errors = []
       pageErrors.push(errors)
-      await page.goto(penpaAddress(served) + query)
+      await page.goto(penpaAddress(served) + markedForPenpa(query))
       await page.waitForFunction(() => typeof pu !== 'undefined')
       return { page, errors }
     },
@@ -118,10 +131,40 @@ function wipeStorageInPage () {
   indexedDB.deleteDatabase('localforage')
 }
 
+// What skipping the tour on a page raised, other than the page navigating away or closing, checked after each test.
+const tourSkipErrors = []
+pageErrors.push(tourSkipErrors)
+
+// Has `page` skip solve.html's tour on each load, as `skipTourInPage` does. Not an init script: a context with one loses
+// kept card layouts over a reload under load (desk.live.mjs failed 21 of 36 runs, against 0 without one, #381).
+function skipTourOnEveryLoad (page) {
+  page.on('domcontentloaded', () => {
+    if (!new URL(page.url()).pathname.endsWith('/solve.html')) return
+    page.evaluate(skipTourInPage).catch((e) => {
+      // A page that navigated on or closed has no tour left to skip; its next load is handled by its own event.
+      if (!page.isClosed() && !/Execution context was destroyed|Target .*closed/.test(e.message)) tourSkipErrors.push(`skipping the tour: ${e.message}`)
+    })
+  })
+}
+
+// Runs in solve.html: presses Skip tour as soon as the tour is in the page, before the page takes any event, so its
+// dimmed backdrop takes no test's clicks.
+function skipTourInPage () {
+  const skip = () => {
+    const button = [...document.querySelectorAll('.ui-tour wa-button')].find((node) => node.textContent === 'Skip tour')
+    // A wa-button presses its inner button, which exists once Lit has rendered it, a microtask after it is added.
+    button?.updateComplete.then(() => button.click())
+    return Boolean(button)
+  }
+  if (skip()) return
+  const watcher = new MutationObserver(() => { if (skip()) watcher.disconnect() })
+  watcher.observe(document.body, { childList: true, subtree: true })
+}
+
 // A context for Penpa+'s pages, answering its network loads, with `served` and `setup` as `openPenpa` takes them.
 async function penpaContext (browser, { served, setup, contextOptions }) {
   const context = await browser.newContext(contextOptions)
-  // Penpa+'s only network loads are Google Tag Manager's: answered empty, so a run needs no network and counts as no visit.
+  // Answers every network load empty, so a run needs no network and counts as no visit to anyone.
   await context.route(/^https?:\/\//, (route) => route.fulfill({ status: 200, body: '' }))
   if (served) {
     await serveDocs(context, PENPA_ORIGIN)
@@ -161,6 +204,9 @@ export const LAYOUT_KEY = 'chinstrap-solve-layout-v1'
 
 // The localStorage key `engine_bridge.js` keeps the solve page's theme under.
 export const THEME_KEY = 'chinstrap-solve-theme-v1'
+// The localStorage key `ui/tour.js` marks the tour seen under, once it is skipped or finished.
+export const TOUR_KEY = 'chinstrap-solve-tour-v1'
+export const TOUR_SEEN = 'seen'
 
 export const GIVEN_CELL = 0
 export const ANSWER_CELL = 1
@@ -386,6 +432,9 @@ export async function waitForTool (page, want, message = 'the tool settles') {
 // Two animation frames: the bridge's `change` fires in the first, and the UI has drawn it by the second. A ResizeObserver also runs in a frame, so this waits for a layout change the page reacts to.
 export const afterChange = (page) => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 
+// Waits until every running animation on the page (a dialog opening, colours easing to a new theme) has finished.
+export const animationsDone = (page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+
 // Fails unless the engine reports fewer than 5 changes in one second with nobody touching the page (a "nothing happened in
 // N ms" check): a redraw that wakes the next change loops every frame, about 60 a second (#322). The bound is not zero
 // because Penpa+'s own clock (`h1#timer`, outside the UI) rewrites its text once a second, which the watcher sees as a
@@ -432,4 +481,25 @@ export function contrastHelpersInPage () {
   }
   const ratio = (a, b) => { const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05) }
   return { luminance, parse, over, ratio }
+}
+
+// Runs in the page: the product of the opacities of a node and its flat-tree ancestors, which dims what the node shows.
+export function opacityOfInPage (node) {
+  let product = 1
+  for (let n = node; n; n = n.assignedSlot ?? n.parentElement ?? n.getRootNode()?.host ?? null) {
+    if (n.nodeType === 1) product *= Number(getComputedStyle(n).opacity)
+  }
+  return product
+}
+
+// Runs in the page: the colour a node's own box shows, composited over its ancestors in the flat tree (a slotted node sits in its slot).
+export function groundOfInPage (node, parse, over) {
+  const layers = []
+  for (let n = node; n; n = n.assignedSlot ?? n.parentElement ?? n.getRootNode()?.host ?? null) {
+    if (n.nodeType !== 1) continue
+    const bg = parse(getComputedStyle(n).backgroundColor)
+    if (bg[3] > 0) layers.push(bg)
+    if (bg[3] === 255) break
+  }
+  return layers.reduceRight((under, top) => over(top, under), [255, 255, 255, 255])
 }

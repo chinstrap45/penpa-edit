@@ -19,9 +19,17 @@ function headerOf () {
 }
 
 describe('the Redirect script', () => {
-  it('has a version above 1.0.0', () => {
+  it('has a version above 1.1.0, the one that named the old address', () => {
     const [major, minor, patch] = headerOf().version.split('.').map(Number)
-    assert.ok(major > 1 || (major === 1 && (minor > 0 || patch > 0)), headerOf().version)
+    assert.ok(major > 1 || (major === 1 && (minor > 1 || (minor === 1 && patch > 0))), headerOf().version)
+  })
+
+  it('names ChinStrap, the name the pages speak in, and not caneff, in what Tampermonkey shows', () => {
+    const { name, description } = headerOf()
+    for (const shown of [name, description]) {
+      assert.match(shown, /ChinStrap/)
+      assert.doesNotMatch(shown, /caneff/i)
+    }
   })
 
   it('matches upstream\'s pages, runs at document start and updates from the raw file on master', () => {
