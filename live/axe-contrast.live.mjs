@@ -121,8 +121,9 @@ describe('the contrast check', () => {
       await page.getByRole('dialog', { name: 'Settings' }).waitFor()
       await animationsDone(page)
       await page.addStyleTag({ content: 'wa-dialog[open] legend { color: #ddd !important; }' })
-      const found = await contrastViolations(page)
-      assert.ok(found.some((line) => line.includes('legend')), `a planted #ddd legend is reported: ${JSON.stringify(found)}`)
+      // Axe's first run after the welcome dialog has closed can miss the legend (#408); the run after it reports it.
+      const found = await settle(async () => (await contrastViolations(page)).filter((line) => line.includes('legend')).length > 0, true, { patient: true })
+      assert.ok(found, 'a planted #ddd legend is reported')
     } finally { await context.close() }
   })
 
