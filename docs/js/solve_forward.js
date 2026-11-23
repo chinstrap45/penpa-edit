@@ -1,6 +1,6 @@
 // caneff: index.html forwards a solve link to the ChinStrap solve page on a desktop-sized screen (#376, spec #373 § Forwarding).
 // The solve page's Penpa+ button marks the link it opens with PENPA_MARK so the forward skips it, and index.html's ChinStrap
-// button drops the mark again. Loaded by both pages; only index.html calls forwardSolveLink, as early in its head as it can.
+// button drops the mark again. Call forwardSolveLink before anything else loads, so a forwarded page never paints.
 
 // The parameter that keeps a solve link on index.html.
 const PENPA_MARK = 'ui=penpa';
