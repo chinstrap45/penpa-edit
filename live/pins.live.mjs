@@ -148,6 +148,67 @@ describe('Tab, Shift+Tab and Enter', () => {
   })
 })
 
+describe('the mouse wheel over the board', () => {
+  let opened
+  before(async () => { opened = await openSolve(['Line Normal', 'Surface', 'Special', 'Shape']) })
+  after(async () => { await opened?.context.close() })
+
+  const modeNow = async (page) => (await currentTool(page)).mode
+  const overCentre = async (page, selector) => {
+    const box = await page.locator(selector).boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  }
+  // Whether the page's own scrolling was left alone for the last wheel event, read after every handler has run.
+  const watchPrevented = (page) => page.evaluate(() => {
+    const first = window.wheelPrevented === undefined
+    window.wheelPrevented = []
+    if (first) document.addEventListener('wheel', (e) => window.wheelPrevented.push(e.defaultPrevented), { passive: true })
+  })
+
+  it('steps once per notch, down as Tab and up as Shift+Tab, and keeps the page from scrolling', async () => {
+    const { page } = opened
+    await watchPrevented(page)
+    await setTool(page, { mode: 'line', submode: '1' })
+    await overCentre(page, 'section[aria-label="Board"] .ui-body')
+    await page.mouse.wheel(0, 100)
+    await waitForTool(page, { mode: 'surface', submode: null }, 'a notch down is Tab')
+    await page.mouse.wheel(0, 100)
+    assert.equal(await settle(() => modeNow(page), 'special'), 'special', 'a second notch steps again')
+    await page.mouse.wheel(0, -100)
+    await waitForTool(page, { mode: 'surface', submode: null }, 'a notch up is Shift+Tab')
+    await page.mouse.wheel(0, -100)
+    await waitForTool(page, { mode: 'line', submode: '1' }, 'up again, back to pin 1')
+    await page.mouse.wheel(0, -100)
+    assert.equal(await settle(() => modeNow(page), 'symbol'), 'symbol', 'up from the first pin wraps to the last')
+    assert.deepEqual(await page.evaluate(() => window.wheelPrevented), [true, true, true, true, true])
+  })
+
+  it('adds up a trackpad\'s small deltas: two thirds of a notch is no step, a whole notch is one', async () => {
+    const { page } = opened
+    await setTool(page, { mode: 'line', submode: '1' })
+    await overCentre(page, 'section[aria-label="Board"] .ui-body')
+    for (let i = 0; i < 6; i += 1) await page.mouse.wheel(0, 10)
+    // "Nothing happened": the steps are synchronous in the handler, so a frame is enough for a wrong step to show.
+    await afterChange(page)
+    assert.equal(await modeNow(page), 'line', '60 of 100 px is no step')
+    for (let i = 0; i < 4; i += 1) await page.mouse.wheel(0, 10)
+    await waitForTool(page, { mode: 'surface', submode: null }, '100 px in all is one step')
+    for (let i = 0; i < 25; i += 1) await page.mouse.wheel(0, 10)
+    assert.equal(await settle(() => modeNow(page), 'symbol'), 'symbol', '250 px more is two steps: Surface to Shape')
+  })
+
+  it('leaves the Rules card scrolling and the pins alone', async () => {
+    const { page } = opened
+    await watchPrevented(page)
+    await setTool(page, { mode: 'line', submode: '1' })
+    await overCentre(page, 'section[aria-label="Rules"] .ui-body')
+    await page.mouse.wheel(0, 100)
+    await afterChange(page)
+    assert.equal(await modeNow(page), 'line')
+    assert.deepEqual(await page.evaluate(() => window.wheelPrevented), [false])
+  })
+})
+
 describe('Z, X, C and V', () => {
   let opened
   before(async () => { opened = await openSolve(['Sudoku Normal', 'Line Normal', 'Wall', 'Number Normal']) })
