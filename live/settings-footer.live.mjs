@@ -9,7 +9,7 @@ const browser = useBrowser()
 const DISCORD_URL = 'https://discord.com/users/184770560356646923'
 
 describe('the footer of Settings', () => {
-  it('names Chris on Discord and links the Redirect script, each in a new tab that leaves the page as it was', async () => {
+  it('names @ChinStrap on Discord and links the Redirect script, each in a new tab that leaves the page as it was', async () => {
     const { context, page } = await openSolvePage(browser(), AKARI_SOLVE, { served: true })
     try {
       await page.getByRole('button', { name: 'Settings' }).click()
@@ -25,7 +25,7 @@ describe('the footer of Settings', () => {
         return [card.id || card.getAttribute('aria-label'), left, top, width, height]
       }))
       const before = await cardBoxes()
-      for (const [name] of [['@ChinStrap'], ['install the Redirect script']]) {
+      for (const name of ['@ChinStrap', 'install the Redirect script']) {
         const opened = context.waitForEvent('page')
         await footer.getByRole('link', { name }).click()
         const tab = await opened

@@ -14,6 +14,7 @@ const CELL = 12
 // Two tools the puzzle does not pin, so the Recent card holds chips once both have been used.
 const UNPINNED_TOOLS = [{ mode: 'sudoku', submode: '2' }, { mode: 'sudoku', submode: '3' }]
 const NORMAL_TOOL = { mode: 'sudoku', submode: '1' }
+const CORNER_TOOL = { mode: 'sudoku', submode: '2' }
 
 // Runs in the page. The visible, enabled controls of the top bar and the cards, in page order, kept on `window` so a later call
 // can say which of them has focus. The Mode card's tree and an open picker list answer their own arrow keys, so of the tree only
@@ -73,7 +74,8 @@ describe('keyboard reach on the solve page', () => {
   for (const key of ['Space', 'Enter']) {
     it(`${key} on a focused pin chip picks its tool and leaves the board as it was`, async () => {
       const { page } = opened
-      await setTool(page, NORMAL_TOOL)
+      // From Corner the pin cycle's next stop is Normal, not Surface, so only the chip's own press lands on Surface.
+      await setTool(page, CORNER_TOOL)
       const before = (await board(page)).entered
       const chip = page.getByRole('region', { name: 'Pinned' }).getByRole('button', { name: /Surface/ }).first()
       await chip.focus()

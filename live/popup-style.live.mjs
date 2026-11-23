@@ -6,28 +6,27 @@ import { AKARI_SOLVE, animationsDone, openPenpa, openSolvePage, useBrowser } fro
 
 const browser = useBrowser()
 
-const PANEL_PROPS = ['fontFamily', 'backgroundColor', 'color', 'borderRadius']
-const BUTTON_PROPS = ['fontFamily', 'backgroundColor', 'color', 'borderRadius']
+const STYLE_PROPS = ['fontFamily', 'backgroundColor', 'color', 'borderRadius']
 
 // Runs in the page. The computed values of a Penpa popup (the answer check's kind: a title, a text and a confirm button).
-async function popupStyleInPage ([panelProps, buttonProps]) {
-  const read = (node, props) => Object.fromEntries(props.map((p) => [p, getComputedStyle(node)[p]]))
+async function popupStyleInPage (props) {
+  const read = (node, keys = props) => Object.fromEntries(keys.map((p) => [p, getComputedStyle(node)[p]]))
   Swal.fire({ title: 'Congratulations!', text: 'You solved it.', icon: 'success' })
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   // The popup's own animations and the button's box-shadow transition must be over before a value is read.
   await Promise.all(document.getAnimations().map((a) => a.finished))
   return {
-    panel: read(document.querySelector('.swal2-popup'), panelProps),
+    panel: read(document.querySelector('.swal2-popup')),
     title: read(document.querySelector('.swal2-title'), ['fontFamily']),
     text: read(document.querySelector('.swal2-html-container'), ['fontFamily']),
-    button: read(document.querySelector('.swal2-confirm'), buttonProps),
+    button: read(document.querySelector('.swal2-confirm')),
     focused: read(document.querySelector('.swal2-confirm'), ['boxShadow'])
   }
 }
 
 // Runs in the page, with the Settings dialog open. The values of that dialog's panel, and of a brand button, which is what a dialog's main action is.
-async function pageDialogStyleInPage ([panelProps, buttonProps]) {
-  const read = (node, props) => Object.fromEntries(props.map((p) => [p, getComputedStyle(node)[p]]))
+async function pageDialogStyleInPage (props) {
+  const read = (node, keys = props) => Object.fromEntries(keys.map((p) => [p, getComputedStyle(node)[p]]))
   const dialog = document.querySelector('wa-dialog[label="Settings"]')
   const ok = document.createElement('wa-button')
   ok.variant = 'brand'
@@ -35,8 +34,8 @@ async function pageDialogStyleInPage ([panelProps, buttonProps]) {
   dialog.append(ok)
   await ok.updateComplete
   return {
-    panel: read(dialog.shadowRoot.querySelector('[part~="dialog"]'), panelProps),
-    button: read(ok.shadowRoot.querySelector('[part~="base"]'), buttonProps)
+    panel: read(dialog.shadowRoot.querySelector('[part~="dialog"]')),
+    button: read(ok.shadowRoot.querySelector('[part~="base"]'))
   }
 }
 
@@ -49,10 +48,10 @@ describe('a Penpa popup', () => {
         await animationsDone(page)
         await page.getByRole('button', { name: 'Settings' }).click()
         await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-        const want = await page.evaluate(pageDialogStyleInPage, [PANEL_PROPS, BUTTON_PROPS])
+        const want = await page.evaluate(pageDialogStyleInPage, STYLE_PROPS)
         await page.keyboard.press('Escape')
         await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
-        const got = await page.evaluate(popupStyleInPage, [PANEL_PROPS, BUTTON_PROPS])
+        const got = await page.evaluate(popupStyleInPage, STYLE_PROPS)
         assert.deepEqual(got.panel, want.panel)
         assert.deepEqual(got.button, want.button)
         assert.equal(got.title.fontFamily, want.panel.fontFamily)
@@ -83,7 +82,7 @@ describe('a Penpa popup', () => {
   it("on index.html keeps SweetAlert's own look", async () => {
     const { context, page } = await openPenpa(browser())
     try {
-      const got = await page.evaluate(popupStyleInPage, [PANEL_PROPS, BUTTON_PROPS])
+      const got = await page.evaluate(popupStyleInPage, STYLE_PROPS)
       assert.equal(got.panel.backgroundColor, 'rgb(255, 255, 255)')
       assert.equal(got.button.backgroundColor, 'rgb(112, 102, 224)')
     } finally {
