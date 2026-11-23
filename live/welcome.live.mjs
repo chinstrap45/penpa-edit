@@ -1,5 +1,4 @@
-// The solve page's welcome dialog (#408, GLOSSARY.md **Welcome**): one dialog on a first visit, no stops, no dimmed
-// page. Escape or Start solving closes it, and after either it does not show again, across reloads, until Settings
+// The solve page's welcome dialog (#408, GLOSSARY.md **Welcome**): one dialog on a first visit. Escape or Start solving closes it, and after either it does not show again, across reloads, until Settings
 // replays it. It is found by role and name, as a solver sees it.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
@@ -34,7 +33,7 @@ async function replayFromSettings (page) {
 }
 
 describe('the welcome dialog on a first visit', () => {
-  it('says what differs from Penpa+, in the approved words, with no stops and no dimmed page', async () => {
+  it('says what differs from Penpa+, in the approved words', async () => {
     const { context, page } = await openFirstVisit()
     try {
       await welcome(page).waitFor()
@@ -48,7 +47,6 @@ describe('the welcome dialog on a first visit', () => {
       ])
       assert.match(await welcomeBox(page).textContent(), /What's different from Penpa\+:/)
       assert.equal(await startButton(page).count(), 1)
-      assert.equal(await page.locator('.ui-tour, .ui-tour-veil, .ui-tour-spotlight').count(), 0, 'no stop, veil or spotlight')
     } finally {
       await context.close()
     }

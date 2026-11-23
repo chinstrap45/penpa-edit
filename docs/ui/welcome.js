@@ -22,26 +22,21 @@
 
   onDeskReady(() => {
     const root = document.querySelector('.ui-root')
-    let dialog = null
 
+    // Built afresh and removed once it has closed, by either way, so wa-after-hide marks the end of its closing animation.
+    // Settings is the only caller after the first visit, and it cannot be opened while this dialog is.
     function start () {
-      if (dialog) {
-        return
-      }
-      dialog = el('wa-dialog', { class: 'ui-welcome', label: 'Welcome to ChinStrap' }, [
+      const dialog = el('wa-dialog', { class: 'ui-welcome', label: 'Welcome to ChinStrap' }, [
         el('p', { class: 'ui-welcome-lead' }, ['What\'s different from Penpa+:']),
         el('ul', { class: 'ui-welcome-list' }, LINES.map((line) => el('li', {}, [line]))),
         el('wa-button', { slot: 'footer', variant: 'brand', 'data-dialog': 'close' }, ['Start solving'])])
-      const shown = dialog
-      // Removed once it has closed, by either way, so a replay builds it afresh.
-      shown.addEventListener('wa-after-hide', (e) => {
-        if (e.target === shown) {
-          shown.remove()
-          dialog = null
+      dialog.addEventListener('wa-after-hide', (e) => {
+        if (e.target === dialog) {
+          dialog.remove()
         }
       })
-      root.append(shown)
-      shown.open = true
+      root.append(dialog)
+      dialog.open = true
     }
 
     window.solveWelcome = { start }

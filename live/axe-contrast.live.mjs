@@ -55,7 +55,13 @@ async function violationsInPage ({ aaText, aaLargeText, scope }) {
 }
 
 // The violations on the whole page, or only inside the element `scope` selects.
-const contrastViolations = async (page, scope) => (await page.evaluate(violationsInPage, { aaText: AA_TEXT, aaLargeText: AA_LARGE_TEXT, scope })).lines
+// Axe's first run after a dialog has opened can judge only some of its text (4 of 30 nodes in Settings, #408); a run after it
+// judges all, so the first is a warm-up and the second is read.
+const contrastViolations = async (page, scope) => {
+  const run = () => page.evaluate(violationsInPage, { aaText: AA_TEXT, aaLargeText: AA_LARGE_TEXT, scope })
+  await run()
+  return (await run()).lines
+}
 
 // The welcome dialog on a first visit, its opening animation over.
 const WELCOME_DIALOG = '.ui-welcome'
@@ -121,9 +127,8 @@ describe('the contrast check', () => {
       await page.getByRole('dialog', { name: 'Settings' }).waitFor()
       await animationsDone(page)
       await page.addStyleTag({ content: 'wa-dialog[open] legend { color: #ddd !important; }' })
-      // Axe's first run after the welcome dialog has closed can miss the legend (#408); the run after it reports it.
-      const found = await settle(async () => (await contrastViolations(page)).filter((line) => line.includes('legend')).length > 0, true, { patient: true })
-      assert.ok(found, 'a planted #ddd legend is reported')
+      const found = await contrastViolations(page)
+      assert.ok(found.some((line) => line.includes('legend')), `a planted #ddd legend is reported: ${JSON.stringify(found)}`)
     } finally { await context.close() }
   })
 
