@@ -216,7 +216,7 @@ describe('the UI fuzz rules', () => {
     describe('when Pinned shrinks and Recent shrinks with its bottom on the desk\'s bottom (#392)', () => {
       const column = (pinnedHeight, recentY, recentHeight) => [card('Pinned', 1006, 72, 380, pinnedHeight), card('Recent', 1006, recentY, 380, recentHeight)]
       const before = { presetUndo: true, cards: column(124.375, 808, 80), recent: [pin(null, 'Line > Normal')] }
-      it('holds when Recent\'s bottom stays put, whatever Pinned\'s change in height', () => {
+      it('holds when Recent\'s bottom stays put while Pinned gets shorter', () => {
         assert.deepEqual(check('reload-keeps-layout-and-pins', { cards: column(96.1875, 832, 56) }, { action: action('reload'), before }), [])
       })
       it('fails when Recent\'s bottom moves', () => {
