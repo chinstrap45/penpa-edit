@@ -66,7 +66,7 @@
   const PENPA_LICENCE_URL = `${PENPA_URL}/blob/master/LICENSE`
   const FORK_URL = 'https://github.com/chinstrap45/penpa-edit'
   const DISCORD_URL = 'https://discord.com/users/184770560356646923'
-  const REDIRECT_SCRIPT_URL = 'https://raw.githubusercontent.com/chinstrap45/penpa-edit/master/userscript/penpa-redirect.user.js'
+  const REDIRECT_SCRIPT_URL = 'https://chinstrap45.github.io/sudokupad-scripts/#penpa-redirect'
 
   const newTabLink = (href, text) => el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, [text])
 
@@ -200,7 +200,7 @@
 
     const contactFooter = el('div', { class: 'ui-settings-about ui-settings-footer' }, [
       el('p', {}, ['Questions, bugs or suggestions? Message me on Discord: ', newTabLink(DISCORD_URL, '@ChinStrap')]),
-      el('p', {}, ['Opening Penpa+ links here: ', newTabLink(REDIRECT_SCRIPT_URL, 'install the Redirect script')])])
+      el('p', {}, ['Opening Penpa+ links here: ', newTabLink(REDIRECT_SCRIPT_URL, 'the Redirect script')])])
 
     const dialog = el('wa-dialog', { label: 'Settings' }, [...GROUPS.map(([title, rows]) => el('fieldset', { class: 'ui-settings-group' },
       [el('legend', {}, [title]), ...rows.map((row) => (specialRows.get(row) ?? control(row)))])), pageGroup, pinsGroup, aboutGroup, contactFooter])
