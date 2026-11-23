@@ -14,7 +14,8 @@
 
     const TEXT_ENTRY = 'input, textarea, select, [contenteditable], wa-input, wa-select';
     const OPEN_MENU = 'wa-dropdown[open], wa-select[open]';
-    const OPEN_DIALOG = 'wa-dialog[open]';
+    // The tour (tour.js) is a dialog too: it is in the page only while it shows.
+    const OPEN_DIALOG = 'wa-dialog[open], .ui-tour';
     // The Mode card's tool tree takes its own arrows, Enter, Space and Home; none of them is a board key.
     const TOOL_TREE = '[role=tree]';
     // A control the board still takes keys from while it has focus.

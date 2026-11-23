@@ -46,6 +46,7 @@
             stages.push(engine.getState().historyLength);
             renderHistory();
         });
+        tryButton.node.classList.add('ui-try');
         const trialDepth = el('span', { class: 'ui-trial-depth' });
         const keep = textButton('Keep', 'End this trial and keep what you entered in it', () => keepStages(1));
         const discard = textButton('Discard', 'Undo everything entered since this trial began, and end it', () => discardStages(1));
@@ -102,6 +103,8 @@
                 notSavedDialog.open = true;
             }
         });
+
+        openInPenpa.node.classList.add('ui-open-penpa');
 
         const notSavedDialog = confirmDialog({
             label: 'Progress is not being saved',

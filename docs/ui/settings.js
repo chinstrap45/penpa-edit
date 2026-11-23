@@ -1,5 +1,5 @@
 // The Settings dialog: the settings that matter for solving, in four groups, each change saved at once, and the page's own
-// (Page: theme, board coordinates and layout; Pins: saved presets). Conflict detection off for this puzzle only is kept here, per puzzle, because
+// (Page: theme, board coordinates, layout and the tour's replay; Pins: saved presets). Conflict detection off for this puzzle only is kept here, per puzzle, because
 // Penpa+ forgets it on the next puzzle. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
     'use strict';
@@ -164,6 +164,12 @@
             resetLayout();
         });
 
+        const tourButton = el('wa-button', { size: 's' }, ['Show the tour']);
+        tourButton.addEventListener('click', () => {
+            dialog.addEventListener('wa-after-hide', () => window.solveTour.start(), { once: true });
+            dialog.open = false;
+        });
+
         const presets = el('wa-select', { label: 'Your presets', size: 's', placeholder: 'None saved' });
         const deletePreset = el('wa-button', { size: 's' }, ['Delete preset']);
         function showPresets() {
@@ -180,7 +186,7 @@
         const pageGroup = el('fieldset', { class: 'ui-settings-group' }, [el('legend', {}, ['Page']),
             el('div', { class: 'ui-setting' }, [theme]),
             coordinatesRow,
-            el('div', { class: 'ui-setting' }, [resetLayoutButton])]);
+            el('div', { class: 'ui-setting' }, [resetLayoutButton, tourButton])]);
         const pinsGroup = el('fieldset', { class: 'ui-settings-group' }, [el('legend', {}, ['Pins']),
             el('div', { class: 'ui-setting' }, [presets, deletePreset])]);
 

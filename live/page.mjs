@@ -71,10 +71,12 @@ export function jsRequest (file) {
 // `url` opens that address (plus `query`) instead of the checkout's page, `solve: true` opens `solve.html` in place of the
 // default page, `ready` is the page function that says the page is up (default: `pu` exists), and `setup(context)` runs
 // before the page opens.
-// `contextOptions` go to `browser.newContext`. `dialogs` holds the message of every native dialog the page opened, each
-// dismissed, and `errors` every page error and `console.error` so far.
-export async function openPenpa (browser, query = '', { cookies = [], served = false, solve = false, url, ready = () => typeof pu !== 'undefined', setup, contextOptions } = {}) {
+// `contextOptions` go to `browser.newContext`. solve.html's tour is skipped on every page of the context as it shows,
+// unless `tour` is true. `dialogs` holds the message of every native dialog the page opened, each dismissed, and `errors` every page
+// error and `console.error` so far.
+export async function openPenpa (browser, query = '', { cookies = [], served = false, solve = false, url, ready = () => typeof pu !== 'undefined', setup, contextOptions, tour = false } = {}) {
   const context = await penpaContext(browser, { served, setup, contextOptions })
+  if (!tour) context.on('page', skipTourOnEveryLoad)
   if (cookies.length) await context.addCookies(cookies)
   const page = await context.newPage()
   const errors = []
@@ -129,6 +131,36 @@ function wipeStorageInPage () {
   indexedDB.deleteDatabase('localforage')
 }
 
+// What skipping the tour on a page raised, other than the page navigating away or closing, checked after each test.
+const tourSkipErrors = []
+pageErrors.push(tourSkipErrors)
+
+// Has `page` skip solve.html's tour on each load, as `skipTourInPage` does. Not an init script: a context with one loses
+// kept card layouts over a reload under load (desk.live.mjs failed 21 of 36 runs, against 0 without one, #381).
+function skipTourOnEveryLoad (page) {
+  page.on('domcontentloaded', () => {
+    if (!new URL(page.url()).pathname.endsWith('/solve.html')) return
+    page.evaluate(skipTourInPage).catch((e) => {
+      // A page that navigated on or closed has no tour left to skip; its next load is handled by its own event.
+      if (!page.isClosed() && !/Execution context was destroyed|Target .*closed/.test(e.message)) tourSkipErrors.push(`skipping the tour: ${e.message}`)
+    })
+  })
+}
+
+// Runs in solve.html: presses Skip tour as soon as the tour is in the page, before the page takes any event, so its
+// dimmed backdrop takes no test's clicks.
+function skipTourInPage () {
+  const skip = () => {
+    const button = [...document.querySelectorAll('.ui-tour wa-button')].find((node) => node.textContent === 'Skip tour')
+    // A wa-button presses its inner button, which exists once Lit has rendered it, a microtask after it is added.
+    button?.updateComplete.then(() => button.click())
+    return Boolean(button)
+  }
+  if (skip()) return
+  const watcher = new MutationObserver(() => { if (skip()) watcher.disconnect() })
+  watcher.observe(document.body, { childList: true, subtree: true })
+}
+
 // A context for Penpa+'s pages, answering its network loads, with `served` and `setup` as `openPenpa` takes them.
 async function penpaContext (browser, { served, setup, contextOptions }) {
   const context = await browser.newContext(contextOptions)
@@ -169,6 +201,9 @@ export function shadeInPage (cell) {
 // empty cell in the given's row.
 // The localStorage key `engine_bridge.js` keeps the solve page's theme under.
 export const THEME_KEY = 'chinstrap-solve-theme-v1'
+// The localStorage key `ui/tour.js` marks the tour seen under, once it is skipped or finished.
+export const TOUR_KEY = 'chinstrap-solve-tour-v1'
+export const TOUR_SEEN = 'seen'
 
 export const GIVEN_CELL = 0
 export const ANSWER_CELL = 1
