@@ -532,14 +532,23 @@
       if (!boxesMeet(boxOf(cards[a].node), boxOf(cards[b].node))) {
         return
       }
-      // The lower card moves below the other, if there is room; the Board only narrows. With no room for either card
-      // the overlap stays: the desk is then too small for both cards at their least heights.
+      // The lower card moves below the other, if there is room; the Board only narrows. With no room below for either,
+      // the upper card moves up to end CARD_GAP_PX above the lower one, its size kept, if the desk's top leaves room;
+      // else the overlap stays: the desk is then too small for both cards.
       const lowerFirst = cards[a].node.offsetTop > cards[b].node.offsetTop ? [[a, b], [b, a]] : [[b, a], [a, b]]
       const found = lowerFirst.filter(([id]) => id !== 'board' && !moved.has(id)).find(([id, other]) => roomBelow(id, other) >= 0)
       if (found) {
         moved.add(found[0])
         moveClear(desk, cards, ...found)
         nudged.push(found[0])
+        return
+      }
+      const [upper, lower] = lowerFirst[1]
+      const top = boxOf(cards[lower].node).top - CARD_GAP_PX - cards[upper].node.offsetHeight
+      if (upper !== 'board' && lower !== 'board' && !moved.has(upper) && top >= TOP_MARGIN_PX) {
+        moved.add(upper)
+        cards[upper].node.style.top = `${top}px`
+        nudged.push(upper)
       }
     })
     nudged.forEach((id) => keepDeskChange(desk, cards, id))
@@ -968,20 +977,24 @@
     })
   }
 
-  // The pairs that overlap now, less each grown card's with a card its old box did not certainly meet. A card grew down from
-  // its top or up from its bottom, so the old box is read both ways, and a pair is old only if both meet. `grown` is
-  // `[id, old height]` per card.
+  // The pairs that overlap now, less each pair a grown card's old box did not certainly meet. A card grew down from its
+  // top or up from its bottom, so its old box is read both ways, and a pair is old only if every reading of both its cards
+  // meets: a card beside a grown one is read at its own old height too when it grew. `grown` is `[id, old height]` per card.
   function pairsBeforeGrowth (cards, grown) {
     const pairs = overlappingPairs(cards)
-    grown.forEach(([id, height]) => {
+    const oldHeights = new Map(grown)
+    const readings = (id) => {
       const box = boxOf(cards[id].node)
-      const oldBoxes = [{ ...box, bottom: box.top + height }, { ...box, top: box.bottom - height }]
-      pairs.forEach((pair, key) => {
-        const other = boxOf(cards[pair.find((card) => card !== id)].node)
-        if (pair.includes(id) && !oldBoxes.every((was) => boxesMeet(other, was))) {
-          pairs.delete(key)
-        }
-      })
+      if (!oldHeights.has(id)) {
+        return [box]
+      }
+      const height = oldHeights.get(id)
+      return [{ ...box, bottom: box.top + height }, { ...box, top: box.bottom - height }]
+    }
+    pairs.forEach((pair, key) => {
+      if (pair.some((id) => oldHeights.has(id)) && !readings(pair[0]).every((a) => readings(pair[1]).every((b) => boxesMeet(a, b)))) {
+        pairs.delete(key)
+      }
     })
     return pairs
   }

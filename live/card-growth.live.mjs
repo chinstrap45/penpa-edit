@@ -108,6 +108,12 @@ describe('a card that grows on a layout the solver changed', () => {
     assert.ok(bottom(after.Pinned) + CARD_GAP_PX <= after.Mode.y + SLACK_PX, `Pinned ends at ${bottom(after.Pinned)}, over Mode at ${after.Mode.y}`)
   })
 
+  it('Recent, grown by a preset load, stays clear of a Mode card dragged down and left (#391)', async () => {
+    await replays('slitherlink', [
+      ['mode pick', 232], drag('Mode', -240, 240), ['preset star', 39], ['mode pick', 465], ['preset load', 273]
+    ])
+  })
+
   it('Rules, dragged by hand, stays clear of Mouse on a preset load', async () => {
     await replays('starbattle', RULES_DRAGGED)
   })
