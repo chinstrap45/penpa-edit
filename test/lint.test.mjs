@@ -2,7 +2,7 @@
 // tool fails it.
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { existsSync, linkSync, mkdirSync, symlinkSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { extname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
@@ -10,7 +10,6 @@ import { JS_EXTENSIONS, NOT_LINTED, SHELL_EXTENSIONS, isNotLinted, lintScope, ow
 import { tree } from './live-scratch.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
-const BIN = join(ROOT, 'node_modules/.bin')
 
 // A scratch repo with the given files committed and `.gitattributes` marking `owned` patterns `merge=ours`, and the real
 // tools linked in.
@@ -25,12 +24,13 @@ function scratch (files, owned) {
   return dir
 }
 
-function withTools (dir) {
-  mkdirSync(join(dir, 'node_modules'), { recursive: true })
-  symlinkSync(join(ROOT, 'node_modules/standard'), join(dir, 'node_modules/standard'))
-  symlinkSync(join(ROOT, 'node_modules/shellcheck'), join(dir, 'node_modules/shellcheck'))
-  mkdirSync(join(dir, 'node_modules/.bin'))
-  for (const tool of ['standard', 'shellcheck']) linkSync(join(BIN, tool), join(dir, 'node_modules/.bin', tool))
+// Links the repo's installed tools in, all of them or only those named.
+function withTools (dir, tools = ['standard', 'shellcheck']) {
+  mkdirSync(join(dir, 'node_modules/.bin'), { recursive: true })
+  for (const tool of tools) {
+    symlinkSync(join(ROOT, 'node_modules', tool), join(dir, 'node_modules', tool))
+    symlinkSync(join(ROOT, 'node_modules/.bin', tool), join(dir, 'node_modules/.bin', tool))
+  }
   return dir
 }
 
@@ -63,7 +63,7 @@ describe('lintScope', () => {
 describe('the repo', () => {
   const owned = ownedFiles(ROOT)
 
-  it('lints every owned JavaScript and shell file, bar the named exceptions', () => {
+  it('puts every owned JavaScript and shell file in the scope, bar the named exceptions', () => {
     const scope = lintScope(ROOT)
     const linted = new Set([...scope.js, ...scope.shell])
     const outside = owned.filter((file) => [...JS_EXTENSIONS, ...SHELL_EXTENSIONS].includes(extname(file)) && !linted.has(file))
@@ -71,7 +71,7 @@ describe('the repo', () => {
   })
 
   it('names only exceptions that exist', () => {
-    for (const path of NOT_LINTED) assert.ok(owned.some((file) => file === path || file.startsWith(path)), `${path} is not an owned file`)
+    for (const path of NOT_LINTED) assert.ok(owned.filter(isNotLinted).some((file) => file.startsWith(path)), `${path} is not an owned file`)
   })
 
   it('leaves out upstream files', () => {
@@ -88,9 +88,18 @@ describe('the repo', () => {
     const kinds = new Set(owned.filter((file) => !linted.has(file) && !isNotLinted(file)).map((file) => extname(file)))
     assert.deepEqual([...kinds].sort(), ['', '.css', '.html', '.json', '.md', '.yml'].filter((kind) => kinds.has(kind)))
   })
+})
 
-  it('is clean', () => {
-    assert.deepEqual(runLint(ROOT), [])
+describe('the entry points', () => {
+  const read = (path) => readFileSync(join(ROOT, path), 'utf8')
+
+  it('runs the lint script from live/lint.mjs', () => {
+    assert.equal(JSON.parse(read('package.json')).scripts.lint, 'node live/lint.mjs')
+  })
+
+  it('runs the lint in CI and in the Seam', () => {
+    assert.match(read('.github/workflows/ci.yml'), /^ +- run: npm run lint$/m)
+    assert.match(read('AGENTS.md'), /^- \*\*Seam\*\*: `npm run lint && npm test && /m)
   })
 })
 
@@ -120,6 +129,24 @@ describe('runLint', () => {
     const dir = scratch({ 'live/a.mjs': CLEAN_JS, 'live/ok.sh': CLEAN_SH }, ['live/**'])
     assert.ok(!existsSync(join(dir, 'node_modules')))
     assert.match(runLint(dir).join('\n'), /standard is not installed/)
+  })
+
+  it('fails when shellcheck is not installed, and still reports StandardJS findings', () => {
+    const dir = withTools(scratch({ 'live/a.mjs': BAD_JS, 'live/ok.sh': CLEAN_SH }, ['live/**']), ['standard'])
+    const out = runLint(dir).join('\n')
+    assert.match(out, /shellcheck is not installed/)
+    assert.match(out, /Extra semicolon/)
+  })
+
+  it('fails when .gitattributes owns no shell script, or no JavaScript file', () => {
+    assert.match(runLint(withTools(scratch({ 'live/a.mjs': CLEAN_JS }, ['live/**']))).join('\n'), /scope is empty/)
+    assert.match(runLint(withTools(scratch({ 'live/ok.sh': CLEAN_SH }, ['live/**']))).join('\n'), /scope is empty/)
+  })
+
+  it('checks an owned file that is not yet added to git', () => {
+    const dir = withTools(scratch({ 'live/a.mjs': CLEAN_JS, 'live/ok.sh': CLEAN_SH }, ['live/**']))
+    writeFileSync(join(dir, 'live/new.mjs'), BAD_JS)
+    assert.match(runLint(dir).join('\n'), /new\.mjs:1:\d+: Extra semicolon/)
   })
 
   it('fails when .gitattributes owns nothing to lint', () => {

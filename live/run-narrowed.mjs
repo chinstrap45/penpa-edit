@@ -12,7 +12,7 @@ const RUN_LIVE = fileURLToPath(new URL('./run-live.mjs', import.meta.url))
 function main () {
   const { values } = parseArgs({ options: { changed: { type: 'string' }, list: { type: 'boolean' } } })
   // Each step is what a run executes; `--list` names the same steps, so the two cannot drift apart.
-  const unitSteps = [
+  const checkSteps = [
     { name: 'npm run lint', command: 'npm', args: ['run', 'lint'] },
     { name: 'npm test', command: 'npm', args: ['test'] }
   ]
@@ -24,10 +24,10 @@ function main () {
   if (values.list) {
     const listing = spawnSync(live.command, [...live.args, '--list'], { stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8' })
     if (listing.error || listing.status !== 0) return fail('listing the live files', listing)
-    console.log([...unitSteps.map((step) => step.name), ...listing.stdout.split('\n').filter(Boolean)].join('\n'))
+    console.log([...checkSteps.map((step) => step.name), ...listing.stdout.split('\n').filter(Boolean)].join('\n'))
     return 0
   }
-  for (const step of unitSteps) {
+  for (const step of checkSteps) {
     const stepRun = spawnSync(step.command, step.args, { stdio: 'inherit' })
     if (stepRun.error || stepRun.status !== 0) return fail(step.name, stepRun)
   }

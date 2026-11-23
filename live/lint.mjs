@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const JS_EXTENSIONS = ['.js', '.mjs', '.cjs']
+export const JS_EXTENSIONS = ['.js', '.mjs']
 export const SHELL_EXTENSIONS = ['.sh']
 // Owned files StandardJS must not read: a vendored bundle and a file `live/generate-gallery.mjs` writes.
 export const NOT_LINTED = ['docs/ui/vendor/', 'docs/gallery-puzzles.js']
@@ -17,9 +17,9 @@ const git = (root, args, input) => {
   return out.stdout
 }
 
-// Every tracked file `.gitattributes` gives `merge=ours`, asked of git itself so no pattern is read twice.
+// Every file git tracks or would add (an untracked one counts: the seam runs before the commit) that `.gitattributes` gives `merge=ours`, asked of git itself so no pattern is read twice.
 export function ownedFiles (root) {
-  const tracked = git(root, ['ls-files', '-z']).split('\0').filter(Boolean)
+  const tracked = git(root, ['ls-files', '-z', '--cached', '--others', '--exclude-standard']).split('\0').filter(Boolean)
   const attrs = git(root, ['check-attr', '-z', '--stdin', 'merge'], tracked.join('\0') + '\0').split('\0')
   const owned = []
   for (let i = 0; i + 2 < attrs.length; i += 3) {
@@ -73,17 +73,23 @@ function shellcheck (root, files) {
   return out.error || out.status !== 0 ? [out.error?.message ?? out.stdout + out.stderr] : []
 }
 
-// Returns the lines to print for a failure; an empty list is a pass.
-export function runLint (root) {
-  const scope = lintScope(root)
-  if (!scope.js.length || !scope.shell.length) {
-    return [`lint scope is empty (${scope.js.length} JavaScript files, ${scope.shell.length} shell scripts): .gitattributes marks nothing, or git could not say`]
-  }
+// Each tool runs whatever the other did, so one tool's failure never hides the other's findings.
+const attempt = (run) => {
   try {
-    return [...standard(root, scope.js), ...shellcheck(root, scope.shell)]
+    return run()
   } catch (error) {
     return [error.message]
   }
+}
+
+// Returns the lines to print for a failure; an empty list is a pass.
+export function runLint (root) {
+  const scope = attempt(() => lintScope(root))
+  if (Array.isArray(scope)) return [`lint scope unreadable: ${scope[0]}`]
+  if (!scope.js.length || !scope.shell.length) {
+    return [`lint scope is empty (${scope.js.length} JavaScript files, ${scope.shell.length} shell scripts): .gitattributes marks nothing`]
+  }
+  return [...attempt(() => standard(root, scope.js)), ...attempt(() => shellcheck(root, scope.shell))]
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

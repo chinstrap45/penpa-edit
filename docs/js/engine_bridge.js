@@ -1544,7 +1544,7 @@
     // the erased grid lines, since Penpa+ keeps the solver's erasures among the givens.
     getPuzzleId () {
       boardCanvas()
-      // eslint-disable-next-line camelcase
+      // eslint-disable-next-line camelcase -- Penpa+'s own key names
       const { command_undo, command_redo, command_replay, deletelineE, ...givens } = pu.pu_q
       return md5(JSON.stringify([pu.gridtype, pu.nx, pu.ny, pu.space, givens]))
     },
