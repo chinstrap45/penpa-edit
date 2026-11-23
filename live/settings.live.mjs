@@ -1,7 +1,7 @@
 // Penpa+ settings are cookies; they must outlive the browser, so each needs an expiry in the future.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { AKARI_SOLVE, openPenpa, useBrowser, waitForSettingsLoaded } from './page.mjs'
+import { AKARI_SOLVE, markedForPenpa, openPenpa, useBrowser, waitForSettingsLoaded } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -66,7 +66,7 @@ describe('conflict detection', () => {
     const { context, page } = await openPenpa(browser(), '', { served: true })
     await setThenSaveOthers(page, OFF_THIS_PUZZLE)
     const next = await context.newPage()
-    await next.goto(new URL(page.url()).origin + '/' + AKARI_SOLVE)
+    await next.goto(new URL(page.url()).origin + '/' + markedForPenpa(AKARI_SOLVE))
     assert.equal(await readConflictDetection(next), ON)
     await context.close()
   })

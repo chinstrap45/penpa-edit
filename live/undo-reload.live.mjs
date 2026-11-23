@@ -1,7 +1,7 @@
 // Undo after reopening saved progress: one undo removes one group of edits, and the stacks stay paired (#19).
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { openPenpa, shadeInPage, useBrowser } from './page.mjs'
+import { markedForPenpa, openPenpa, shadeInPage, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -34,7 +34,7 @@ describe('undo after reopening saved progress', () => {
     // Both sessions share one context, so the second reads the progress the first saved.
     const open = async () => {
       const p = await context.newPage()
-      await p.goto(origin + hash)
+      await p.goto(origin + markedForPenpa(hash))
       await p.waitForFunction(() => typeof pu !== 'undefined')
       return p
     }

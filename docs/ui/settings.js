@@ -1,5 +1,5 @@
 // The Settings dialog: the settings that matter for solving, in four groups, each change saved at once, and the page's own
-// (Page: theme, board coordinates and layout; Pins: saved presets). Conflict detection off for this puzzle only is kept here, per puzzle, because
+// (Page: theme, board coordinates, layout and the tour's replay; Pins: saved presets). Conflict detection off for this puzzle only is kept here, per puzzle, because
 // Penpa+ forgets it on the next puzzle. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
     'use strict';
@@ -64,7 +64,9 @@
 
     const PENPA_URL = 'https://github.com/swaroopg92/penpa-edit';
     const PENPA_LICENCE_URL = `${PENPA_URL}/blob/master/LICENSE`;
-    const FORK_URL = 'https://github.com/caneff/penpa-edit';
+    const FORK_URL = 'https://github.com/chinstrap45/penpa-edit';
+    const DISCORD_URL = 'https://discord.com/users/184770560356646923';
+    const REDIRECT_SCRIPT_URL = 'https://raw.githubusercontent.com/chinstrap45/penpa-edit/master/userscript/penpa-redirect.user.js';
 
     const newTabLink = (href, text) => el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, [text]);
 
@@ -162,6 +164,12 @@
             resetLayout();
         });
 
+        const tourButton = el('wa-button', { size: 's' }, ['Show the tour']);
+        tourButton.addEventListener('click', () => {
+            dialog.addEventListener('wa-after-hide', () => window.solveTour.start(), { once: true });
+            dialog.open = false;
+        });
+
         const presets = el('wa-select', { label: 'Your presets', size: 's', placeholder: 'None saved' });
         const deletePreset = el('wa-button', { size: 's' }, ['Delete preset']);
         function showPresets() {
@@ -178,7 +186,7 @@
         const pageGroup = el('fieldset', { class: 'ui-settings-group' }, [el('legend', {}, ['Page']),
             el('div', { class: 'ui-setting' }, [theme]),
             coordinatesRow,
-            el('div', { class: 'ui-setting' }, [resetLayoutButton])]);
+            el('div', { class: 'ui-setting' }, [resetLayoutButton, tourButton])]);
         const pinsGroup = el('fieldset', { class: 'ui-settings-group' }, [el('legend', {}, ['Pins']),
             el('div', { class: 'ui-setting' }, [presets, deletePreset])]);
 
@@ -188,10 +196,14 @@
                 el('p', {}, ['Penpa+ is under the ', newTabLink(PENPA_LICENCE_URL, 'MIT licence'), ':']),
                 el('p', {}, ['Original Work/Project Initiator - Copyright (c) 2019 Opt-Pan']),
                 el('p', {}, ['New Features/Upgrades - Copyright (c) 2020 Swaroop Guggilam']),
-                el('p', {}, ['This fork\'s source: ', newTabLink(FORK_URL, 'caneff/penpa-edit')])])]);
+                el('p', {}, ['This fork\'s source: ', newTabLink(FORK_URL, 'chinstrap45/penpa-edit')])])]);
+
+        const contactFooter = el('div', { class: 'ui-settings-about ui-settings-footer' }, [
+            el('p', {}, ['Questions, bugs or suggestions? Message me on Discord: ', newTabLink(DISCORD_URL, '@ChinStrap')]),
+            el('p', {}, ['Opening Penpa+ links here: ', newTabLink(REDIRECT_SCRIPT_URL, 'install the Redirect script')])]);
 
         const dialog = el('wa-dialog', { label: 'Settings' }, [...GROUPS.map(([title, rows]) => el('fieldset', { class: 'ui-settings-group' },
-            [el('legend', {}, [title]), ...rows.map((row) => (specialRows.get(row) ?? control(row)))])), pageGroup, pinsGroup, aboutGroup]);
+            [el('legend', {}, [title]), ...rows.map((row) => (specialRows.get(row) ?? control(row)))])), pageGroup, pinsGroup, aboutGroup, contactFooter]);
         // The controls show what the engine and the UI hold each time the dialog opens, so they never go stale. Done before
         // the dialog opens, not on its `wa-show`, which can come after the visitor's first click.
         function openDialog() {

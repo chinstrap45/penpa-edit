@@ -7,7 +7,8 @@ function linkParams() {
 }
 
 async function openInChinStrap() {
-    const goToChinStrap = () => { location.href = `solve.html${location.search}${location.hash}`; };
+    // The Penpa+ button's mark, which only keeps a link on this page, is dropped (#376).
+    const goToChinStrap = () => { location.href = `solve.html${withoutPenpaMark(location.search + location.hash)}`; };
     if (await saveProgressNow()) {
         goToChinStrap();
         return;

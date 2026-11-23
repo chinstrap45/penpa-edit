@@ -38,7 +38,6 @@
     const PIN_LUMINANCE = 0.16;
     const LIGHTNESS_STEPS = 20;
     const NEUTRAL_COLOUR = 'var(--ui-neutral-colour)';
-    const BUTTON = 'button, wa-button';
     // A pin seen from the side: the head and the needle.
     const PIN_SHAPE = '<path d="M5.5 1.5h5l-.8 4.2 2.3 2.8H4l2.3-2.8z"/><path d="M8 8.5v6"/>';
     const UNPIN_ALL_ICON = `${PIN_SHAPE}<path d="M2 2l12 12"/>`;
@@ -169,16 +168,14 @@
             applyPin(pins[stepTarget(delta)]);
         }
 
-        const originIsButton = (e) => e.composedPath().some((node) => node instanceof Element && node.matches(BUTTON));
-
-        // Enter does what Tab does unless a button has focus: then the button takes it, and Penpa+ never sees it, since Penpa+
-        // would step its own Tab set. With no pins neither key is ours, so the browser keeps them.
+        // Enter does what Tab does, and Penpa+ never sees it, since Penpa+ would step its own Tab set; on a focused button keys.js
+        // gives Enter to the button before this runs. With no pins neither key is ours, so the browser keeps them.
         window.uiKeys.add((e) => {
             if (e.type !== 'keydown' || e.ctrlKey || e.metaKey || e.altKey) {
                 return;
             }
             if (STEP_KEYS.includes(e.key)) {
-                if (!pins.length || (e.key === 'Enter' && originIsButton(e))) {
+                if (!pins.length) {
                     return 'browser';
                 }
                 e.preventDefault();

@@ -153,7 +153,7 @@ describe('long links and Load URL (PR 229)', () => {
 
   for (const [name, makeUrl] of [
     ['a URL with no penpa-edit in its path', (d) => `https://example.test/local/dev/?${d}`],
-    ['a link pasted without https://', (d) => `caneff.github.io/penpa-edit/?${d}`]
+    ['a link pasted without https://', (d) => `chinstrap45.github.io/penpa-edit/?${d}`]
   ]) {
     it(`loads ${name}`, async () => {
       const { context, page } = await openPenpa(browser())

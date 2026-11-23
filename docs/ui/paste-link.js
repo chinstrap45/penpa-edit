@@ -7,8 +7,9 @@
         return;
     }
 
-    // Both hosts serve Penpa+ under /penpa-edit/; the userscript sends the first to the second.
-    const PENPA_ORIGINS = ['https://swaroopg92.github.io', 'https://caneff.github.io'];
+    // The hosts that serve Penpa+ under /penpa-edit/; the userscript sends the first to the second. The last is the fork's
+    // address before the move, kept so a link shared then still opens (spec #373: old links keep working).
+    const PENPA_ORIGINS = ['https://swaroopg92.github.io', 'https://chinstrap45.github.io', 'https://caneff.github.io'];
     const PENPA_PATH = '/penpa-edit/';
     // Parameters with a puzzle in them: `p=` among them, the test boot applies to a query.
     const HAS_PUZZLE = /(^|&)p=/;
@@ -34,7 +35,7 @@
     }
 
     const { el, setDark } = window.uiKit;
-    const EXAMPLE_LINK = 'https://caneff.github.io/penpa-edit/solve.html?m=solve&p=…';
+    const EXAMPLE_LINK = 'https://chinstrap45.github.io/penpa-edit/solve.html?m=solve&p=…';
     const input = el('wa-input', { id: 'paste-link-input', label: 'Penpa+ link', placeholder: EXAMPLE_LINK, autocomplete: 'off', spellcheck: 'false' });
     const error = el('p', { class: 'ui-paste-error', role: 'alert', hidden: '' }, [
         'That is not a Penpa+ link with its puzzle after the ? or the #. Paste the whole link, such as one ending in ?m=solve&p=… or #m=solve&p=…'

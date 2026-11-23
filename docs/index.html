@@ -3,21 +3,20 @@
 
 <head>
     <!-- HTML Meta Tags -->
-    <title>Penpa+</title>
+    <!-- caneff: titles, share previews and addresses name ChinStrap and the fork, not Penpa+ or its owner, and use no upstream logo (#375) -->
+    <title>ChinStrap</title>
     <meta name="description" content="Web application to create and solve Sudokus and Puzzles.">
     <!-- Facebook Meta Tags -->
-    <meta property="og:url" content="https://swaroopg92.github.io/penpa-edit/">
+    <meta property="og:url" content="https://chinstrap45.github.io/penpa-edit/">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Penpa+">
+    <meta property="og:title" content="ChinStrap">
     <meta property="og:description" content="Web application to create and solve Sudokus and Puzzles.">
-    <meta property="og:image" content="https://github.com/swaroopg92/penpa-edit/blob/master/docs/css/images/logo.png">
     <!-- Twitter Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta property="twitter:domain" content="swaroopg92.github.io">
-    <meta property="twitter:url" content="https://swaroopg92.github.io/penpa-edit/">
-    <meta name="twitter:title" content="Penpa+">
+    <meta name="twitter:card" content="summary">
+    <meta property="twitter:domain" content="chinstrap45.github.io">
+    <meta property="twitter:url" content="https://chinstrap45.github.io/penpa-edit/">
+    <meta name="twitter:title" content="ChinStrap">
     <meta name="twitter:description" content="Web application to create and solve Sudokus and Puzzles.">
-    <meta name="twitter:image" content="https://github.com/swaroopg92/penpa-edit/blob/master/docs/css/images/logo.png">
     <!-- HTML other tags -->
     <meta charset="utf-8"/>
     <meta name="robots" content="nofollow"/>
@@ -26,24 +25,10 @@
     <!-- Favicon -->
     <link rel="shortcut icon" href="./css/images/logo.png"/>
     <link rel="apple-touch-icon" href="./css/images/logo.png"/>
-    <!-- Google Tag Manager -->
-    <script>
-        (function(w, d, s, l, i) {
-            w[l] = w[l] || [];
-            w[l].push({
-                'gtm.start': new Date().getTime(),
-                event: 'gtm.js'
-            });
-            var f = d.getElementsByTagName(s)[0],
-                j = d.createElement(s),
-                dl = l != 'dataLayer' ? '&l=' + l : '';
-            j.async = true;
-            j.src =
-                'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-            f.parentNode.insertBefore(j, f);
-        })(window, document, 'script', 'dataLayer', 'GTM-TSBMV8L8');
-    </script>
-    <!-- End Google Tag Manager -->
+    <!-- caneff: no Google Tag Manager here or after <body>: the page sends no analytics (#374) -->
+    <!-- caneff: a desktop solve link opens on solve.html (#376), before anything else loads -->
+    <script src="./js/solve_forward.js"></script>
+    <script>forwardSolveLink();</script>
     <!-- STYLES -->
     <!-- Local styles -->
     <script>
@@ -144,12 +129,6 @@
 </head>
 
 <body>
-<!-- Google Tag Manager (noscript) -->
-<noscript>
-    <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TSBMV8L8" height="0" width="0"
-            style="display:none;visibility:hidden"></iframe>
-</noscript>
-<!-- End Google Tag Manager (noscript) -->
 <header id="header">
     <span id="title">Setter Mode</span>
     <span id="version-info">Penpa+ v<span id="version-number"></span> &copy; 2020-2026

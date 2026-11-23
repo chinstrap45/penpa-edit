@@ -3311,7 +3311,7 @@ function update_title() {
 
     let auth_str = (author ? (title ? ' by ' + author : author) : '');
     let auth_tit_str = (title ? title : (auth_str ? '' : 'Puzzle')) + auth_str;
-    document.title = (auth_tit_str ? auth_tit_str + ' - Penpa+' : 'Penpa+');
+    document.title = (auth_tit_str ? auth_tit_str + ' - ChinStrap' : 'ChinStrap'); // caneff: the tab names the fork (#375)
 }
 
 // Polyfills

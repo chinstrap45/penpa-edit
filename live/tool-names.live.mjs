@@ -2,7 +2,7 @@
 // (#190), the tool-change banner and the Board card's colour cue, which mirrors the current pin's chip (#243). The UI is found by role and accessible name where it has one, else by its class or test id; the tool is set through `engine`.
 import assert from 'node:assert/strict'
 import { before, after, describe, it } from 'node:test'
-import { afterChange, chipName, listedTools, newBoardSolveLink, openSolvePage, setTool, shareOf, useBrowser, waitForTool } from './page.mjs'
+import { afterChange, animationsDone, chipName, listedTools, newBoardSolveLink, openSolvePage, setTool, shareOf, useBrowser, waitForTool } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -202,7 +202,7 @@ describe('the Board card\'s colour cue', () => {
   const currentChipFill = async (page, name) => {
     const chip = region(page, 'Pinned').locator('.ui-chip.is-current', { hasText: name })
     await chip.waitFor()
-    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+    await animationsDone(page)
     return chip.evaluate((node) => getComputedStyle(node).backgroundColor)
   }
   const rgbOf = (page, css) => page.evaluate((c) => {
@@ -310,7 +310,7 @@ describe('the style mark beside the tool name', () => {
     assert.ok(names.length > 0, 'Number has a text sample with no disc')
     for (const name of names) {
       await chooseStyle(page, { mode: 'number', submode: '1' }, await plainStyle(page, 'number', '1', name))
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+      await animationsDone(page)
       const { pill, ink } = await boardLabel(page).evaluate((label) => {
         const glyph = getComputedStyle(label.querySelector('.ui-mark svg text'))
         // A clear fill leaves the stroke as the glyph's ink.
