@@ -1,5 +1,5 @@
 // WCAG AA colour contrast on `solve.html` (#378), read by axe-core's `color-contrast` rule on the loaded page: with a puzzle
-// loaded, with Settings open, with another dialog open and on the tour's popup, in each theme. A planted low-contrast colour must fail it, so a
+// loaded, with Settings open, with another dialog open and on the welcome dialog, in each theme. A planted low-contrast colour must fail it, so a
 // pass is a check that can fail.
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
@@ -11,9 +11,9 @@ const browser = useBrowser()
 const AXE_SOURCE = createRequire(import.meta.url).resolve('axe-core/axe.min.js')
 
 let numberLink
-async function openIn (theme, { tour = false } = {}) {
+async function openIn (theme, { welcome = false } = {}) {
   numberLink ??= await makeNumberSolveLink(browser())
-  const opened = await openSolvePage(browser(), numberLink, { tour })
+  const opened = await openSolvePage(browser(), numberLink, { welcome })
   await opened.page.addScriptTag({ path: AXE_SOURCE })
   await opened.page.addScriptTag({ content: `window.__helpers = ${contrastHelpersInPage}; window.__groundOf = ${groundOfInPage}; window.__opacityOf = ${opacityOfInPage}` })
   // The page's `body` is 0 high with `overflow: hidden`; axe counts the fixed desk inside it as clipped and skips all its text.
@@ -55,14 +55,19 @@ async function violationsInPage ({ aaText, aaLargeText, scope }) {
 }
 
 // The violations on the whole page, or only inside the element `scope` selects.
-const contrastViolations = async (page, scope) => (await page.evaluate(violationsInPage, { aaText: AA_TEXT, aaLargeText: AA_LARGE_TEXT, scope })).lines
+// Axe's first run after a dialog has opened can judge only some of its text (4 of 30 nodes in Settings, #408); a run after it
+// judges all, so the first is a warm-up and the second is read.
+const contrastViolations = async (page, scope) => {
+  const run = () => page.evaluate(violationsInPage, { aaText: AA_TEXT, aaLargeText: AA_LARGE_TEXT, scope })
+  await run()
+  return (await run()).lines
+}
 
-// The tour's popup on a first visit, its opening animation over. Only the popup is read: the page around it is dimmed on
-// purpose, and nobody reads it while the tour is up.
-const TOUR_POPUP = '.ui-tour'
-async function openTourIn (theme) {
-  const opened = await openIn(theme, { tour: true })
-  await opened.page.getByRole('dialog', { name: 'Tour' }).waitFor()
+// The welcome dialog on a first visit, its opening animation over.
+const WELCOME_DIALOG = '.ui-welcome'
+async function openWelcomeIn (theme) {
+  const opened = await openIn(theme, { welcome: true })
+  await opened.page.getByRole('dialog', { name: 'Welcome to ChinStrap' }).waitFor()
   await animationsDone(opened.page)
   return opened
 }
@@ -96,10 +101,10 @@ for (const theme of ['light', 'dark']) {
       } finally { await context.close() }
     })
 
-    it('holds on the tour\'s popup', async () => {
-      const { context, page } = await openTourIn(theme)
+    it('holds on the welcome dialog', async () => {
+      const { context, page } = await openWelcomeIn(theme)
       try {
-        assert.deepEqual(await contrastViolations(page, TOUR_POPUP), [])
+        assert.deepEqual(await contrastViolations(page, WELCOME_DIALOG), [])
       } finally { await context.close() }
     })
   })
@@ -127,12 +132,12 @@ describe('the contrast check', () => {
     } finally { await context.close() }
   })
 
-  it('fails on a planted low-contrast colour in the tour\'s popup', async () => {
-    const { context, page } = await openTourIn('light')
+  it('fails on a planted low-contrast colour in the welcome dialog', async () => {
+    const { context, page } = await openWelcomeIn('light')
     try {
-      await page.addStyleTag({ content: '.ui-tour-text { color: #ddd !important; }' })
-      const found = await contrastViolations(page, TOUR_POPUP)
-      assert.ok(found.some((line) => line.includes('ui-tour-text')), `a planted #ddd tour line is reported: ${JSON.stringify(found)}`)
+      await page.addStyleTag({ content: '.ui-welcome li { color: #ddd !important; }' })
+      const found = await contrastViolations(page, WELCOME_DIALOG)
+      assert.ok(found.some((line) => line.includes('ui-welcome')), `a planted #ddd welcome line is reported: ${JSON.stringify(found)}`)
     } finally { await context.close() }
   })
 })

@@ -1,0 +1,48 @@
+// The welcome dialog (GLOSSARY.md **Welcome**): on a first visit, one dialog saying what differs from Penpa+'s page. It is
+// marked seen in localStorage as it opens, so a reload does not bring it back; Start solving or Escape close it, and only
+// Settings replays it (`window.solveWelcome.start`). It is a plain wa-dialog, so Web Awesome closes it on Escape and
+// keys.js keeps that Escape from the board. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
+(function () {
+  'use strict'
+
+  const { el, onDeskReady } = window.uiKit
+
+  // The key of the tour this dialog replaced, kept so a visitor who has seen that is not welcomed (#408).
+  const WELCOME_KEY = 'chinstrap-solve-tour-v1'
+  const WELCOME_SEEN = 'seen'
+
+  // One line each, saying only what differs from Penpa+'s page (Chris, 2026-11-23, Q37).
+  const LINES = [
+    'Drag a card by its title, resize it from any edge, close it with ×. Your layout is kept.',
+    'Pin tools in Pinned. Z X C V pick the first four; Tab, Shift+Tab or the mouse wheel over the board steps through them. Recent keeps your last tools.',
+    'Mode lists every tool this grid has.',
+    'Try starts a trial. Keep or Discard it later.',
+    'Penpa+ opens this puzzle in Penpa+; its Back to new UI button brings you back.'
+  ]
+
+  onDeskReady(() => {
+    const root = document.querySelector('.ui-root')
+
+    // Built afresh and removed once it has closed, by either way, so wa-after-hide marks the end of its closing animation.
+    // Settings is the only caller after the first visit, and it cannot be opened while this dialog is.
+    function start () {
+      const dialog = el('wa-dialog', { class: 'ui-welcome', label: 'Welcome to ChinStrap' }, [
+        el('p', { class: 'ui-welcome-lead' }, ['What\'s different from Penpa+:']),
+        el('ul', { class: 'ui-welcome-list' }, LINES.map((line) => el('li', {}, [line]))),
+        el('wa-button', { slot: 'footer', variant: 'brand', 'data-dialog': 'close' }, ['Start solving'])])
+      dialog.addEventListener('wa-after-hide', (e) => {
+        if (e.target === dialog) {
+          dialog.remove()
+        }
+      })
+      root.append(dialog)
+      dialog.open = true
+    }
+
+    window.solveWelcome = { start }
+    if (localStorage.getItem(WELCOME_KEY) !== WELCOME_SEEN) {
+      localStorage.setItem(WELCOME_KEY, WELCOME_SEEN)
+      start()
+    }
+  })
+})()

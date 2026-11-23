@@ -422,15 +422,6 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 .swal2-container .swal2-styled:is(:focus, :focus-visible) { box-shadow: none; }
 .swal2-container .swal2-styled:focus-visible { outline: var(--wa-focus-ring); outline-offset: var(--wa-focus-ring-offset); }
 
-/* The tour (tour.js): a veil over the page that takes its clicks, a lit window over the stop's element that dims the rest,
-   and the stop's popup, which Web Awesome shows in the top layer. */
-.ui-tour-veil { position: fixed; inset: 0; z-index: calc(var(--ui-bar-z) + 10); }
-.ui-tour-spotlight { position: fixed; z-index: calc(var(--ui-bar-z) + 11); border-radius: 9px; box-shadow: 0 0 0 200vmax rgba(20, 18, 12, .55); pointer-events: none; }
-.ui-root wa-popup { --arrow-size: 8px; }
-.ui-root wa-popup::part(arrow) { background: var(--wa-color-surface-raised); }
-.ui-tour { padding: 12px 14px 10px; border-radius: var(--wa-border-radius-l); background: var(--wa-color-surface-raised); color: var(--ui-ink);
-    box-shadow: 0 4px 18px rgba(0, 0, 0, .3); font: 14px/1.4 var(--ui-font); }
-.ui-tour-text { margin: 0 0 10px; white-space: nowrap; }
-.ui-tour-foot { display: flex; align-items: center; gap: 6px; }
-.ui-tour-count { color: #5f5b4c; font-size: 12px; }
-.ui-dark .ui-tour-count { color: #a9b0bd; }
+/* The welcome dialog (welcome.js): a wa-dialog with a short list. */
+.ui-welcome-lead { margin: 0 0 8px; }
+.ui-welcome-list { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }

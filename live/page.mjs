@@ -71,12 +71,12 @@ export function jsRequest (file) {
 // `url` opens that address (plus `query`) instead of the checkout's page, `solve: true` opens `solve.html` in place of the
 // default page, `ready` is the page function that says the page is up (default: `pu` exists), and `setup(context)` runs
 // before the page opens.
-// `contextOptions` go to `browser.newContext`. solve.html's tour is skipped on every page of the context as it shows,
-// unless `tour` is true. `dialogs` holds the message of every native dialog the page opened, each dismissed, and `errors` every page
+// `contextOptions` go to `browser.newContext`. solve.html's welcome dialog is closed on every page of the context as it shows,
+// unless `welcome` is true. `dialogs` holds the message of every native dialog the page opened, each dismissed, and `errors` every page
 // error and `console.error` so far.
-export async function openPenpa (browser, query = '', { cookies = [], served = false, solve = false, url, ready = () => typeof pu !== 'undefined', setup, contextOptions, tour = false } = {}) {
+export async function openPenpa (browser, query = '', { cookies = [], served = false, solve = false, url, ready = () => typeof pu !== 'undefined', setup, contextOptions, welcome = false } = {}) {
   const context = await penpaContext(browser, { served, setup, contextOptions })
-  if (!tour) context.on('page', skipTourOnEveryLoad)
+  if (!welcome) context.on('page', closeWelcomeOnEveryLoad)
   if (cookies.length) await context.addCookies(cookies)
   const page = await context.newPage()
   const errors = []
@@ -86,6 +86,7 @@ export async function openPenpa (browser, query = '', { cookies = [], served = f
   page.on('dialog', async (d) => { dialogs.push(d.message()); await d.dismiss() })
   await page.goto((url ?? penpaAddress(served, solve)) + (solve ? query : markedForPenpa(query)))
   await page.waitForFunction(ready)
+  if (solve && !welcome) await welcomeClosed(page)
   return { context, page, dialogs, errors }
 }
 
@@ -131,33 +132,33 @@ function wipeStorageInPage () {
   indexedDB.deleteDatabase('localforage')
 }
 
-// What skipping the tour on a page raised, other than the page navigating away or closing, checked after each test.
-const tourSkipErrors = []
-pageErrors.push(tourSkipErrors)
+// What closing the welcome on a page raised, other than the page navigating away or closing, checked after each test.
+const welcomeCloseErrors = []
+pageErrors.push(welcomeCloseErrors)
 
-// Has `page` skip solve.html's tour on each load, as `skipTourInPage` does. Not an init script: a context with one loses
+// Has `page` close solve.html's welcome dialog on each load, as `closeWelcomeInPage` does. Not an init script: a context with one loses
 // kept card layouts over a reload under load (desk.live.mjs failed 21 of 36 runs, against 0 without one, #381).
-function skipTourOnEveryLoad (page) {
+function closeWelcomeOnEveryLoad (page) {
   page.on('domcontentloaded', () => {
     if (!new URL(page.url()).pathname.endsWith('/solve.html')) return
-    page.evaluate(skipTourInPage).catch((e) => {
-      // A page that navigated on or closed has no tour left to skip; its next load is handled by its own event.
-      if (!page.isClosed() && !/Execution context was destroyed|Target .*closed/.test(e.message)) tourSkipErrors.push(`skipping the tour: ${e.message}`)
+    page.evaluate(closeWelcomeInPage).catch((e) => {
+      // A page that navigated on or closed has no welcome left to close; its next load is handled by its own event.
+      if (!page.isClosed() && !/Execution context was destroyed|Target .*closed/.test(e.message)) welcomeCloseErrors.push(`closing the welcome: ${e.message}`)
     })
   })
 }
 
-// Runs in solve.html: presses Skip tour as soon as the tour is in the page, before the page takes any event, so its
-// dimmed backdrop takes no test's clicks.
-function skipTourInPage () {
-  const skip = () => {
-    const button = [...document.querySelectorAll('.ui-tour wa-button')].find((node) => node.textContent === 'Skip tour')
+// Runs in solve.html: presses Start solving as soon as the welcome is in the page, before the page takes any event, so
+// the dialog takes no test's clicks.
+function closeWelcomeInPage () {
+  const close = () => {
+    const button = [...document.querySelectorAll('.ui-welcome wa-button')].find((node) => node.textContent === 'Start solving')
     // A wa-button presses its inner button, which exists once Lit has rendered it, a microtask after it is added.
     button?.updateComplete.then(() => button.click())
     return Boolean(button)
   }
-  if (skip()) return
-  const watcher = new MutationObserver(() => { if (skip()) watcher.disconnect() })
+  if (close()) return
+  const watcher = new MutationObserver(() => { if (close()) watcher.disconnect() })
   watcher.observe(document.body, { childList: true, subtree: true })
 }
 
@@ -204,9 +205,10 @@ export const LAYOUT_KEY = 'chinstrap-solve-layout-v1'
 
 // The localStorage key `engine_bridge.js` keeps the solve page's theme under.
 export const THEME_KEY = 'chinstrap-solve-theme-v1'
-// The localStorage key `ui/tour.js` marks the tour seen under, once it is skipped or finished.
-export const TOUR_KEY = 'chinstrap-solve-tour-v1'
-export const TOUR_SEEN = 'seen'
+// The localStorage key `ui/welcome.js` marks the welcome seen under, as it opens. Its string is the old tour's, so a visitor
+// who has seen the tour is not welcomed (#408).
+export const WELCOME_KEY = 'chinstrap-solve-tour-v1'
+export const WELCOME_SEEN = 'seen'
 
 export const GIVEN_CELL = 0
 export const ANSWER_CELL = 1
@@ -368,6 +370,16 @@ export async function openSolvePage (browser, query, options = {}) {
   const opened = await openPenpa(browser, query, { solve: true, contextOptions: DESK_SIZE, ...options })
   await waitForDesk(opened.page)
   return opened
+}
+
+// Waits out the first visit's welcome dialog, which the harness closes (`closeWelcomeInPage`): its closing animation would
+// otherwise overlap the test's first steps. `solveWelcome` is set in the task that opens the dialog, so once it is there the
+// dialog is already in the page, or never will be.
+async function welcomeClosed (page) {
+  // A page whose desk never builds has no welcome to wait for; the test's own wait for the desk then fails it.
+  const built = await page.waitForFunction(() => window.solveWelcome !== undefined, undefined, { timeout: 10000 }).then(() => true, () => false)
+  if (!built) return
+  await page.waitForFunction(() => !document.querySelector('.ui-welcome'))
 }
 
 // Presses Settings' Reset layout, which closes the dialog, as a visitor does now that the top bar has no such button.
