@@ -114,7 +114,7 @@ describe('the paste page\'s look (#193)', () => {
       assert.equal(look.buttonTag, 'WA-BUTTON')
       assert.equal(look.upgraded, true)
       assert.equal(await bare.page.getByRole('heading', { name: 'ChinStrap solve page' }).count(), 1)
-      assert.match(look.pageText, /https:\/\/caneff\.github\.io\/penpa-edit\/\S*[?#]\S*p=/, 'an example link')
+      assert.match(look.pageText, /https:\/\/chinstrap45\.github\.io\/penpa-edit\/\S*[?#]\S*p=/, 'an example link')
     } finally { await bare.context.close() }
   })
 

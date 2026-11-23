@@ -12,7 +12,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 - **Relationships (parent, dependencies, type)**: record these as first-class GitHub fields, not as body prose, so automation reads structured data via the `--json` fields above:
   - Sub-issue of a parent: `gh issue create ... --parent <#>`, or `gh issue edit <child> --parent <#>` / `--remove-parent` afterwards; `gh issue edit <parent> --add-sub-issue <child>` is the same edge from the parent's side.
   - Dependencies: `gh issue create ... --blocked-by <#,#> --blocking <#>` (or `gh issue edit <#> --add-blocked-by <#>` / `--remove-blocked-by <#>`, plus the `--add-blocking` / `--remove-blocking` pair).
-  - Type: omit `--type`. This is a user-account repo (`gh api users/caneff --jq .type` is `User`), and types are unavailable there.
+  - Type: omit `--type`. This is a user-account repo (`gh api users/chinstrap45 --jq .type` is `User`), and types are unavailable there.
 - **Close**: `gh issue close <number> --comment "..."`
 
 Pass `--repo chinstrap45/penpa-edit` on every `gh` call but `gh api`, which rejects the flag and names the repo in its path; the samples on this page omit it for length. Without it `gh issue view` can print nothing and exit 0 (worktrees, cwd outside the clone).
