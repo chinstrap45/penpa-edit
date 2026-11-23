@@ -24,6 +24,9 @@
     const WHEEL_SWIPE_GAP_MS = 300;
     // `WheelEvent.deltaMode` of 1 counts lines and 2 pages; a line is about this many pixels.
     const WHEEL_LINE_PX = 40;
+    // One swipe of small deltas moves at most this many steps, so a flick and its momentum do not run through every pin. A notch
+    // is never capped: a solver spinning the wheel wants every step.
+    const WHEEL_MAX_SWIPE_STEPS = 3;
     const NUMBER_MODE = 'number';
     const EMPTY_NOTE_TEXT = 'Nothing pinned. Use the pin button beside the Mode picker, on a row of its list, or on a Recent chip, to pin a tool.';
     // Colour number `n` is the golden angle times `n` around the hue wheel, so each new colour lands in the widest gap left and no
@@ -160,6 +163,12 @@
             return (from + delta + pins.length) % pins.length;
         }
 
+        // A hold lends the tool it shows; the step starts from the tool before it.
+        function step(delta) {
+            engine.releaseHolds();
+            applyPin(pins[stepTarget(delta)]);
+        }
+
         const originIsButton = (e) => e.composedPath().some((node) => node instanceof Element && node.matches(BUTTON));
 
         // Enter does what Tab does unless a button has focus: then the button takes it, and Penpa+ never sees it, since Penpa+
@@ -173,9 +182,7 @@
                     return 'browser';
                 }
                 e.preventDefault();
-                // A hold lends the tool it shows; the step starts from the tool before it.
-                engine.releaseHolds();
-                applyPin(pins[stepTarget(e.shiftKey ? -1 : 1)]);
+                step(e.shiftKey ? -1 : 1);
                 return 'ui';
             }
             const slot = SHORTCUT_SLOT_BY_CODE[e.code];
@@ -191,26 +198,39 @@
         });
 
         // The wheel over the board: down is Tab and up is Shift+Tab, and the board does not scroll under it. Elsewhere the wheel is
-        // the page's, so the Rules card keeps scrolling.
+        // the page's, so the Rules card keeps scrolling; so does a board zoomed past its card, which the wheel then scrolls.
+        const boardBody = cards.board.body;
         let wheelSum = 0;
         let wheelAt = -Infinity;
-        cards.board.body.addEventListener('wheel', (e) => {
-            if (!pins.length || e.ctrlKey || e.deltaY === 0) {
+        let swipeSteps = 0;
+        boardBody.addEventListener('wheel', (e) => {
+            const scrolls = boardBody.scrollHeight > boardBody.clientHeight || boardBody.scrollWidth > boardBody.clientWidth;
+            if (!pins.length || e.ctrlKey || e.deltaY === 0 || scrolls) {
                 return;
             }
             e.preventDefault();
             const delta = e.deltaY * (e.deltaMode === 1 ? WHEEL_LINE_PX : e.deltaMode === 2 ? WHEEL_STEP_DELTA : 1);
+            if (e.timeStamp - wheelAt > WHEEL_SWIPE_GAP_MS) {
+                swipeSteps = 0;
+            }
             if (e.timeStamp - wheelAt > WHEEL_SWIPE_GAP_MS || Math.sign(delta) !== Math.sign(wheelSum)) {
                 wheelSum = 0;
             }
             wheelAt = e.timeStamp;
-            // A notch is a step even when it is 120 and not 100, so a notch's extra is dropped, not carried.
-            wheelSum = Math.abs(delta) >= WHEEL_STEP_DELTA ? Math.sign(delta) * WHEEL_STEP_DELTA : wheelSum + delta;
+            if (Math.abs(delta) >= WHEEL_STEP_DELTA) {
+                // A notch is a step even when it is 120 and not 100, so its extra is dropped, not carried.
+                wheelSum = 0;
+                step(Math.sign(delta));
+                return;
+            }
+            wheelSum += delta;
             while (Math.abs(wheelSum) >= WHEEL_STEP_DELTA) {
                 const direction = Math.sign(wheelSum);
                 wheelSum -= direction * WHEEL_STEP_DELTA;
-                engine.releaseHolds();
-                applyPin(pins[stepTarget(direction)]);
+                if (swipeSteps < WHEEL_MAX_SWIPE_STEPS) {
+                    swipeSteps += 1;
+                    step(direction);
+                }
             }
         }, { passive: false });
 

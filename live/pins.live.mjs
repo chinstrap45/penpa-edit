@@ -153,12 +153,25 @@ describe('the mouse wheel over the board', () => {
   before(async () => { opened = await openSolve(['Line Normal', 'Surface', 'Special', 'Shape']) })
   after(async () => { await opened?.context.close() })
 
+  const BOARD_BODY = 'section[aria-label="Board"] .ui-body'
   const modeNow = async (page) => (await currentTool(page)).mode
+  const toLine = (page) => setTool(page, { mode: 'line', submode: '1' })
   const overCentre = async (page, selector) => {
     const box = await page.locator(selector).boundingBox()
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   }
-  // Whether the page's own scrolling was left alone for the last wheel event, read after every handler has run.
+  // Sends `deltas` as wheel events in one go, so they land in one swipe whatever the box's load; resolves to each event's `defaultPrevented`.
+  const wheelBurst = (page, deltas, init = {}) => page.evaluate(({ selector, deltas: list, init: extra }) => {
+    const body = document.querySelector(selector)
+    return list.map((deltaY) => {
+      const event = new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true, ...extra })
+      body.dispatchEvent(event)
+      return event.defaultPrevented
+    })
+  }, { selector: BOARD_BODY, deltas, init })
+  // Waits out the page's swipe gap (a sleep, allowed because the gap is the page's own clock), so the last test's swipe is not this one's.
+  const freshSwipe = (page) => page.waitForTimeout(350)
+  // Records every wheel event's `defaultPrevented` from now, read after every handler has run; `true` means the page's own scrolling was stopped.
   const watchPrevented = (page) => page.evaluate(() => {
     const first = window.wheelPrevented === undefined
     window.wheelPrevented = []
@@ -168,8 +181,8 @@ describe('the mouse wheel over the board', () => {
   it('steps once per notch, down as Tab and up as Shift+Tab, and keeps the page from scrolling', async () => {
     const { page } = opened
     await watchPrevented(page)
-    await setTool(page, { mode: 'line', submode: '1' })
-    await overCentre(page, 'section[aria-label="Board"] .ui-body')
+    await toLine(page)
+    await overCentre(page, BOARD_BODY)
     await page.mouse.wheel(0, 100)
     await waitForTool(page, { mode: 'surface', submode: null }, 'a notch down is Tab')
     await page.mouse.wheel(0, 100)
@@ -183,29 +196,106 @@ describe('the mouse wheel over the board', () => {
     assert.deepEqual(await page.evaluate(() => window.wheelPrevented), [true, true, true, true, true])
   })
 
-  it('adds up a trackpad\'s small deltas: two thirds of a notch is no step, a whole notch is one', async () => {
+  it('counts a notch of 120, or of 3 lines, as one step and carries nothing over', async () => {
     const { page } = opened
-    await setTool(page, { mode: 'line', submode: '1' })
-    await overCentre(page, 'section[aria-label="Board"] .ui-body')
-    for (let i = 0; i < 6; i += 1) await page.mouse.wheel(0, 10)
-    // "Nothing happened": the steps are synchronous in the handler, so a frame is enough for a wrong step to show.
-    await afterChange(page)
-    assert.equal(await modeNow(page), 'line', '60 of 100 px is no step')
-    for (let i = 0; i < 4; i += 1) await page.mouse.wheel(0, 10)
-    await waitForTool(page, { mode: 'surface', submode: null }, '100 px in all is one step')
-    for (let i = 0; i < 25; i += 1) await page.mouse.wheel(0, 10)
-    assert.equal(await settle(() => modeNow(page), 'symbol'), 'symbol', '250 px more is two steps: Surface to Shape')
+    await freshSwipe(page)
+    await toLine(page)
+    await wheelBurst(page, [120, 120, 120, 120, 120])
+    // Five steps from Line round four pins to Surface; a carried 20 per notch would make a sixth, Special.
+    await waitForTool(page, { mode: 'surface', submode: null }, 'five notches of 120 are five steps')
+    await toLine(page)
+    await wheelBurst(page, [3], { deltaMode: 1 })
+    await waitForTool(page, { mode: 'surface', submode: null }, '3 lines are a notch')
   })
 
-  it('leaves the Rules card scrolling and the pins alone', async () => {
+  it('adds up a trackpad\'s small deltas: 60 of 100 px is no step, 100 is one', async () => {
     const { page } = opened
+    await freshSwipe(page)
+    await toLine(page)
+    await wheelBurst(page, [10, 10, 10, 10, 10, 10])
+    assert.equal(await modeNow(page), 'line', '60 of 100 px is no step')
+    await wheelBurst(page, [10, 10, 10, 10])
+    await waitForTool(page, { mode: 'surface', submode: null }, '100 px in all is one step')
+  })
+
+  it('moves one swipe at most three steps', async () => {
+    const { page } = opened
+    await freshSwipe(page)
+    await toLine(page)
+    await wheelBurst(page, Array(60).fill(10))
+    await waitForTool(page, { mode: 'symbol', submode: 'circle_L' }, '600 px of small deltas in one swipe are three steps, not six')
+  })
+
+  it('starts a new sum when the direction changes', async () => {
+    const { page } = opened
+    await freshSwipe(page)
+    await toLine(page)
+    await wheelBurst(page, [60, -50, -50])
+    // Without the reset the sum is 60 - 100 = -40 and nothing steps; with it, -100 is one step up from Line to Shape.
+    await waitForTool(page, { mode: 'symbol', submode: 'circle_L' }, '-100 after the turn is one step up')
+  })
+
+  it('forgets a leftover after a pause', async () => {
+    const { page } = opened
+    await toLine(page)
+    await wheelBurst(page, [60])
+    // A sleep, allowed for a "nothing happened" check: the swipe gap is 300 ms of the clock.
+    await page.waitForTimeout(400)
+    await wheelBurst(page, [60])
+    await afterChange(page)
+    assert.equal(await modeNow(page), 'line', '60 and 60 a pause apart are no step')
+  })
+
+  it('leaves Ctrl+wheel, the Rules card and the pins alone', async () => {
+    const { page } = opened
+    await toLine(page)
+    assert.deepEqual(await wheelBurst(page, [100], { ctrlKey: true }), [false])
+    await afterChange(page)
+    assert.equal(await modeNow(page), 'line', 'a pinch zoom is not a step')
     await watchPrevented(page)
-    await setTool(page, { mode: 'line', submode: '1' })
     await overCentre(page, 'section[aria-label="Rules"] .ui-body')
     await page.mouse.wheel(0, 100)
     await afterChange(page)
     assert.equal(await modeNow(page), 'line')
     assert.deepEqual(await page.evaluate(() => window.wheelPrevented), [false])
+  })
+})
+
+describe('the mouse wheel over the Rules card', () => {
+  let opened
+  before(async () => {
+    const rules = Array.from({ length: 80 }, (_, i) => `Rule line ${i + 1}.`).join('\n')
+    opened = await openSolvePage(browser(), await newBoardSolveLink(browser(), ['Line Normal', 'Surface'], rules))
+  })
+  after(async () => { await opened?.context.close() })
+
+  it('scrolls the card and changes no pin', async () => {
+    const { page } = opened
+    await setTool(page, { mode: 'line', submode: '1' })
+    const body = page.locator('section[aria-label="Rules"] .ui-body')
+    assert.equal(await body.evaluate((node) => node.scrollHeight > node.clientHeight), true, 'the long rules overflow the card')
+    const box = await body.boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.wheel(0, 100)
+    assert.equal(await settle(() => body.evaluate((node) => node.scrollTop > 0), true), true, 'the card scrolled')
+    assert.equal((await currentTool(page)).mode, 'line')
+  })
+})
+
+describe('the mouse wheel with nothing pinned', () => {
+  let opened
+  before(async () => { opened = await openSolve([]) })
+  after(async () => { await opened?.context.close() })
+
+  it('is left to the page', async () => {
+    const { page } = opened
+    assert.deepEqual(await chipNames(page), [], 'no pin')
+    const outcome = await page.evaluate(() => {
+      const event = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true })
+      document.querySelector('section[aria-label="Board"] .ui-body').dispatchEvent(event)
+      return event.defaultPrevented
+    })
+    assert.equal(outcome, false)
   })
 })
 
