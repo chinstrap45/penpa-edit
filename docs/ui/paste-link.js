@@ -7,8 +7,9 @@
         return;
     }
 
-    // Both hosts serve Penpa+ under /penpa-edit/; the userscript sends the first to the second.
-    const PENPA_ORIGINS = ['https://swaroopg92.github.io', 'https://chinstrap45.github.io'];
+    // The hosts that serve Penpa+ under /penpa-edit/; the userscript sends the first to the second. The last is the fork's
+    // address before the move, kept so a link shared then still opens (spec #373: old links keep working).
+    const PENPA_ORIGINS = ['https://swaroopg92.github.io', 'https://chinstrap45.github.io', 'https://caneff.github.io'];
     const PENPA_PATH = '/penpa-edit/';
     // Parameters with a puzzle in them: `p=` among them, the test boot applies to a query.
     const HAS_PUZZLE = /(^|&)p=/;
