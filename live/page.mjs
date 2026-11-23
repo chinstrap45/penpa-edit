@@ -86,6 +86,7 @@ export async function openPenpa (browser, query = '', { cookies = [], served = f
   page.on('dialog', async (d) => { dialogs.push(d.message()); await d.dismiss() })
   await page.goto((url ?? penpaAddress(served, solve)) + (solve ? query : markedForPenpa(query)))
   await page.waitForFunction(ready)
+  if (solve && !welcome) await welcomeClosed(page)
   return { context, page, dialogs, errors }
 }
 
@@ -368,7 +369,6 @@ export async function waitForDesk (page) {
 export async function openSolvePage (browser, query, options = {}) {
   const opened = await openPenpa(browser, query, { solve: true, contextOptions: DESK_SIZE, ...options })
   await waitForDesk(opened.page)
-  if (!options.welcome) await welcomeClosed(opened.page)
   return opened
 }
 
@@ -376,7 +376,9 @@ export async function openSolvePage (browser, query, options = {}) {
 // otherwise overlap the test's first steps. `solveWelcome` is set in the task that opens the dialog, so once it is there the
 // dialog is already in the page, or never will be.
 async function welcomeClosed (page) {
-  await page.waitForFunction(() => window.solveWelcome !== undefined)
+  // A page whose desk never builds has no welcome to wait for; the test's own wait for the desk then fails it.
+  const built = await page.waitForFunction(() => window.solveWelcome !== undefined, undefined, { timeout: 10000 }).then(() => true, () => false)
+  if (!built) return
   await page.waitForFunction(() => !document.querySelector('.ui-welcome'))
 }
 
