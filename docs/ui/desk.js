@@ -466,10 +466,9 @@
     const boxOf = (node) => ({ left: node.offsetLeft, top: node.offsetTop, right: node.offsetLeft + node.offsetWidth, bottom: node.offsetTop + node.offsetHeight });
     const boxesMeet = (p, q) => p.left < q.right && q.left < p.right && p.top < q.bottom && q.top < p.bottom;
 
-    // The cards that overlap: a map from a key naming the pair to the pair's two card ids.
-    function overlappingPairs(cards) {
-        const ids = shownIds(cards);
-        const box = (id) => cards[id].node.getBoundingClientRect();
+    // The pairs among the cards `ids` whose `box` (a card id to a box) meet: a map from a key naming the pair to the pair's
+    // two card ids.
+    function meetingPairs(ids, box) {
         const pairs = new Map();
         ids.forEach((a, i) => ids.slice(i + 1).forEach((b) => {
             if (boxesMeet(box(a), box(b))) {
@@ -479,30 +478,26 @@
         return pairs;
     }
 
-    // The pairs of `overlappingPairs`' shape the solver left over each other: both cards placed by the solver in a desk of
-    // the same size, their saved boxes overlapping there (a card saved with no height has its current one). A kept layout
-    // does not say which overlaps are deliberate, so the open recomputes them; any other pair is the window's doing.
+    const overlappingPairs = (cards) => meetingPairs(shownIds(cards), (id) => cards[id].node.getBoundingClientRect());
+
+    // The overlaps the solver made, which a kept layout does not say apart from the ones a smaller window makes: pairs of
+    // cards with a kept place, saved in desks of one size, whose saved boxes meet there (a card saved with no height has its
+    // current one). A fitted card counts, since the solver may have dragged a card over it.
     function deliberateOverlaps(cards) {
         const boxSaved = (id) => {
             const { x, y, w, h = cards[id].node.offsetHeight } = saved[id];
             return { left: x, top: y, right: x + w, bottom: y + h };
         };
-        const isPlaced = (id) => saved[id]?.x !== undefined && !saved[id].fitted;
-        const ids = shownIds(cards).filter(isPlaced);
-        const pairs = new Map();
-        ids.forEach((a, i) => ids.slice(i + 1).forEach((b) => {
-            if (saved[a].vw === saved[b].vw && saved[a].vh === saved[b].vh && boxesMeet(boxSaved(a), boxSaved(b))) {
-                pairs.set(`${a}/${b}`, [a, b]);
-            }
-        }));
-        return pairs;
+        const ids = shownIds(cards).filter((id) => isMoved(id));
+        const pairs = meetingPairs(ids, boxSaved);
+        return new Map([...pairs].filter(([, [a, b]]) => saved[a].vw === saved[b].vw && saved[a].vh === saved[b].vh));
     }
 
-    // Cards newly put over each other, by a smaller window (at a resize or when a saved layout opens), places kept from another puzzle or a card that grew, not by the
+    // Cards newly put over each other, by a smaller window, places kept from another puzzle or a card that grew, not by the
     // solver, nudged apart and never refitted (#344): the Board card narrows into the room between the cards beside it, and
     // each overlap left (or one a too narrow Board leaves) moves the lower of its two cards below the other, or above it, shrunk
     // to the room there is at least. What moved is kept, so a reload opens on the same layout. `before` holds the pairs
-    // (`overlappingPairs`) that already overlapped, which stay.
+    // (`overlappingPairs`' keys) that stay.
     function repairOverlaps(desk, cards, before) {
         const isNew = () => [...overlappingPairs(cards)].filter(([key]) => !before.has(key)).map(([, pair]) => pair);
         if (!isNew().length) {
@@ -1453,7 +1448,10 @@
         openLayout();
         fitPending = Object.keys(saved).length === 0;
         layout(desk);
-        repairOverlaps(desk.desk, desk.cards, deliberateOverlaps(desk.cards));
+        // With no kept layout the fit places the cards, and nothing is kept for a nudge to change.
+        if (!fitPending) {
+            repairOverlaps(desk.desk, desk.cards, deliberateOverlaps(desk.cards));
+        }
         const relayout = () => layout(desk);
         // The cards laid out again by `step`, and the pairs it newly put over each other nudged apart.
         const nudged = (step) => {
