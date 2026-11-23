@@ -216,8 +216,10 @@ const CASES = {
     Digit: [['picks colour n', [], [stage(key('3'), ['style=3'])]]]
   },
 
-  'multicolor/': selectingTool({ digit: ['adds colour n, then removes it', [click(at(A))], cycle(key('1'), [`surface@cell=${SHADE}`], [])],
-    removeDrag: true }),
+  'multicolor/': selectingTool({
+    digit: ['adds colour n, then removes it', [click(at(A))], cycle(key('1'), [`surface@cell=${SHADE}`], [])],
+    removeDrag: true
+  }),
   'combi/blpo': {
     'Left click': [['shades, dots, then clears', [], cycle(click(at(A)), [`surface@cell=${SHADE}`], [GREY_DOT], [])]],
     'Right click': [['dots, shades, then clears', [], cycle(rightClick(at(A)), [GREY_DOT], [`surface@cell=${SHADE}`], [])]],
@@ -347,11 +349,13 @@ const CASES = {
   'number/10': selectingTool({ digit: ['writes a large number', [click(at(A))], [stage(key('5'), ['number@cell=["5",2,"10"]'])]] }),
   'number/6': selectingTool({ digit: ['writes a medium number', [click(at(A))], [stage(key('5'), ['number@cell=["5",2,"6"]'])]] }),
   'number/5': selectingTool({ digit: ['writes a small number', [click(at(A))], [stage(key('5'), ['number@cell=["5",2,"5"]'])]] }),
-  'number/7': selectingTool({ double: [
-    ['on a number: selects every cell with it', [useTool({ mode: 'number', submode: '1' }), ...sameValueSetup], [stage(doubleClick(at(A)), [`selection=${A},${C}`])]],
-    ['on candidates: selects just that cell', sameValueSetup, [stage(doubleClick(at(A)), [`selection=${A}`])]]
-  ],
-  digit: ['adds a candidate, then removes it', [click(at(A))], cycle(key('5'), ['number@cell=[[0,0,0,0,1,0,0,0,0],2,"7"]'], ['number@cell=[[0,0,0,0,0,0,0,0,0],2,"7"]'])] }),
+  'number/7': selectingTool({
+    double: [
+      ['on a number: selects every cell with it', [useTool({ mode: 'number', submode: '1' }), ...sameValueSetup], [stage(doubleClick(at(A)), [`selection=${A},${C}`])]],
+      ['on candidates: selects just that cell', sameValueSetup, [stage(doubleClick(at(A)), [`selection=${A}`])]]
+    ],
+    digit: ['adds a candidate, then removes it', [click(at(A))], cycle(key('5'), ['number@cell=[[0,0,0,0,1,0,0,0,0],2,"7"]'], ['number@cell=[[0,0,0,0,0,0,0,0,0],2,"7"]'])]
+  }),
   'number/8': selectingTool({ digit: ['adds to the long number', [click(at(A))], [stage(key('5'), ['number@cell=["5",2,"8"]']), stage(key('6'), ['number@cell=["56",2,"8"]'])]] }),
   'number/3': cursorTool({ dx: 0.3, dy: 0.3 }, 'type4', 'numberS@type4=["5",2]'),
   'number/9': cursorTool({ dx: 0.35, dy: 0 }, 'type5', 'numberS@type5=["5",2]'),
@@ -360,11 +364,14 @@ const CASES = {
     'Shift + digit': [['writes corner marks', [click(at(A))], [stage(key('5', ['Shift']), ['numberS@type4=["5",9]'])]]],
     'Ctrl + digit': [['writes a centre mark', [click(at(A))], [stage(key('5', ['Control']), ['number@cell=["5",9,"6"]'])]]]
   },
-  'sudoku/2': selectingTool({ double: [
-    ['on a digit: selects every cell with it', [useTool({ mode: 'sudoku', submode: '1' }), ...sameValueSetup], [stage(doubleClick(at(A)), [`selection=${A},${C}`])]],
-    ['on corner marks only: clears the selection', sameValueSetup, [stage(doubleClick(at(A)), ['selection='])]]
-  ],
-  digit: ['writes a corner mark', [click(at(A))], [stage(key('5'), ['numberS@type4=["5",9]'])]], removeDrag: true }),
+  'sudoku/2': selectingTool({
+    double: [
+      ['on a digit: selects every cell with it', [useTool({ mode: 'sudoku', submode: '1' }), ...sameValueSetup], [stage(doubleClick(at(A)), [`selection=${A},${C}`])]],
+      ['on corner marks only: clears the selection', sameValueSetup, [stage(doubleClick(at(A)), ['selection='])]]
+    ],
+    digit: ['writes a corner mark', [click(at(A))], [stage(key('5'), ['numberS@type4=["5",9]'])]],
+    removeDrag: true
+  }),
   'sudoku/3': selectingTool({ digit: ['writes a centre mark', [click(at(A))], [stage(key('5'), ['number@cell=["5",9,"6"]'])]], removeDrag: true }),
   'combi/numfl': flickTool((v) => `number@cell=${JSON.stringify([v, 2, '1'])}`, '5', { nw: '1', n: '2', ne: '3', w: '4', e: '6', sw: '7', s: '8', se: '9' }),
   'combi/alfl': flickTool((v) => `number@cell=${JSON.stringify([v, 2, '1'])}`, 'E', { nw: 'A', n: 'B', ne: 'C', w: 'D', e: 'F', sw: 'G', s: 'H', se: '-' }),
@@ -514,7 +521,6 @@ const SHAPE_CASES = {
 
 // ---- Running a case --------------------------------------------------------------------------------------------------
 
-
 // Steps a dispatched drag takes between two of its points, as Playwright's `mouse.move` takes `steps`.
 const DRAG_STEPS = 4
 
@@ -547,8 +553,12 @@ function snapshotInPage () {
   const { command_undo: undo, command_redo: redo, command_replay: replay, ...entered } = s.pu_a
   return {
     // Erasing grid lines writes to the question's layer.
-    entered, erased: pu.pu_q.deletelineE, selection: s.selection,
-    cursor: pu.cursol, cursorS: pu.cursolS, style: engine.getTool().style
+    entered,
+    erased: pu.pu_q.deletelineE,
+    selection: s.selection,
+    cursor: pu.cursol,
+    cursorS: pu.cursolS,
+    style: engine.getTool().style
   }
 }
 

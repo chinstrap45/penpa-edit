@@ -238,8 +238,8 @@ export const UI_PLANTS = [
     id: 'pin-keys-x-and-c-swapped',
     bug: 'pin keys X and C select each other\'s pin, each chip still showing its own key',
     file: 'pins.js',
-    find: 'const SHORTCUT_SLOT_BY_CODE = { KeyZ: 0, KeyX: 1, KeyC: 2, KeyV: 3 };',
-    replace: 'const SHORTCUT_SLOT_BY_CODE = { KeyZ: 0, KeyX: 2, KeyC: 1, KeyV: 3 };',
+    find: 'const SHORTCUT_SLOT_BY_CODE = { KeyZ: 0, KeyX: 1, KeyC: 2, KeyV: 3 }',
+    replace: 'const SHORTCUT_SLOT_BY_CODE = { KeyZ: 0, KeyX: 2, KeyC: 1, KeyV: 3 }',
     focus: ['pinned'],
     caughtBy: /^rules? broken after step \d+ \(.*\): pin-keys-select-their-pin: pressing [XC] left /,
     last: /^press pin key [XC]/
@@ -271,6 +271,7 @@ export function plantIn (source, plant) {
   if (scope.indexOf(find, at + 1) !== -1) throw new Error(`${plant.id}: its line is in ${plant.handler ?? plant.file} more than once`)
   const planted = source.slice(0, start + at) + replace + source.slice(start + at + find.length)
   try {
+    // eslint-disable-next-line no-new -- the constructor throws on a syntax error, which is the check
     new Script(planted, { filename: plant.file })
   } catch (e) {
     throw new Error(`${plant.id}: ${plant.file} does not parse with it in: ${e.message}`)

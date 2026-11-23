@@ -22,6 +22,7 @@ const WINDOW = { viewport: { width: 1600, height: 900 } }
 // The entries the page lists, read from the file it loads.
 const listed = () => {
   const source = readFileSync(GALLERY_FILE, 'utf8')
+  // eslint-disable-next-line no-new-func -- reads the list from the page's own script text
   return new Function(`${source}; return GALLERY_PUZZLES`)()
 }
 
@@ -98,7 +99,7 @@ describe('the review page', () => {
 
   const entryOf = (id) => listed().find((entry) => entry.id === id)
 
-  it(`loads the first puzzle's own board`, async () => {
+  it('loads the first puzzle\'s own board', async () => {
     const { page } = await open()
     await assertOpensEntry(page, entryOf(IDS[0]))
   })
@@ -132,7 +133,7 @@ describe('the review page', () => {
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowUp')
     assert.equal(await selectedId(page), IDS[1])
-    await page.locator(`#puzzle-list [data-id="killer"]`).click()
+    await page.locator('#puzzle-list [data-id="killer"]').click()
     assert.equal(await selectedId(page), 'killer')
     await boardFrame(page, 'killer')
   })

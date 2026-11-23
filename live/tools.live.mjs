@@ -545,8 +545,8 @@ describe('the Mouse card and the title bar', () => {
     [{ mode: 'combi', submode: 'linex' }, 'Line x', [['Right click', '× on the edge → clear'],
       ['Drag', 'line through cell centres; starting on a line: clear it'], ['Right drag', 'from an edge: × on each edge it passes; starting on a ×: clear them']]],
     [{ mode: 'combi', submode: 'linedir' }, 'Line x<>', [['Right click', 'edge: × → arrowhead one way → the other way → clear'], ['Drag', 'line through cell centres; starting on a line: clear it'],
-      ['Right drag', 'from a cell toward an edge: arrowhead on that edge pointing that way → clear (same way); '
-        + 'from an edge: × on each edge it passes (starting on a mark: as a right click there; starting on the last arrowhead: clear the marks it passes)']]],
+      ['Right drag', 'from a cell toward an edge: arrowhead on that edge pointing that way → clear (same way); ' +
+        'from an edge: × on each edge it passes (starting on a mark: as a right click there; starting on the last arrowhead: clear the marks it passes)']]],
     [{ mode: 'number', submode: '7' }, 'Number > Candidates', [['Left click', 'only that cell selected'],
       ['Drag', 'many cells selected'], ['Digit', 'candidate in the selected cells, again: removed'], ['Ctrl/Shift + click', 'cell added to the selection, again: removed'],
       ['Alt + drag', 'rectangle of cells selected (square grids only)'],
@@ -673,9 +673,12 @@ describe('the Mouse card reads at a glance (#203)', () => {
         rows: [...card.querySelectorAll('.ui-mrow')].map((row) => {
           const gesture = row.children[0]
           return {
-            gesture: gesture.textContent, effect: row.children[1].textContent, isMore: row.classList.contains('is-more'),
+            gesture: gesture.textContent,
+            effect: row.children[1].textContent,
+            isMore: row.classList.contains('is-more'),
             gestureLines: Math.round(gesture.getBoundingClientRect().height / parseFloat(getComputedStyle(gesture).lineHeight === 'normal'
-              ? parseFloat(getComputedStyle(gesture).fontSize) * 1.2 : getComputedStyle(gesture).lineHeight)),
+              ? parseFloat(getComputedStyle(gesture).fontSize) * 1.2
+              : getComputedStyle(gesture).lineHeight)),
             keypad: [...row.querySelectorAll('.ui-keypad > *')].map((k) => k.textContent)
           }
         })

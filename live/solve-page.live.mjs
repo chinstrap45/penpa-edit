@@ -9,7 +9,6 @@ import {
   AKARI_SOLVE, ANSWER_CELL, boardAgainstCard, boardCanvasInPage, jsRequest, linkFromNewBoard, makeNumberSolveLink, openPenpa,
   openSolvePage, takePageErrors, typeDigitInPage, useBrowser
 } from './page.mjs'
-import { clickCell } from './replay.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
