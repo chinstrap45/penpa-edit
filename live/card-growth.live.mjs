@@ -108,10 +108,19 @@ describe('a card that grows on a layout the solver changed', () => {
     assert.ok(bottom(after.Pinned) + CARD_GAP_PX <= after.Mode.y + SLACK_PX, `Pinned ends at ${bottom(after.Pinned)}, over Mode at ${after.Mode.y}`)
   })
 
-  it('Recent, grown by a preset load, stays clear of a Mode card dragged down and left (#391)', async () => {
-    await replays('slitherlink', [
-      ['mode pick', 232], drag('Mode', -240, 240), ['preset star', 39], ['mode pick', 465], ['preset load', 273]
-    ])
+  // The ticket's steps: Mode dragged down and left, then a preset load grows Mode and Recent, which sits at the desk's bottom.
+  const MODE_DRAGGED_DOWN = [['mode pick', 232], drag('Mode', -240, 240), ['preset star', 39], ['mode pick', 465], ['preset load', 273]]
+
+  it('Recent and a Mode card dragged down and left, both grown by a preset load, stay clear (#391)', async () => {
+    await replays('slitherlink', MODE_DRAGGED_DOWN)
+  })
+
+  it('the Mode card dragged there keeps its place, and Recent keeps its bottom edge, squeezed to the room under Mode (#391)', async () => {
+    const { before, after } = await boxesAround('slitherlink', MODE_DRAGGED_DOWN)
+    near(after.Mode.x, before.Mode.x, 'Mode\'s left')
+    near(after.Mode.y, before.Mode.y, 'Mode\'s top')
+    near(bottom(after.Recent), bottom(before.Recent), 'Recent\'s bottom')
+    assert.ok(bottom(after.Mode) + CARD_GAP_PX <= after.Recent.y + SLACK_PX, `Mode ends at ${bottom(after.Mode)}, over Recent at ${after.Recent.y}`)
   })
 
   it('Rules, dragged by hand, stays clear of Mouse on a preset load', async () => {
