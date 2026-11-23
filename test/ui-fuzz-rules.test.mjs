@@ -213,6 +213,17 @@ describe('the UI fuzz rules', () => {
       assert.deepEqual(check('reload-keeps-layout-and-pins', { cards: [card('Recent', 1005, 300, 380, 98)] }, { action: action('reload'), before }),
         ['the reload moved Recent from 1005,326 380x136 to 1005,300 380x98'])
     })
+    describe('when Pinned shrinks and Recent shrinks with its bottom on the desk\'s bottom (#392)', () => {
+      const column = (pinnedHeight, recentY, recentHeight) => [card('Pinned', 1006, 72, 380, pinnedHeight), card('Recent', 1006, recentY, 380, recentHeight)]
+      const before = { presetUndo: true, cards: column(124.375, 808, 80), recent: [pin(null, 'Line > Normal')] }
+      it('holds when Recent\'s bottom stays put while Pinned gets shorter', () => {
+        assert.deepEqual(check('reload-keeps-layout-and-pins', { cards: column(96.1875, 832, 56) }, { action: action('reload'), before }), [])
+      })
+      it('fails when Recent\'s bottom moves', () => {
+        assert.deepEqual(check('reload-keeps-layout-and-pins', { cards: column(96.1875, 810, 56) }, { action: action('reload'), before }),
+          ['the reload moved Recent from 1006,808 380x80 to 1006,810 380x56'])
+      })
+    })
     describe('when Pinned showed a preset\'s undo line, which a reload drops', () => {
       const column = (pinnedHeight, modeY) => [card('Pinned', 1006, 72, 380, pinnedHeight), card('Mode', 1006, modeY, 380, 98)]
       it('holds when Pinned gets shorter and the cards under it move up by as much', () => {

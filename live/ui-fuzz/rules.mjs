@@ -184,10 +184,13 @@ export const RULES = [
       const moved = before.cards.flatMap((was) => {
         const is = now.cards.find((c) => c.name === was.name)
         if (!is || is.shown !== was.shown) return [`the reload ${was.shown ? 'closed' : 'opened'} ${was.name}`]
+        // Recent's bottom stays on the desk's bottom, so a Recent that gets shorter ends lower, and the cards above it
+        // do not move it (#306, #392). Where the column has no room Recent stacks under them (desk.js placeRightColumn),
+        // so a Recent of the same height may still move with them.
+        const recentResized = was.name === RECENT_CARD && Math.abs(grew(was.name)) > SLACK_PX
         const expected = {
           ...was.rect,
-          // Recent's bottom stays on the desk's bottom, so a Recent that gets shorter ends lower (#306).
-          y: was.rect.y + above(was.rect).reduce((sum, c) => sum + grew(c.name), 0) - (was.name === RECENT_CARD ? grew(was.name) : 0),
+          y: recentResized ? was.rect.y - grew(was.name) : was.rect.y + above(was.rect).reduce((sum, c) => sum + grew(c.name), 0),
           height: was.rect.height + grew(was.name)
         }
         // A card whose rectangle is as it was never moved, whatever the column above it did.
