@@ -5,8 +5,8 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, it } from 'node:test'
-import { CARD_GAP_PX, MOUSE_MIN_HEIGHT_PX, MOUSE_SLACK_PX, SLACK_PX, steady } from './desk-layout.mjs'
-import { afterChange, ICEBREAKER, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, resetLayoutInSettings, useBrowser, waitForDesk } from './page.mjs'
+import { CARD_GAP_PX, MOUSE_MIN_HEIGHT_PX, MOUSE_SLACK_PX, overlaps, SLACK_PX, steady } from './desk-layout.mjs'
+import { afterChange, ICEBREAKER, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, resetLayoutInSettings, useBrowser, waitForDesk } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -80,7 +80,6 @@ function readDeskInPage (names) {
   }
 }
 
-const overlaps = (a, b) => a.x < b.x + b.w - 0.5 && b.x < a.x + a.w - 0.5 && a.y < b.y + b.h - 0.5 && b.y < a.y + a.h - 0.5
 const near = (a, b) => Math.abs(a - b) <= SLACK_PX
 
 // The tooltips showing now, by text. A Web Awesome tooltip is marked `open` while it shows.
@@ -418,7 +417,7 @@ describe('the desk holds together', () => {
 
   const deskSettled = (page) => steady(page, readDeskInPage, CARDS)
   // The layout the desk keeps in localStorage, as text, or null when none is kept.
-  const keptLayout = (page) => page.evaluate(() => localStorage.getItem('chinstrap-solve-layout-v1'))
+  const keptLayout = (page) => page.evaluate((key) => localStorage.getItem(key), LAYOUT_KEY)
   const cardsOf = async (page) => (await page.evaluate(readDeskInPage, CARDS)).cards
 
   async function dragFrom (page, point, dx, dy) {
