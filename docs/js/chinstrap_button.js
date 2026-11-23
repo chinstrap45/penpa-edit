@@ -1,4 +1,4 @@
-// caneff: index.html's way back to the ChinStrap solve page (#364), the mirror of solve.html's Penpa+ button (#148): a button in
+// caneff: index.html's Back to new UI button, the way back to the solve page (#364), the mirror of solve.html's Penpa+ button (#148): a button in
 // Penpa+'s top row that saves the progress, then opens solve.html on the same link, which reads the progress back from the store.
 
 // Penpa+ reads a link's settings from its `?`, or from its `#` when it has no `?`.
@@ -15,7 +15,7 @@ async function openInChinStrap () {
   }
   const answer = await Swal.fire({
     title: 'Progress is not being saved',
-    text: 'Saving in this browser is off or was cleared, so ChinStrap would open the puzzle without what you entered here.',
+    text: 'Saving in this browser is off or was cleared, so the new UI would open the puzzle without what you entered here.',
     showCancelButton: true,
     cancelButtonText: 'Stay here',
     confirmButtonText: 'Open anyway'
@@ -33,8 +33,8 @@ function addChinStrapButton () {
   }
   const button = document.createElement('button')
   button.id = 'chinstrap'
-  button.textContent = 'ChinStrap'
-  button.title = 'Open this puzzle in the ChinStrap solve page'
+  button.textContent = 'Back to new UI'
+  button.title = 'Open this puzzle in the new solve UI'
   button.addEventListener('click', openInChinStrap)
   document.getElementById('top_button').prepend(button)
 }

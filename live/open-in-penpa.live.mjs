@@ -1,5 +1,5 @@
 // The top bar's Penpa+ button (#148, #244): the escape hatch to `index.html` on the same puzzle, keeping the solver's progress both
-// ways through the progress store the two pages share; and index.html's ChinStrap button back (#364). Served over one origin so the store is shared; the buttons are found
+// ways through the progress store the two pages share; and index.html's Back to new UI button (#364). Served over one origin so the store is shared; the buttons are found
 // by role and accessible name and the board is read as Penpa+ would save it (`board`). The timer is not checked: it is a
 // running clock, and nothing here reads it.
 import assert from 'node:assert/strict'
@@ -15,7 +15,7 @@ const PENPA_CELL = 15
 
 const entered = async (page) => (await board(page)).entered
 const open = (page) => page.getByRole('button', { name: 'Penpa+', exact: true })
-const chinStrap = (page) => page.getByRole('button', { name: 'ChinStrap', exact: true })
+const chinStrap = (page) => page.getByRole('button', { name: 'Back to new UI', exact: true })
 const waitForPenpa = (page) => page.waitForFunction(() => typeof pu !== 'undefined' && !document.querySelector('section[aria-label="Board"]'))
 
 async function openWithEntries () {
@@ -70,7 +70,7 @@ describe('the Penpa+ button', () => {
   })
 })
 
-describe('the ChinStrap button on index.html', () => {
+describe('the Back to new UI button on index.html', () => {
   it('opens solve.html with every entry made on index.html', async () => {
     const { context, page, link } = await openWithEntries()
     await open(page).click()
@@ -108,7 +108,7 @@ describe('the ChinStrap button on index.html', () => {
   it('is not on index.html in edit mode', async () => {
     const { context, page } = await openPenpa(browser(), '', { served: true })
     assert.equal(await page.locator('#top_button #savetext').count(), 1, 'Penpa+\'s top row is on the page')
-    assert.equal(await chinStrap(page).count(), 0, 'no ChinStrap button')
+    assert.equal(await chinStrap(page).count(), 0, 'no Back to new UI button')
     await context.close()
   })
 
