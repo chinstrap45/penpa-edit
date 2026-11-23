@@ -2,7 +2,7 @@
 // confirm button's, read as computed styles. Penpa+'s own page keeps SweetAlert's default look.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { AKARI_SOLVE, openPenpa, openSolvePage, useBrowser } from './page.mjs'
+import { AKARI_SOLVE, animationsDone, openPenpa, openSolvePage, useBrowser } from './page.mjs'
 
 const browser = useBrowser()
 
@@ -46,7 +46,7 @@ describe('a Penpa popup', () => {
       const { context, page } = await openSolvePage(browser(), AKARI_SOLVE)
       try {
         await page.evaluate((t) => engine.setTheme(t), theme)
-        await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+        await animationsDone(page)
         await page.getByRole('button', { name: 'Settings' }).click()
         await page.getByRole('dialog', { name: 'Settings' }).waitFor()
         const want = await page.evaluate(pageDialogStyleInPage, [PANEL_PROPS, BUTTON_PROPS])

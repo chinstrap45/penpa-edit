@@ -429,6 +429,9 @@ export async function waitForTool (page, want, message = 'the tool settles') {
 // Two animation frames: the bridge's `change` fires in the first, and the UI has drawn it by the second. A ResizeObserver also runs in a frame, so this waits for a layout change the page reacts to.
 export const afterChange = (page) => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 
+// Waits until every running animation on the page (a dialog opening, colours easing to a new theme) has finished.
+export const animationsDone = (page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+
 // Fails unless the engine reports fewer than 5 changes in one second with nobody touching the page (a "nothing happened in
 // N ms" check): a redraw that wakes the next change loops every frame, about 60 a second (#322). The bound is not zero
 // because Penpa+'s own clock (`h1#timer`, outside the UI) rewrites its text once a second, which the watcher sees as a

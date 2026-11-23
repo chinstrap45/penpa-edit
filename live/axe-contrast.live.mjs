@@ -1,19 +1,19 @@
 // WCAG AA colour contrast on `solve.html` (#378), read by axe-core's `color-contrast` rule on the loaded page: with a puzzle
-// loaded, with Settings open and with another dialog open, in each theme. A planted low-contrast colour must fail it, so a
+// loaded, with Settings open, with another dialog open and on the tour's popup, in each theme. A planted low-contrast colour must fail it, so a
 // pass is a check that can fail.
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { describe, it } from 'node:test'
-import { contrastHelpersInPage, groundOfInPage, makeNumberSolveLink, opacityOfInPage, openSolvePage, useBrowser } from './page.mjs'
+import { animationsDone, contrastHelpersInPage, groundOfInPage, makeNumberSolveLink, opacityOfInPage, openSolvePage, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 const AXE_SOURCE = createRequire(import.meta.url).resolve('axe-core/axe.min.js')
 
 let numberLink
-async function openIn (theme) {
+async function openIn (theme, { tour = false } = {}) {
   numberLink ??= await makeNumberSolveLink(browser())
-  const opened = await openSolvePage(browser(), numberLink)
+  const opened = await openSolvePage(browser(), numberLink, { tour })
   await opened.page.addScriptTag({ path: AXE_SOURCE })
   await opened.page.addScriptTag({ content: `window.__helpers = ${contrastHelpersInPage}; window.__groundOf = ${groundOfInPage}; window.__opacityOf = ${opacityOfInPage}` })
   // The page's `body` is 0 high with `overflow: hidden`; axe counts the fixed desk inside it as clipped and skips all its text.
@@ -21,7 +21,7 @@ async function openIn (theme) {
   await opened.page.evaluate((t) => engine.setTheme(t), theme)
   await settle(() => opened.page.evaluate(() => document.documentElement.classList.contains('wa-dark')), theme === 'dark')
   // The colours ease to the new theme's; axe reads them only once the easing is over.
-  await opened.page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+  await animationsDone(opened.page)
   return opened
 }
 
@@ -33,8 +33,8 @@ const AA_LARGE_TEXT = 3
 // instead. Axe cannot read the panel colour behind a dialog's slotted text (it sits in Web Awesome's shadow DOM), so it
 // reports that text as `bgOverlap`; those nodes are measured through the flat tree. Other undecided nodes (a one-character
 // glyph, a swatch's letter on its colour) stay unjudged here; `dark-theme.live.mjs` measures the swatches.
-async function violationsInPage ({ aaText, aaLargeText }) {
-  const { violations, incomplete } = await axe.run(document, { runOnly: ['color-contrast'], elementRef: true })
+async function violationsInPage ({ aaText, aaLargeText, scope }) {
+  const { violations, incomplete } = await axe.run(scope ? document.querySelector(scope) : document, { runOnly: ['color-contrast'], elementRef: true })
   const lines = violations.flatMap((v) => v.nodes.map((n) => {
     const data = n.any[0]?.data ?? {}
     return `${data.fgColor} on ${data.bgColor} = ${data.contrastRatio} (needs ${data.expectedContrastRatio}): ${n.target.join(' ')}`
@@ -54,51 +54,85 @@ async function violationsInPage ({ aaText, aaLargeText }) {
   return { lines, measured: measured.length }
 }
 
-const contrastViolations = async (page) => (await page.evaluate(violationsInPage, { aaText: AA_TEXT, aaLargeText: AA_LARGE_TEXT })).lines
+// The violations on the whole page, or only inside the element `scope` selects.
+const contrastViolations = async (page, scope) => (await page.evaluate(violationsInPage, { aaText: AA_TEXT, aaLargeText: AA_LARGE_TEXT, scope })).lines
 
-const closeDialogs = (page) => page.keyboard.press('Escape')
+// The tour's popup on a first visit, its opening animation over. Only the popup is read: the page around it is dimmed on
+// purpose, and nobody reads it while the tour is up.
+const TOUR_POPUP = '.ui-tour'
+async function openTourIn (theme) {
+  const opened = await openIn(theme, { tour: true })
+  await opened.page.getByRole('dialog', { name: 'Tour' }).waitFor()
+  await animationsDone(opened.page)
+  return opened
+}
 
 for (const theme of ['light', 'dark']) {
   describe(`WCAG AA contrast, ${theme} theme`, () => {
     it('holds with a puzzle loaded', async () => {
-      const { page } = await openIn(theme)
-      assert.deepEqual(await contrastViolations(page), [])
+      const { context, page } = await openIn(theme)
+      try {
+        assert.deepEqual(await contrastViolations(page), [])
+      } finally { await context.close() }
     })
 
     it('holds with Settings open', async () => {
-      const { page } = await openIn(theme)
-      await page.getByRole('button', { name: 'Settings' }).click()
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
-      assert.deepEqual(await contrastViolations(page), [])
-      await closeDialogs(page)
+      const { context, page } = await openIn(theme)
+      try {
+        await page.getByRole('button', { name: 'Settings' }).click()
+        await page.getByRole('dialog', { name: 'Settings' }).waitFor()
+        await animationsDone(page)
+        assert.deepEqual(await contrastViolations(page), [])
+      } finally { await context.close() }
     })
 
     it('holds with the Change size dialog open', async () => {
-      const { page } = await openIn(theme)
-      await page.getByRole('region', { name: 'Board' }).getByRole('button', { name: 'Change size' }).click()
-      await page.getByRole('dialog', { name: 'Change size' }).waitFor()
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
-      assert.deepEqual(await contrastViolations(page), [])
+      const { context, page } = await openIn(theme)
+      try {
+        await page.getByRole('region', { name: 'Board' }).getByRole('button', { name: 'Change size' }).click()
+        await page.getByRole('dialog', { name: 'Change size' }).waitFor()
+        await animationsDone(page)
+        assert.deepEqual(await contrastViolations(page), [])
+      } finally { await context.close() }
+    })
+
+    it('holds on the tour\'s popup', async () => {
+      const { context, page } = await openTourIn(theme)
+      try {
+        assert.deepEqual(await contrastViolations(page, TOUR_POPUP), [])
+      } finally { await context.close() }
     })
   })
 }
 
 describe('the contrast check', () => {
   it('fails on a planted low-contrast colour', async () => {
-    const { page } = await openIn('light')
-    await page.addStyleTag({ content: '.ui-card, .ui-card * { color: #bbb !important; background: #fff !important; }' })
-    const found = await contrastViolations(page)
-    assert.ok(found.length > 0, 'a planted #bbb on white is reported')
+    const { context, page } = await openIn('light')
+    try {
+      await page.addStyleTag({ content: '.ui-card, .ui-card * { color: #bbb !important; background: #fff !important; }' })
+      const found = await contrastViolations(page)
+      assert.ok(found.length > 0, 'a planted #bbb on white is reported')
+    } finally { await context.close() }
   })
 
   it('fails on a planted low-contrast colour in the Settings dialog, which axe cannot judge itself', async () => {
-    const { page } = await openIn('light')
-    await page.getByRole('button', { name: 'Settings' }).click()
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
-    await page.addStyleTag({ content: 'wa-dialog[open] legend { color: #ddd !important; }' })
-    const found = await contrastViolations(page)
-    assert.ok(found.some((line) => line.includes('legend')), `a planted #ddd legend is reported: ${JSON.stringify(found)}`)
+    const { context, page } = await openIn('light')
+    try {
+      await page.getByRole('button', { name: 'Settings' }).click()
+      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
+      await animationsDone(page)
+      await page.addStyleTag({ content: 'wa-dialog[open] legend { color: #ddd !important; }' })
+      const found = await contrastViolations(page)
+      assert.ok(found.some((line) => line.includes('legend')), `a planted #ddd legend is reported: ${JSON.stringify(found)}`)
+    } finally { await context.close() }
+  })
+
+  it('fails on a planted low-contrast colour in the tour\'s popup', async () => {
+    const { context, page } = await openTourIn('light')
+    try {
+      await page.addStyleTag({ content: '.ui-tour-text { color: #ddd !important; }' })
+      const found = await contrastViolations(page, TOUR_POPUP)
+      assert.ok(found.some((line) => line.includes('ui-tour-text')), `a planted #ddd tour line is reported: ${JSON.stringify(found)}`)
+    } finally { await context.close() }
   })
 })

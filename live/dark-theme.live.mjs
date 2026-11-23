@@ -3,7 +3,7 @@
 // page's computed styles and the board's pixels, so a CSS change that looks wrong fails here.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { boardCanvasInPage, contrastHelpersInPage, groundOfInPage, makeNumberSolveLink, opacityOfInPage, openSolvePage, useBrowser, waitForDesk } from './page.mjs'
+import { animationsDone, boardCanvasInPage, contrastHelpersInPage, groundOfInPage, makeNumberSolveLink, opacityOfInPage, openSolvePage, useBrowser, waitForDesk } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -32,7 +32,7 @@ async function openIn (theme) {
   await opened.page.evaluate((t) => engine.setTheme(t), theme)
   await settle(() => opened.page.evaluate(() => document.documentElement.classList.contains('wa-dark')), theme === 'dark')
   // The colours ease to the new theme's; read them only once the easing is over.
-  await opened.page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+  await animationsDone(opened.page)
   return opened
 }
 
@@ -97,7 +97,7 @@ for (const theme of ['light', 'dark']) {
       // Colours ease to their new value, so each read waits until the list settles.
       const lowContrast = async () => {
         // A tool change flashes its name in and out; the flash is not the card's text.
-        await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+        await animationsDone(page)
         return settle(() => page.evaluate((min) => window.__lowContrast(min), WCAG_AA_TEXT), [])
       }
       assert.deepEqual(await lowContrast(), [], 'on opening')
@@ -177,7 +177,7 @@ describe('pin colours', () => {
       await page.reload()
       await waitForDesk(page)
       await page.addScriptTag({ content: `window.__helpers = ${contrastHelpersInPage}; window.__groundOf = ${groundOfInPage}` })
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+      await animationsDone(page)
       const chips = await page.evaluate(() => {
         const { parse, over, luminance, ratio } = window.__helpers()
         return [...document.querySelectorAll('.ui-pins .ui-chip')].map((chip) => {
@@ -239,7 +239,7 @@ describe('the dark theme elsewhere', () => {
     // A dialog fades in, so read once the buttons stop changing (settle returns the value once it holds still).
     const dialogButtons = () => settle(() => page.evaluate(() => window.__dialogButtons()), null)
     await page.locator('wa-dialog[open] wa-button', { hasText: 'Reset layout' }).waitFor()
-    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+    await animationsDone(page)
     const inSettings = await dialogButtons()
     const neutral = inSettings.filter((b) => !b.variant || b.variant === 'neutral')
     assert.ok(neutral.length >= 2, `the dialog has neutral buttons: ${JSON.stringify(inSettings)}`)
@@ -250,7 +250,7 @@ describe('the dark theme elsewhere', () => {
     // The danger-styled Clear opens its own confirm dialog, over the Settings dialog.
     await page.locator('wa-dialog[open] wa-button[variant="danger"]').first().click()
     await page.locator('wa-dialog[open][label*="Clear"] wa-button').first().waitFor()
-    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
+    await animationsDone(page)
     const confirm = await page.evaluate(() => [...document.querySelectorAll('wa-dialog[label*="Clear"] wa-button')].length)
     assert.equal(confirm, 2, 'the confirm dialog has Cancel and Clear')
     const inConfirm = (await dialogButtons()).filter((b) => b.name === 'Clear progress' || b.name === 'Cancel' || /^Keep|^Cancel/.test(b.name))

@@ -31,51 +31,69 @@ describe('a solve link opened on index.html', () => {
   before(async () => {
     hashLink = await makeNumberSolveLink(browser())
     const { context, page } = await openPenpa(browser(), hashLink, { served: true, solve: true, contextOptions: DESK_SIZE })
-    await waitForDesk(page)
-    expectedGivens = await givens(page)
-    await context.close()
+    try {
+      await waitForDesk(page)
+      expectedGivens = await givens(page)
+    } finally {
+      await context.close()
+    }
   })
 
   for (const form of ['#', '?']) {
     it(`lands on solve.html with its data and the same board on a desktop screen, in ${form} form`, async () => {
       const data = form + hashLink.slice(1)
       const { context, page } = await openIndex(data)
-      await waitForDesk(page)
-      assert.equal(pathOf(page), '/solve.html', 'the page is the solve page')
-      assert.equal(dataOf(page), data, 'the link\'s data came along unchanged')
-      assert.deepEqual(await givens(page), expectedGivens, 'the board is the one the link holds')
-      await context.close()
+      try {
+        await waitForDesk(page)
+        assert.equal(pathOf(page), '/solve.html', 'the page is the solve page')
+        assert.equal(dataOf(page), data, 'the link\'s data came along unchanged')
+        assert.deepEqual(await givens(page), expectedGivens, 'the board is the one the link holds')
+      } finally {
+        await context.close()
+      }
     })
   }
 
   it('leaves no index.html entry for Back to return to', async () => {
     const { context, page } = await openIndex(hashLink)
-    await waitForDesk(page)
-    await page.goBack()
-    assert.equal(page.url(), 'about:blank', 'Back goes to the page before the link')
-    await context.close()
+    try {
+      await waitForDesk(page)
+      await page.goBack()
+      assert.equal(page.url(), 'about:blank', 'Back goes to the page before the link')
+    } finally {
+      await context.close()
+    }
   })
 
   it('stays on index.html on a phone-sized screen', async () => {
     const { context, page } = await openIndex(hashLink, PHONE_SIZE)
-    assert.equal(pathOf(page), '/index.html')
-    assert.deepEqual(await givens(page), expectedGivens)
-    await context.close()
+    try {
+      assert.equal(pathOf(page), '/index.html')
+      assert.deepEqual(await givens(page), expectedGivens)
+    } finally {
+      await context.close()
+    }
   })
 
   it('stays on index.html on a touch screen, whatever its width', async () => {
     const { context, page } = await openIndex(hashLink, { ...DESK_SIZE, hasTouch: true })
-    assert.equal(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), true, 'the screen reads as touch')
-    assert.equal(pathOf(page), '/index.html')
-    await context.close()
+    try {
+      assert.equal(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), true, 'the screen reads as touch')
+      assert.equal(pathOf(page), '/index.html')
+    } finally {
+      await context.close()
+    }
   })
 
   it('stays on index.html when the solve page\'s Penpa+ button marked it, in either form', async () => {
     for (const data of [`${hashLink}&${PENPA_MARK}`, `?${hashLink.slice(1)}&${PENPA_MARK}`]) {
       const { context, page } = await openIndex(data)
-      assert.equal(pathOf(page), '/index.html', data)
-      assert.deepEqual(await givens(page), expectedGivens, 'the mark leaves the board as the link holds it')
-      await context.close()
+      try {
+        assert.equal(pathOf(page), '/index.html', data)
+        assert.deepEqual(await givens(page), expectedGivens, 'the mark leaves the board as the link holds it')
+      } finally {
+        await context.close()
+      }
     }
   })
 })
@@ -85,7 +103,10 @@ describe('an edit link opened on index.html', () => {
     const link = await makeNumberSolveLink(browser())
     const editLink = link.replace('m=solve', 'm=edit')
     const { context, page } = await openIndex(editLink)
-    assert.equal(pathOf(page), '/index.html')
-    await context.close()
+    try {
+      assert.equal(pathOf(page), '/index.html')
+    } finally {
+      await context.close()
+    }
   })
 })
