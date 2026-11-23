@@ -1,7 +1,9 @@
 // The tour (GLOSSARY.md **Tour**): on a first visit, one stop per difference from Penpa+'s page, each a popup anchored to
-// its card or control while the rest of the page is dimmed. Skip, Escape or Done marks it seen in localStorage, and it is
-// not shown again until Settings replays it (`window.solveTour.start`). A stop whose element is not shown (a closed card)
-// is left out. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
+// its card or control while the rest of the page is dimmed. It is marked seen in localStorage as it starts, so a tour left
+// unfinished (a reload, a closed tab) does not come back on its own either (Chris, 2026-11-23); Skip, Escape or Done end
+// it, and only Settings replays it (`window.solveTour.start`). A stop whose element is not shown points at its fallback
+// when it has one (the Rules card, when a puzzle has no rules to size), and is left out otherwise (a closed card). Reaches
+// Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
     'use strict';
 
@@ -14,14 +16,15 @@
     const SPOTLIGHT_PAD_PX = 4;
 
     onDeskReady(({ bar, cards }) => {
-        // One short line each, saying only what differs from Penpa+'s page (Chris, 2026-11-22).
+        // One short line each, saying only what differs from Penpa+'s page (Chris, 2026-11-22), and the element to point at
+        // when the first is not shown.
         const STOPS = [
             [cards.board.head, 'Drag a card by its title, resize from any edge, close with ×. Layout is kept.'],
             [cards.mode.node, 'Mode offers every tool this grid supports.'],
             [cards.pins.node, 'Pin tools here; Z X C V pick the first four. Recent keeps the last ones.'],
             [cards.mouse.node, 'Hold Shift for Corner marks or Ctrl for Centre marks.'],
             [bar.querySelector('.ui-try'), 'Try starts a trial; then Keep or Discard what you entered.'],
-            [cards.rules.head.querySelector('.ui-rules-text'), 'The Rules card has its own text size.'],
+            [cards.rules.head.querySelector('.ui-rules-text'), 'The Rules card has its own text size.', cards.rules.node],
             [bar.querySelector('.ui-open-penpa'), 'Penpa+ opens this puzzle there; its ChinStrap button brings you back.']
         ];
 
@@ -67,7 +70,8 @@
         }
 
         function start() {
-            shown = STOPS.filter(([target]) => target.checkVisibility());
+            shown = STOPS.map(([target, line, fallback]) => [[target, fallback].find((node) => node?.checkVisibility()), line])
+                .filter(([target]) => target);
             index = 0;
             root.append(veil, spotlight, popup);
             showStop();
@@ -93,16 +97,19 @@
             showStop();
         });
         skip.addEventListener('click', end);
-        // Capture, ahead of Penpa+: Escape ends the tour wherever focus is.
+        // Capture, ahead of Penpa+: Escape ends the tour wherever focus is, and goes no further, so it does not also clear
+        // the board's selection.
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && popup.isConnected) {
                 e.preventDefault();
+                e.stopPropagation();
                 end();
             }
         }, true);
 
         window.solveTour = { start };
         if (localStorage.getItem(TOUR_KEY) !== TOUR_SEEN) {
+            localStorage.setItem(TOUR_KEY, TOUR_SEEN);
             start();
         }
     });

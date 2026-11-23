@@ -6,7 +6,8 @@
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { settle } from './settle.mjs'
-import { afterChange, newBoardSolveLink, openSolvePage, TOUR_KEY, TOUR_SEEN, useBrowser, waitForDesk } from './page.mjs'
+import { afterChange, DIGIT_CELL, newBoardSolveLink, openSolvePage, setTool, TOUR_KEY, TOUR_SEEN, typedDigits, useBrowser, waitForDesk } from './page.mjs'
+import { clickCell } from './replay.mjs'
 
 const browser = useBrowser()
 
@@ -90,6 +91,18 @@ describe('the tour on a first visit', () => {
 })
 
 describe('skipping the tour', () => {
+  it('a tour left unfinished by a reload does not come back on its own (Chris, 2026-11-23)', async () => {
+    const { context, page } = await openFirstVisit()
+    try {
+      await tourButton(page, 'Next').click()
+      assert.equal(await stopCount(page), `2 of ${STOPS.length}`)
+      await page.reload()
+      assert.equal(await tourShownAfterLoad(page), 0, 'the tour shows on the first visit only')
+    } finally {
+      await context.close()
+    }
+  })
+
   it('Skip at a middle stop ends it, and a reload does not show it', async () => {
     const { context, page } = await openFirstVisit()
     try {
@@ -105,17 +118,25 @@ describe('skipping the tour', () => {
     }
   })
 
-  it('Escape skips it, and the key does not reach the board', async () => {
+  it('Escape skips it for good, and a digit typed while it is up does not reach the selected cell', async () => {
     const { context, page } = await openFirstVisit()
     try {
       await tour(page).waitFor()
-      const board = () => page.evaluate(() => JSON.stringify(engine.getState()))
-      const before = await board()
+      await page.keyboard.press('Escape')
+      await tour(page).waitFor({ state: 'detached' })
+      assert.equal(await storedTour(page), TOUR_SEEN)
+
+      // With the Number tool, a selected cell is where a digit would go; the tour's veil takes clicks, so select it before
+      // the replay.
+      await setTool(page, { mode: 'number', submode: '1' })
+      await clickCell(page, DIGIT_CELL)
+      await replayFromSettings(page)
       await page.keyboard.press('1')
       await page.keyboard.press('Escape')
       await tour(page).waitFor({ state: 'detached' })
-      assert.equal(await board(), before, 'the board took no key while the tour was up')
-      assert.equal(await storedTour(page), TOUR_SEEN)
+      assert.deepEqual(await typedDigits(page), [], 'the board took no digit while the tour was up')
+      await page.keyboard.press('1')
+      assert.deepEqual(await settle(() => typedDigits(page), ['1']), ['1'], 'with the tour gone the same key enters it')
     } finally {
       await context.close()
     }
@@ -155,6 +176,21 @@ describe('Settings', () => {
       assert.equal(stop.spotlightCovers, true, 'the replay points at the first stop\'s element')
       await page.keyboard.press('Enter')
       assert.equal(await settle(() => stopCount(page), `2 of ${STOPS.length}`), `2 of ${STOPS.length}`, 'Enter presses Next, which has focus')
+    } finally {
+      await context.close()
+    }
+  })
+
+  it('keeps the Rules stop on a puzzle with no rules, pointing at the Rules card', async () => {
+    const { context, page } = await openSolvePage(browser(), await newBoardSolveLink(browser()), { tour: true })
+    try {
+      await tour(page).waitFor()
+      for (let i = 0; i < STOPS.length - 2; i++) await tourButton(page, 'Next').click()
+      const stop = await readStop(page, page.getByRole('region', { name: 'Rules' }))
+      assert.equal(stop.count, `${STOPS.length - 1} of ${STOPS.length}`)
+      assert.equal(stop.text, 'The Rules card has its own text size.')
+      assert.ok(stop.popupGap <= MAX_POPUP_GAP_PX, `popup ${stop.popupGap}px from the Rules card`)
+      assert.ok(stop.spotlightCovers, 'the lit window covers the Rules card')
     } finally {
       await context.close()
     }
