@@ -1,6 +1,6 @@
 # penpa-edit (caneff's fork of Penpa+)
 
-Chris's fork of Penpa+ (`swaroopg92/penpa-edit`), served by GitHub Pages from `master:/docs` at `https://caneff.github.io/penpa-edit/`.
+Chris's fork of Penpa+ (`swaroopg92/penpa-edit`), served by GitHub Pages from `master:/docs` at `https://chinstrap45.github.io/penpa-edit/`.
 The fork is splitting from upstream (Chris, 2026-11-09): upstream's engine files (parsers, grid classes, checkers) keep
 being merged; the UI becomes ours, rebuilt against an engine API; `docs/js/class_p.js` is split step by step into the two.
 The plan is the `/wayfinder` map on the tracker. A Tampermonkey script, `userscript/penpa-redirect.user.js`, sends every
@@ -13,7 +13,7 @@ only stops naming Swaroop or upstream as its owner, with no self-promotion (Chri
 - **Upstream**: the `upstream` remote is `swaroopg92/penpa-edit`, branch `master`. Its changes are merged into our `master`, never rebased.
   A file we own is marked `merge=ours` in `.gitattributes`, so a merge keeps our side and upstream's change to it is ported by hand
   or dropped (git has no built-in `ours` driver: only `upstream-merge.sh` passes one, with `git -c`; never write it to a config); every other upstream file follows `CODING_STANDARDS.md` § Upstream merges. Nothing ever goes back to upstream: no commit,
-  push or PR (Chris, 2026-11-13). `gh repo set-default` names `caneff/penpa-edit`, so `gh pr create` targets the fork.
+  push or PR (Chris, 2026-11-13). `gh repo set-default` names `chinstrap45/penpa-edit`, so `gh pr create` targets the fork.
 - **Share links point at the fork** (Chris, 2026-11-09). `maketext_baseurl()` in `docs/js/class_p.js` already builds links from
   `location.href`; its localhost / `file://` branch names the fork's address too.
 - **Our files**, outside upstream's: `.gitattributes`, `AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md`, `GLOSSARY.md`, `.agents/` (the skills' tracker,
@@ -31,7 +31,7 @@ only stops naming Swaroop or upstream as its owner, with no self-promotion (Chri
 
 ### Issue tracker
 
-GitHub issues at `caneff/penpa-edit`, through `gh`. See `.agents/issue-tracker.md`.
+GitHub issues at `chinstrap45/penpa-edit`, through `gh`. See `.agents/issue-tracker.md`.
 
 ### Triage labels
 

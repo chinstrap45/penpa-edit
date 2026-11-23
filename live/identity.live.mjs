@@ -6,7 +6,7 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-const FORK_ADDRESS = 'https://caneff.github.io/penpa-edit/'
+const FORK_ADDRESS = 'https://chinstrap45.github.io/penpa-edit/'
 const PAGES = [['index.html', { solve: false }], ['solve.html', { solve: true }]]
 
 // Runs in the page: the head's title and every `og:`/`twitter:` meta, as [name, content] pairs.
@@ -29,7 +29,7 @@ describe('the page head', () => {
         assert.equal(byName['twitter:title'], 'ChinStrap')
         assert.equal(byName['og:url'], FORK_ADDRESS)
         assert.equal(byName['twitter:url'], FORK_ADDRESS)
-        assert.equal(byName['twitter:domain'], 'caneff.github.io')
+        assert.equal(byName['twitter:domain'], 'chinstrap45.github.io')
         assert.doesNotMatch(JSON.stringify(head), /swaroop|Penpa\+/i)
       } finally {
         await context.close()

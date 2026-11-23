@@ -14,7 +14,7 @@ The words this repo uses for Penpa+ and our changes to it. Terms come from Penpa
 - **Tab cycle**: Tab and Shift+Tab stepping through the pins in the new solve UI. Not the Tab set, which only seeds them.
 - **Review page**: `docs/gallery.html` (the file keeps the name "gallery"): a list of representative puzzles, each opened in `solve.html` inside an iframe at a size the reviewer picks, for going through the solve page by hand.
 - **Upstream**: `swaroopg92/penpa-edit`, the Penpa+ this repo forks.
-- **The fork**: this repo, served at `https://caneff.github.io/penpa-edit/`.
+- **The fork**: this repo, served at `https://chinstrap45.github.io/penpa-edit/`.
 - **Redirect script**: `userscript/penpa-redirect.user.js`, which sends upstream's links to the fork.
 - **Engine**: Penpa+'s puzzle model, grid geometry, importers and checkers: the part of upstream the fork keeps merging. Not "core" or "backend".
 - **Owned file**: an upstream file the fork has taken over, marked `merge=ours`; a merge keeps our side.
