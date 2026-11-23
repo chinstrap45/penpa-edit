@@ -136,7 +136,7 @@
         window.uiKeys.describe('Tools', () => (pins.length ? [
             { keys: STEP_KEYS.join(', '), text: 'Next pinned tool' },
             { keys: STEP_KEYS.map((key) => `Shift+${key}`).join(', '), text: 'Previous pinned tool' },
-            { keys: 'Wheel over the board', text: 'Down: next pinned tool. Up: previous pinned tool' },
+            { keys: 'Wheel over the board', text: 'Down steps the pins like Tab, up like Shift+Tab' },
             { keys: SHORTCUT_LABELS.join(' '), text: `Jump to pinned tool 1 to ${SHORTCUT_LABELS.length}, except in Number mode`,
                 state: engine.getSettings().shortcuts_enabled ? 'On' : 'Off: turn it on in Settings > Keys' }
         ] : []));
