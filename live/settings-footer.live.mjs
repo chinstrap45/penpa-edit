@@ -27,7 +27,7 @@ describe('the footer of Settings', () => {
       const before = await cardBoxes()
       for (const name of ['@ChinStrap', 'the Redirect script']) {
         const opened = context.waitForEvent('page')
-        await footer.getByRole('link', { name }).click()
+        await footer.getByRole('link', { name, exact: true }).click()
         const tab = await opened
         await tab.close()
       }
