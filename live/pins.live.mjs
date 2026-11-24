@@ -173,18 +173,26 @@ describe('Tab, Shift+Tab and Enter', () => {
   })
 })
 
-describe('the mouse wheel over the board', () => {
+const BOARD_BODY = 'section[aria-label="Board"] .ui-body'
+const RULES_BODY = 'section[aria-label="Rules"] .ui-body'
+const overCentre = async (page, selector) => {
+  const box = await page.locator(selector).boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+}
+// Records every wheel event's `defaultPrevented` from now, read after every handler has run; `true` means the page's own scrolling was stopped.
+const watchPrevented = (page) => page.evaluate(() => {
+  const first = window.wheelPrevented === undefined
+  window.wheelPrevented = []
+  if (first) document.addEventListener('wheel', (e) => window.wheelPrevented.push(e.defaultPrevented), { passive: true })
+})
+
+describe('the mouse wheel on the page', () => {
   let opened
   before(async () => { opened = await openSolve(['Line Normal', 'Surface', 'Special', 'Shape']) })
   after(async () => { await opened?.context.close() })
 
-  const BOARD_BODY = 'section[aria-label="Board"] .ui-body'
   const modeNow = async (page) => (await currentTool(page)).mode
   const toLine = (page) => setTool(page, { mode: 'line', submode: '1' })
-  const overCentre = async (page, selector) => {
-    const box = await page.locator(selector).boundingBox()
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-  }
   // Sends `deltas` as wheel events in one go, so they land in one swipe whatever the box's load; resolves to each event's `defaultPrevented`.
   const wheelBurst = (page, deltas, init = {}) => page.evaluate(({ selector, deltas: list, init: extra }) => {
     const body = document.querySelector(selector)
@@ -196,13 +204,6 @@ describe('the mouse wheel over the board', () => {
   }, { selector: BOARD_BODY, deltas, init })
   // Waits out the page's swipe gap (a sleep, allowed because the gap is the page's own clock), so the last test's swipe is not this one's.
   const freshSwipe = (page) => page.waitForTimeout(350)
-  // Records every wheel event's `defaultPrevented` from now, read after every handler has run; `true` means the page's own scrolling was stopped.
-  const watchPrevented = (page) => page.evaluate(() => {
-    const first = window.wheelPrevented === undefined
-    window.wheelPrevented = []
-    if (first) document.addEventListener('wheel', (e) => window.wheelPrevented.push(e.defaultPrevented), { passive: true })
-  })
-
   it('steps once per notch, down as Tab and up as Shift+Tab, and keeps the page from scrolling', async () => {
     const { page } = opened
     await watchPrevented(page)
@@ -271,18 +272,48 @@ describe('the mouse wheel over the board', () => {
     assert.equal(await modeNow(page), 'line', '60 and 60 a pause apart are no step')
   })
 
-  it('leaves Ctrl+wheel, the Rules card and the pins alone', async () => {
+  it('leaves Ctrl+wheel alone', async () => {
     const { page } = opened
     await toLine(page)
     assert.deepEqual(await wheelBurst(page, [100], { ctrlKey: true }), [false])
     await afterChange(page)
     assert.equal(await modeNow(page), 'line', 'a pinch zoom is not a step')
+  })
+
+  it('steps over a card that is not the board when it has no scroll bar, and keeps the page from scrolling', async () => {
+    const { page } = opened
+    await freshSwipe(page)
     await watchPrevented(page)
-    await overCentre(page, 'section[aria-label="Rules"] .ui-body')
+    await toLine(page)
+    const body = page.locator(RULES_BODY)
+    assert.equal(await body.evaluate((node) => node.scrollHeight > node.clientHeight), false, 'the short rules fit their card')
+    await overCentre(page, RULES_BODY)
+    await page.mouse.wheel(0, 100)
+    await waitForTool(page, { mode: 'surface', submode: null }, 'a notch over the Rules card is Tab')
+    assert.deepEqual(await page.evaluate(() => window.wheelPrevented), [true])
+  })
+
+  it('steps over the page outside every card', async () => {
+    const { page } = opened
+    await freshSwipe(page)
+    await toLine(page)
+    await page.mouse.move(2, 2)
+    await page.mouse.wheel(0, 100)
+    await waitForTool(page, { mode: 'surface', submode: null }, 'a notch over the bare desk is Tab')
+  })
+
+  it('does not step while a dialog is open', async () => {
+    const { page } = opened
+    await freshSwipe(page)
+    await toLine(page)
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await page.locator('wa-dialog[open]').waitFor({ state: 'attached' })
+    await overCentre(page, 'section[aria-label="Pinned"] .ui-body')
     await page.mouse.wheel(0, 100)
     await afterChange(page)
-    assert.equal(await modeNow(page), 'line')
-    assert.deepEqual(await page.evaluate(() => window.wheelPrevented), [false])
+    assert.equal(await modeNow(page), 'line', 'a notch with a dialog open is no step')
+    await page.keyboard.press('Escape')
+    await page.locator('wa-dialog[open]').waitFor({ state: 'detached' })
   })
 })
 
@@ -316,13 +347,28 @@ describe('the mouse wheel over the Rules card', () => {
   it('scrolls the card and changes no pin', async () => {
     const { page } = opened
     await setTool(page, { mode: 'line', submode: '1' })
-    const body = page.locator('section[aria-label="Rules"] .ui-body')
+    const body = page.locator(RULES_BODY)
     assert.equal(await body.evaluate((node) => node.scrollHeight > node.clientHeight), true, 'the long rules overflow the card')
     const box = await body.boundingBox()
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
     await page.mouse.wheel(0, 100)
     assert.equal(await settle(() => body.evaluate((node) => node.scrollTop > 0), true), true, 'the card scrolled')
     assert.equal((await currentTool(page)).mode, 'line')
+  })
+
+  it('is still the page\'s at the end of the scroll', async () => {
+    const { page } = opened
+    await setTool(page, { mode: 'line', submode: '1' })
+    const body = page.locator(RULES_BODY)
+    await body.evaluate((node) => { node.scrollTop = node.scrollHeight })
+    const box = await body.boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await watchPrevented(page)
+    await page.mouse.wheel(0, 100)
+    await afterChange(page)
+    assert.equal(await body.evaluate((node) => node.scrollTop + node.clientHeight >= node.scrollHeight - 1), true, 'the card is at its end')
+    assert.equal((await currentTool(page)).mode, 'line', 'a notch at the end of the scroll is no step')
+    assert.deepEqual(await page.evaluate(() => window.wheelPrevented), [false])
   })
 })
 

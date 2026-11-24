@@ -40,7 +40,7 @@ describe('the welcome dialog on a first visit', () => {
       const lines = await welcomeBox(page).locator('li').allTextContents()
       assert.deepEqual(lines.map((line) => line.trim()), [
         'Drag a card by its title, resize it from any edge, close it with ×. Your layout is kept.',
-        'Pin tools in Pinned. Z X C V pick the first four; Tab, Shift+Tab or the mouse wheel over the board steps through them. Recent keeps your last tools.',
+        'Pin tools in Pinned. Z X C V pick the first four; Tab, Shift+Tab or the mouse wheel anywhere without a scroll bar steps through them. Recent keeps your last tools.',
         'Mode lists every tool this grid has.',
         'Try starts a trial. Keep or Discard it later.',
         'Penpa+ opens this puzzle in Penpa+; its Back to new UI button brings you back.'
