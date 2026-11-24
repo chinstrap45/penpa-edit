@@ -106,14 +106,6 @@ describe('a saved value the Pinned card did not write', () => {
     assert.deepEqual(saved.pins.flatMap((p) => Object.keys(p)).filter((k) => !['mode', 'submode', 'style'].includes(k)), [])
   })
 
-  it('still loads a save that holds id and nextId, with the same pins', async () => {
-    const { page } = opened
-    const key = await savedPinKey(page)
-    await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ nextId: 7, pins: [{ id: 3, mode: 'line', submode: '1', style: null }] })), key)
-    await page.reload()
-    await waitForDesk(page)
-    assert.deepEqual(await settle(() => chipNames(page), ['Line > Normal']), ['Line > Normal'])
-  })
   for (const value of BAD_VALUES) {
     it(`is read as none, so the Tab set seeds again, and the console says so: ${JSON.stringify(value)}`, async () => {
       const { page } = opened
@@ -137,6 +129,15 @@ describe('a saved value the Pinned card did not write', () => {
       }
     })
   }
+
+  it('still loads a save that holds id and nextId, with the same pins', async () => {
+    const { page } = opened
+    const key = await savedPinKey(page)
+    await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ nextId: 7, pins: [{ id: 3, mode: 'line', submode: '1', style: null }] })), key)
+    await page.reload()
+    await waitForDesk(page)
+    assert.deepEqual(await settle(() => chipNames(page), ['Line > Normal']), ['Line > Normal'])
+  })
 })
 
 // Pins outside Sudoku, so no Shift starts a hold; holds.live.mjs covers Tab during a hold.
