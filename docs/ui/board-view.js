@@ -117,21 +117,16 @@
     coordinatesLayer.style.setProperty('--ui-stick-end-y', `${Math.min(0, view.bottom - box.bottom)}px`)
   }
 
-  function setGridNumberedOnly (only) {
-    storeFlag(GRID_NUMBERING_KEY, GRID_NUMBERING_ALL, !only)
+  function storeAndRefit (key, value, on) {
+    storeFlag(key, value, on)
     drawCoordinates()
     if (!isZoomed) {
       fitBoard()
     }
   }
 
-  function setCoordinatesWanted (shown) {
-    storeFlag(COORDINATES_KEY, COORDINATES_SHOWN, shown)
-    drawCoordinates()
-    if (!isZoomed) {
-      fitBoard()
-    }
-  }
+  const setGridNumberedOnly = (only) => storeAndRefit(GRID_NUMBERING_KEY, GRID_NUMBERING_ALL, !only)
+  const setCoordinatesWanted = (shown) => storeAndRefit(COORDINATES_KEY, COORDINATES_SHOWN, shown)
 
   // The box inside the body's padding (desk.css), which is the room the board has.
   function bodyRoom () {
