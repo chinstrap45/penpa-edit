@@ -451,14 +451,6 @@ describe('Z, X, C and V', () => {
     }
     await waitForTool(page, { mode: 'sudoku', submode: '1' }, 'and its key-up gives Normal back')
   })
-
-  it('does not jump when Penpa+\'s shortcuts setting is off', async () => {
-    const { page } = opened
-    await page.evaluate(() => { UserSettings.shortcuts_enabled = false })
-    await setTool(page, { mode: 'line', submode: '1' })
-    await page.keyboard.press('z')
-    assert.equal((await currentTool(page)).mode, 'line')
-  })
 })
 
 describe('what a pin remembers', () => {

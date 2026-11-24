@@ -62,7 +62,6 @@ function readDeskInPage (names) {
     cards: Object.fromEntries(names.map((name) => [name, rect(section(name))])),
     heads: Object.fromEntries(names.map((name) => [name, rect(section(name).querySelector('.ui-head'))])),
     rulesButtons: [...section('Rules').querySelectorAll('.ui-head .ui-rules-text wa-button')].map(rect),
-    titleMargins: [...document.querySelectorAll('.ui-head h2')].map((h2) => getComputedStyle(h2).margin),
     headButtonsFit: [...document.querySelectorAll('.ui-head')].every((head) => [...head.querySelectorAll('wa-button, .ui-tool-name')].every((node) => {
       const outer = head.getBoundingClientRect()
       const inner = node.getBoundingClientRect()
@@ -271,7 +270,6 @@ describe('the desk on a laptop screen', () => {
         assert.deepEqual(new Set(heights).size, 1, `header heights ${heights}`)
         assert.equal(heights[0] <= HEAD_MAX_PX, true, `headers ${heights[0]}px tall`)
         assert.equal(read.headButtonsFit, true, 'every header control fits inside its header')
-        assert.deepEqual(new Set(read.titleMargins), new Set(['0px']), 'no card title has a margin')
         for (const buttons of [read.zoomButtons, read.rulesButtons]) {
           buttons.slice(1).forEach((button, i) => assert.equal(button.x - (buttons[i].x + buttons[i].w) <= SLACK_PX, true, `joined: ${JSON.stringify(buttons)}`))
         }

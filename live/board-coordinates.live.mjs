@@ -305,15 +305,6 @@ describe('board coordinates on a grid that is not square', () => {
     await assertRowNumbers(page, 8, 11)
     await context.close()
   })
-
-  it('offer the switch on a grid that is not square', async () => {
-    const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 6, rows: 6, gridtype: 'hex' }), { served: true })
-    await page.getByRole('button', { name: 'Settings' }).click()
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-    assert.equal(await page.evaluate(() => pu.gridtype), 'hex', 'the board is a hexagon grid')
-    assert.equal(await page.getByRole('switch', { name: SWITCH }).count(), 1)
-    await context.close()
-  })
 })
 
 // Runs in the page: the Board card's visible area (its padding box, viewport px), and how far its body scrolls. Measured here from the

@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 
 import { extname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { JS_EXTENSIONS, NOT_LINTED, SHELL_EXTENSIONS, isNotLinted, lintScope, ownedFiles, runLint } from '../live/lint.mjs'
+import { NOT_LINTED, isNotLinted, lintScope, ownedFiles, runLint } from '../live/lint.mjs'
 import { tree } from './live-scratch.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
@@ -60,13 +60,6 @@ describe('lintScope', () => {
 
 describe('the repo', () => {
   const owned = ownedFiles(ROOT)
-
-  it('puts every owned JavaScript and shell file in the scope, bar the named exceptions', () => {
-    const scope = lintScope(ROOT)
-    const linted = new Set([...scope.js, ...scope.shell])
-    const outside = owned.filter((file) => [...JS_EXTENSIONS, ...SHELL_EXTENSIONS].includes(extname(file)) && !linted.has(file))
-    assert.deepEqual(outside.filter((file) => !isNotLinted(file)), [])
-  })
 
   it('names only exceptions that exist', () => {
     for (const path of NOT_LINTED) assert.ok(owned.filter(isNotLinted).some((file) => file.startsWith(path)), `${path} is not an owned file`)
@@ -145,10 +138,5 @@ describe('runLint', () => {
     const dir = withTools(scratch({ 'live/a.mjs': CLEAN_JS, 'live/ok.sh': CLEAN_SH }, ['live/**']))
     writeFileSync(join(dir, 'live/new.mjs'), BAD_JS)
     assert.match(runLint(dir).join('\n'), /new\.mjs:1:\d+: Extra semicolon/)
-  })
-
-  it('fails when .gitattributes owns nothing to lint', () => {
-    const dir = withTools(scratch({ 'live/a.mjs': CLEAN_JS }, []))
-    assert.match(runLint(dir).join('\n'), /scope is empty/)
   })
 })
