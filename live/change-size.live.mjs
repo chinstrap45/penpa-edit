@@ -1,7 +1,3 @@
-// Change size on solve.html (#274): blank rows and columns added to or removed from each side of a square-cell board, through
-// the bridge's `changeSize` and the Board card's dialog. A removal that would take a given or an entry with it is refused, as
-// is any change on a grid that is not square; the new size survives a reload and the solve link, and undo does not take it
-// back. Read through where Penpa+ draws the cells and the given.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { ANSWER_CELL, boardAgainstCard, cardBodyButtons, chipName, DIGIT_CELL, linkFromNewBoard, makeNumberSolveLink, newBoardSolveLink, openSolvePage, setTool, typedDigits, typeDigitInPage, useBrowser, openSettings, waitForDesk, cellSize } from './page.mjs'
@@ -12,12 +8,8 @@ const browser = useBrowser()
 
 const BOARD = 'section[aria-label="Board"]'
 const DIALOG = 'Change size'
-// The 4x4 board of makeNumberSolveLink, its given in the top-left cell.
 const START = { columns: 4, rows: 4, given: [0, 0] }
 
-// Runs in the page: the board as drawn, in screen terms. `columns` and `rows` count the drawn cells, blank rows and columns
-// included; `given` is the column and row of the board's first given, counted from the top-left; `givens` and `entries`
-// count what Penpa+ keeps of each.
 // Penpa+ draws the cells `i + j * nx0` with i and j from 2 to nx0 - 3 and ny0 - 3; the rest of `pu.point` is outside the board.
 function layoutInPage () {
   const cells = []
@@ -36,7 +28,6 @@ const shape = async (page) => {
   return { columns, rows, given }
 }
 
-// Runs in the page: what `engine.changeSize(side, change)` threw, or 'no throw'.
 function refusalInPage ([side, change]) {
   try {
     engine.changeSize(side, change)
@@ -51,10 +42,6 @@ const openNumberBoard = async (options) => {
   return openSolvePage(browser(), await makeNumberSolveLink(browser()), options)
 }
 
-// Runs in the page: a new board of `columns` x `rows` cells of `gridtype`, `space` of them blank on every side, the grid's
-// first cell given a 1, the first `topClues` cells of the top blank row given 1, 2, ..., and with `topLine` a given
-// thermometer and a given line through its second and third cells; turned by Penpa+'s `rotate_grid(turn)`, and flipped
-// with `flip` 'UD' (top to bottom) or 'LR'. Returns its solve link's `#` part.
 function boardLinkInPage ({ columns, rows, gridtype = 'square', space = 0, topClues = 0, topLine = null, turn = 0, flip = null }) {
   document.getElementById('gridtype').value = gridtype
   UserSettings.gridtype = gridtype
@@ -129,8 +116,6 @@ describe('engine.changeSize on a square-cell board', () => {
   })
 
   it('refuses to remove a blank row that holds a given, and removes one that holds nothing', async (t) => {
-    // A 6x6 board, one blank cell all round, three clues in the top blank row from the left: the top row and the left
-    // column hold a clue, the bottom row and the right column hold none.
     const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 6, rows: 6, space: 1, topClues: 3 }))
     t.after(() => context.close())
     const before = await layout(page)
@@ -149,7 +134,6 @@ describe('engine.changeSize on a square-cell board', () => {
     const { context, page } = await openNumberBoard()
     t.after(() => context.close())
     await page.evaluate(() => engine.changeSize('top', 1))
-    // The new row's first cell: Penpa+'s board starts at column 2 and row 2 of its point ids.
     await page.evaluate(() => { pu.pu_a.number[2 + 2 * pu.nx0] = ['5', 2, '1'] })
     assert.match(await refusal(page, 'top', -1), /holds an entry/)
     const after = await layout(page)
@@ -231,15 +215,12 @@ describe('engine.changeSize on a grid that is not square', () => {
   })
 })
 
-// ---- The Board card's dialog --------------------------------------------------------------------------------------
-
 const openDialog = async (page) => {
   await page.locator(BOARD).getByRole('button', { name: 'Change size' }).click()
   await page.getByRole('dialog', { name: DIALOG }).waitFor()
   // The dialog's content is slotted into Web Awesome's shadow `dialog`, so it is found from the host.
   return page.locator('wa-dialog[open]')
 }
-// The wa-button named `label`: the element its look is set on, where `getByRole` finds the button inside it.
 const sideHost = (dialog, label) => dialog.locator('wa-button').filter({ hasText: label })
 
 describe('the Change size dialog', () => {
@@ -292,8 +273,6 @@ describe('the Change size dialog', () => {
   })
 })
 
-// ---- What is kept per puzzle survives a resize (#292) -------------------------------------------------------------
-
 describe('a resize keeps what the solver set on the puzzle', () => {
   const RULES = 'Put a digit from 1 to 9 in every cell.'
   const rules = (page) => page.getByRole('region', { name: 'Rules' })
@@ -303,7 +282,6 @@ describe('a resize keeps what the solver set on the puzzle', () => {
   }
   const pinned = async (page) => (await cardBodyButtons(page, 'Pinned', { name: /^(?!Unpin|Save pins)/ }).allInnerTexts()).map(chipName)
 
-  // Unpins the first pin, turns conflict detection off for this puzzle and widens the Rules card, as a solver would.
   async function setThings (page) {
     await page.getByRole('button', { name: 'Unpin Line > Normal' }).click()
     await (await openSettings(page)).getByRole('combobox', { name: 'Conflict detection' }).click()

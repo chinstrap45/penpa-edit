@@ -1,4 +1,4 @@
-// A killer cage's solve-history keys do not depend on the board's cell size (#137). The keys are point pairs; on a
+// A killer cage's solve-history keys do not depend on the board's cell size. The keys are point pairs; on a
 // triangular or uniform grid their order came from a sort of pixel distances in `fix_points` (class_p.js), whose
 // rounding differs at each cell size.
 import assert from 'node:assert/strict'
@@ -18,7 +18,6 @@ const SIZES = [RECORDED_CELL_PX, 90]
 // shown by its engine replay against its expected file.
 const RECORDINGS = ['grid/tri-cage', 'grid/uniform-cage', 'stamp/cage-killer']
 
-// Runs in the page: sets the cell size as Penpa+'s size setting does, and returns the size the board is drawn at.
 function setSizeInPage (px) {
   UserSettings.displaysize = px
   return pu.size
@@ -30,8 +29,6 @@ function atSize (step, px) {
   return step.kind === 'pointer' ? { ...step, ...pointAtSize(step, px) } : step
 }
 
-// The cage entries of the solve history after `id`'s steps are made through the engine at `px` a cell, without
-// their time stamps.
 async function cageHistory (id, px) {
   const recording = await readRecording(id)
   const { context, page } = await openPenpa(browser(), recording.header.source)

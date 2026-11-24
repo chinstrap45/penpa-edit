@@ -1,6 +1,3 @@
-// Keyboard reach on `solve.html` (#377): from a control, Tab reaches every top-bar and card control in one stable order, Enter
-// and Space press a focused card button, and the board's own keys still reach Penpa+. Real key presses; focus is read as the
-// page's `document.activeElement` (a Web Awesome control is its host element).
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { afterChange, board, currentTool, openSolvePage, setTool, solveLinkOfImport, useBrowser, waitForTool } from './page.mjs'
@@ -11,7 +8,6 @@ import { IMPORTS } from './tier-c-puzzles.mjs'
 const browser = useBrowser()
 
 const CELL = 12
-// Two tools the puzzle does not pin, so the Recent card holds chips once both have been used.
 const UNPINNED_TOOLS = [{ mode: 'sudoku', submode: '2' }, { mode: 'sudoku', submode: '3' }]
 const NORMAL_TOOL = { mode: 'sudoku', submode: '1' }
 const CORNER_TOOL = { mode: 'sudoku', submode: '2' }
@@ -28,12 +24,8 @@ function listControlsInPage () {
   return window.reachControls.map((c) => `${c.closest('section[aria-label]')?.getAttribute('aria-label') ?? 'Top bar'}: ${name(c)}`)
 }
 
-// Runs in the page. The index in `listControlsInPage`'s list of the control with focus: -1 for a control the list does not
-// hold (one an open picker shows), null when focus is on the page itself.
 const focusedControlInPage = () => (document.activeElement === document.body ? null : window.reachControls.indexOf(document.activeElement))
 
-// Presses Tab from the list's first control until focus falls to the page itself, and gives the listed controls it visited in
-// order.
 async function tabLap (page, limit) {
   await page.evaluate(() => window.reachControls[0].focus())
   const visited = [await page.evaluate(focusedControlInPage)]
@@ -63,7 +55,6 @@ describe('keyboard reach on the solve page', () => {
   it('Tab from the first control reaches every top-bar and card control, in the same order each lap', async () => {
     const { page } = opened
     const names = await page.evaluate(listControlsInPage)
-    // More presses than there are controls and the open pickers' own, so a lap that loops is cut off rather than endless.
     const limit = 4 * names.length
     const first = await tabLap(page, limit)
     const missed = names.filter((_, i) => !first.includes(i))

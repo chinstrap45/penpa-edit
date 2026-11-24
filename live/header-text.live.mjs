@@ -1,4 +1,3 @@
-// Title, Author, Source and Rules come back from a saved link exactly as typed, and the page shows them as text.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'

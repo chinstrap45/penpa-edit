@@ -1,4 +1,4 @@
-// Sudoku corner mode in Solution mode (#140): the first mark of a cell lands top-left, whether or not the puzzle's
+// Sudoku corner mode in Solution mode: the first mark of a cell lands top-left, whether or not the puzzle's
 // given layer holds a small number (a killer's cage total). Real keys on Penpa+'s page; the board is read as the
 // engine saves it (`pu.pu_a.numberS`).
 import assert from 'node:assert/strict'
@@ -9,16 +9,12 @@ const browser = useBrowser()
 
 const SUDOKU = 'https://puzz.link/p?sudoku/9/9/15i96l17i7g65i42k1g5368h2i7g2p3h5g48g2g9k3h7i6'
 
-// Index in `pu.centerlist` of a cell clear of the board's edges.
 const CELL = 12
 
 // A cell holds 8 marks: corner slots 0..3 are top-left, top-right, bottom-left, bottom-right; side slots 4..7 follow
 // (class_square.js).
 const SLOTS = 8
 
-// Opens the 9x9 sudoku, gives it a small number in a cell's corner in the question layer when `killer` is set (as a
-// killer's cage total is), and types `keys` into cell CELL in Solution mode's Sudoku corner submode. Returns the digit
-// in each of the cell's 8 slots, '' where none.
 async function typeCornerMarks (keys, { killer, saved = {} }) {
   const { context, page } = await openPenpa(browser(), '')
   try {
@@ -31,7 +27,6 @@ async function typeCornerMarks (keys, { killer, saved = {} }) {
       }, CELL)
       assert.equal(await page.evaluate(() => Object.keys(pu.pu_q.numberS).length), 1, 'the cage total is in the question layer')
     }
-    // `saved` maps a slot (0..7) of the cell to a mark already on the board, as an old save leaves it.
     await page.evaluate(({ i, marks }) => {
       for (const [slot, digit] of Object.entries(marks)) {
         const base = slot < 4 ? pu.nx0 * pu.ny0 : 2 * pu.nx0 * pu.ny0
@@ -70,7 +65,7 @@ describe('Sudoku corner marks', () => {
     assert.deepEqual(slots, ['7', '2', '5', '1', '', '', '', ''])
   })
 
-  // #142: a killer cell saved by upstream (or by the fork before #140) holds its marks from slot 1, slot 0 empty.
+  // A killer cell saved by upstream, or by an older fork, holds its marks from slot 1, slot 0 empty.
   it('keep a mark saved from slot 1 when another is added, and pack the cell from top-left', async () => {
     const slots = await typeCornerMarks(['5'], { killer: true, saved: { 1: '9', 2: '7' } })
     assert.deepEqual(slots, ['9', '7', '5', '', '', '', '', ''])

@@ -1,7 +1,4 @@
-// The Settings dialog of `solve.html` (#100): `engine.getSettings` / `setSetting` over the fixed list, the dialog's four
-// groups, every change saved at once, conflict detection off for one puzzle only, Clear saved progress, and the keys.
-// The UI is found by role and accessible name, the board by what Penpa+ would save (`readEngineState`, defined by
-// recorder.js); the keys and clicks are real. Settings live in cookies, so every page is served over `https://penpa.test/`.
+// Settings live in cookies, so every page is served over https://penpa.test/.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { AKARI_SOLVE, board, boardCanvasInPage, linkFromNewBoard, makeNumberSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, typedDigits, useBrowser, waitForDesk, openSettings } from './page.mjs'
@@ -11,7 +8,6 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// Index in `pu.centerlist` of a cell clear of the board's edges.
 const CELL = 12
 
 const SETTING_NAMES = [
@@ -37,23 +33,19 @@ const CONTROLS = [
   { name: 'shortcuts_enabled', group: 'Keys', toggle: 'Z, X, C and V shortcuts', from: true, to: false }
 ]
 
-// Opens `solve.html` on `query` in a context of its own, served so that cookies work, and returns once the desk is built.
 const openSolve = (query = AKARI_SOLVE, options = {}) => openSolvePage(browser(), query, { served: true, ...options })
 
-// A page that asks "leave this page?" (the reload protection setting) is left as a visitor who says yes leaves it.
 function acceptLeaving (page) {
   page.removeAllListeners('dialog')
   page.on('dialog', (d) => d.accept())
 }
 
-// Reloads the page as a visitor would.
 async function reload (page) {
   acceptLeaving(page)
   await page.reload()
   await waitForDesk(page)
 }
 
-// Goes to `query` on the same page and context, which keep their cookies and storage.
 async function openLink (page, query) {
   const solvePage = page.url().split('#')[0]
   acceptLeaving(page)
@@ -62,7 +54,6 @@ async function openLink (page, query) {
   await waitForDesk(page)
 }
 
-// A puzzle other than AKARI_SOLVE: a setting that is global holds there too, and is not just part of the first puzzle's saved progress.
 let otherPuzzle
 const otherLink = async () => (otherPuzzle ??= await makeNumberSolveLink(browser()))
 
@@ -89,7 +80,6 @@ const closeDialog = async (page) => {
 // input. The click goes to the switch element holding it, which waits for the dialog's opening animation to settle first.
 const flipSwitch = (page, name) => page.locator('wa-switch').filter({ has: page.getByRole('switch', { name }) }).click()
 
-// Changes one control as a visitor would. A select is looked for in `group`, the control's group of the dialog.
 async function useControl (page, group, control) {
   if (control.toggle) {
     await flipSwitch(page, control.toggle)
@@ -99,7 +89,6 @@ async function useControl (page, group, control) {
   }
 }
 
-// Types `digit` into the cell at `index` in Number mode, as a visitor does, and waits until it is on the board.
 async function typeDigit (page, index, digit) {
   await setTool(page, { mode: 'number', submode: '1' })
   await clickCell(page, index)
@@ -111,7 +100,6 @@ async function typeDigit (page, index, digit) {
 // the same store waits for it.
 const savePenpa = (page) => page.evaluate(() => PenpaProgress.save())
 
-// The progress Penpa+ holds for the open puzzle, or null for none.
 const storedProgress = (page) => page.evaluate(() => localforage.getItem(PenpaProgress.getHash(pu.url)))
 
 describe('engine.getSettings and engine.setSetting', () => {
@@ -224,7 +212,6 @@ describe('the Settings dialog shows what the open puzzle uses', () => {
 })
 
 describe('the Settings dialog is readable', () => {
-  // The Penpa+ words, and the one help line under each.
   const HELP = {
     'Surface second colour': ['combobox', 'The colour Surface uses for its second shading style.'],
     'Custom colours': ['switch', 'Adds your own colours to the colour pickers.'],
@@ -488,7 +475,6 @@ describe('the keys', () => {
   it('make Z jump to the first pin with the shortcuts setting on, and do nothing with it off', async (t) => {
     const { context, page } = await openSolve(AKARI_SOLVE)
     t.after(() => context.close())
-    // The tool Z jumps to, and a tool of another mode to start from.
     const [firstPin] = await page.evaluate(() => engine.tabSet())
     const { mode, submode } = (await page.evaluate(() => engine.listTools())).find((t) => t.mode !== firstPin.mode)
     const start = { mode, submode }
@@ -509,11 +495,7 @@ describe('the keys', () => {
   })
 })
 
-// Runs in the page. A 4x4 board's solve link `#` part, built for one setting's effect to show:
-// - `sudoku`: a classic sudoku, conflict checked, with two given 1s in its top row, a given 2 in its bottom right cell and
-//   an author's answer, which Penpa+ needs before it checks for conflicts;
-// - `colour`: a given shaded cell in a custom colour of its own;
-// - `lineAnswer`: an author's answer of a green line between the two top-left cells, checked as a loop line.
+// The sudoku board holds an author's answer because Penpa+ checks for conflicts only on a puzzle that has one.
 function settingBoardInPage ({ sudoku, colour, lineAnswer }) {
   document.getElementById('nb_size1').value = 4
   document.getElementById('nb_size2').value = 4
@@ -548,7 +530,6 @@ const settingLink = (kind) => {
   return settingLinks.get(kind)
 }
 
-// The drawn board, as an image's data URL.
 async function boardPicture (page) {
   const canvas = await page.evaluateHandle(boardCanvasInPage)
   try {
@@ -560,8 +541,7 @@ async function boardPicture (page) {
 
 const setSetting = (page, name, value) => page.evaluate(([n, v]) => engine.setSetting(n, v), [name, value])
 
-// Sets `name` to `to` and back to `from`: the board must look different at `to` and as it was at `from`. The bridge's
-// setters draw before they return, so no wait is needed.
+// The bridge's setters draw before they return, so no wait is needed.
 async function assertRedrawn (page, name, from, to) {
   await setSetting(page, name, from)
   const before = await boardPicture(page)
@@ -571,7 +551,6 @@ async function assertRedrawn (page, name, from, to) {
   assert.equal(await boardPicture(page), before, `${name} ${JSON.stringify(from)} draws it as before`)
 }
 
-// The symbols the solver has placed, by Penpa+'s point number.
 const placedSymbols = (page) => page.evaluate(() => readEngineState().pu_a.symbol)
 
 describe('each Board look and Checking setting, on a board where it applies', () => {
@@ -635,7 +614,6 @@ describe('each Board look and Checking setting, on a board where it applies', ()
     it('starbattle_dots decides whether a right click near a corner puts a dot there', async () => {
       const { page } = opened
       await setTool(page, { mode: 'combi', submode: 'star' })
-      // A right click near the bottom-right corner of a cell, inside the cell.
       const nearCorner = async () => {
         const centre = await cellPixel(page, 6)
         const size = await page.evaluate(() => engine.getState().cellSize)

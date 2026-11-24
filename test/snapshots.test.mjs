@@ -13,10 +13,8 @@ describe('puzz.link import snapshots', () => {
   let page
   before(async () => { ({ page } = await openPenpa(browser())) })
 
-  // `useBrowser` fails this test on an error raised while the page booted.
   it('boots with no page error or console.error', () => {})
 
-  // A puzzle line the list's pattern misses would otherwise drop out of the suite unnoticed.
   it('reads a puzzle from puzz_link_parser.js for every snapshot file', () => {
     const files = readdirSync(SNAPSHOTS).filter((f) => f.startsWith('puzzlink_')).sort()
     assert.deepEqual(cases.map(({ name }) => snapshotName(name)).sort(), files)

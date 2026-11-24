@@ -1,6 +1,3 @@
-// The Board card's zoom on solve.html (#200): the card follows the cursor while zoomed, - and + stop at the limits, a zoom the
-// solver set survives a layout change until Fit, and a selected cell is filled. Read through the card's scroll position, the
-// buttons' disabled states, the canvas size and the canvas's pixels.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { afterChange, boardCanvasInPage, linkFromNewBoard, openSolvePage, useBrowser, cellSize } from './page.mjs'
@@ -12,7 +9,6 @@ const browser = useBrowser()
 const SUDOKU = IMPORTS['sudoku-9x9']
 const BOARD = 'section[aria-label="Board"]'
 
-// Runs in the page: the solve link of a puzzle opened from a puzz.link address.
 function solveLinkOf (url) {
   import_url(url)
   const link = pu.maketext_solve()
@@ -118,7 +114,6 @@ describe('a zoom the solver set', () => {
     assert.equal(await cellSize(page), zoomed, 'a smaller window keeps the zoom')
     await button(page, 'Fit').click()
     assert.equal(await settle(async () => (await cellSize(page)) !== zoomed, true), true, 'Fit refits')
-    // Fit also hands the size back to the card: a much smaller window now shrinks it.
     const refitted = await cellSize(page)
     await page.setViewportSize({ width: width - 300, height: height - 250 })
     assert.equal(await settle(async () => (await cellSize(page)) < refitted, true), true, 'after Fit the board follows the card again')
@@ -130,7 +125,6 @@ describe('a selected cell', () => {
   // The window brackets the fill's alpha in docs/js/engine_bridge.js (0.05 x (255 - 110) = about 7 on white): change one, change both.
   const FILL_MIN_SHIFT = 5
   const FILL_MAX_SHIFT = 10
-  // The most the three channels of the filled pixel may differ from each other: grey has no hue.
   const FILL_MAX_HUE = 2
   // Where the sampled pixel lies on the line from the cell's first corner (0) to its centre (1): inside the outline and its glow.
   const SAMPLE_TOWARD_CENTRE = 0.6
@@ -139,7 +133,6 @@ describe('a selected cell', () => {
     it(`has an extremely light grey fill in the ${theme} theme`, async (t) => {
       const { context, page } = await openSudoku()
       t.after(() => context.close())
-      // A pixel of the first cell inside its outline, read before and after the cell is selected.
       await page.addScriptTag({ content: `window.__boardCanvas = ${boardCanvasInPage}` })
       const corner = () => page.evaluate((toward) => {
         const canvas = window.__boardCanvas()

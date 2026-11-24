@@ -1,4 +1,3 @@
-// Opening Penpa+ in headless Chromium for a test. Not a check itself, so `live/**/*.live.mjs` skips it.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { after, before, beforeEach } from 'node:test'
@@ -7,32 +6,24 @@ import vm from 'node:vm'
 import { chromium } from 'playwright'
 import { settle } from './settle.mjs'
 
-// Penpa+ served straight from this checkout, as Pages serves `docs/`.
 const PENPA_URL = new URL('../docs/index.html', import.meta.url).href
 
-// The ChinStrap solve page, served the same way.
 const SOLVE_URL = new URL('../docs/solve.html', import.meta.url).href
 
-// Where a test that needs cookies is served `docs/` from.
 export const PENPA_ORIGIN = 'https://penpa.test'
 
-// The mark the solve page's Penpa+ button adds to the link it opens, so index.html does not forward it back to the solve
-// page (#376), and the function that adds it: read from the shipped script, so a test marks a link as the page does.
+// The solve page's Penpa+ mark and the function that adds it, read from the shipped script so a test marks a link as the page does.
 const solveForward = vm.runInNewContext(
   readFileSync(new URL('../docs/js/solve_forward.js', import.meta.url), 'utf8') + ';({ PENPA_MARK, withPenpaMark, penpaLinkParams })', { URLSearchParams })
 export const PENPA_MARK = solveForward.PENPA_MARK
 
-// `query` marked when it is a solve link (`m=solve` in its query, else its `#` data), so a test of Penpa+'s own page stays on it.
 export const markedForPenpa = (query) => solveForward.penpaLinkParams(query).get('m') === 'solve' ? solveForward.withPenpaMark(query) : query
 
 // `pu.maketext_solve()` after importing Akari 1 of `test/public/puzz_link_parser.js`, whose snapshot holds 13 numbers.
 export const AKARI_SOLVE = '#m=solve&p=1VTtb7pIEP7uX9Hs124QBC2SNBff2qRpvXq1P68SY1BRUHQtL63BtH97Z3bxcNE2l7vchwvszOwzy+zMss9Er4kTulRT8dVNChoeQzP5qJg1PtTs6ftx4FoXtJHEHgvB8OJ4G1nl8jZJh+lQCfzNqrz9zVk5oV/WVHwVZaF4iq8slZUSKLGqGfoE124p/f3mhs6dIHLp3cuy2V413juNP8vVoa4/d+eXy3bveTkb/NJ6ql8O1W5gbh4e283g8jYdPniNN7fj1h4jNvUC15k56XBwtws2N+bCm2utO69lzp2NGr2a/fpbs3d9XbKzGkYlm2iEkgoMjYw+yZStJz75tAnPmlB9VNqnf1j7dGzZow+aPuemmZtP1p7oKrEMSnRNKF2oGleGIVSdq6pQNeEzxawuPq+Lz+sVoTAKxO9m8W1yQegVT1XsJAOwWgZgBwnAPGQANpcAzE0CMEsJwHzh+A5TzNvW8ikmZeRTqMPW8ylmeFgMdWnWHuQLl304SprqXLa5VLmscnnP13S4HHDZ4tLgssbXXOHPKJVsXVxb+an+/zC8nE9JOHemLlzPFltvWeTHLoErSSIWjCPhG7s7ZxoTS5Dn2CNhm2Q9cUMJChjbAknPRTi4JNBfbFjonnUh6M4W34VC15lQExbOCjm9O0Eg18J7kgRN/XAayFAMZD2eO2HI3iVk7cSeBEycGPpX5PlbOZK7KRxm7MgpitYgxc6P46NEdoQPuPcVamD/qFtpg6a3wKOjXkPTHjSQBytrOdhEbELgr1OyToLYn7KAwb4ZBgTgX1fA7OTmgPvRaglQU8HuZjaYL2CK4xrfC+TRstM+JZhAk3+NJlmzN6hAJIhzkRQAR6cEzRDKTWZslWRLNSRx4x+UAZEOZaApykDrTBlY3b8u4692XqigPvoQf0z9m31edOP/qHftMmaz8Ady584ifIbigP7A8iPvOfwbQh95i/gJezHZUwIDeobDgBZpDNApkwE8ITNg3/AZoxYpjVkVWY1bnRAbtzrm9uEijUoc+AI='
 
-// The errors of every page `openPenpa` opened in this file, checked and emptied after each test.
 const pageErrors = []
 
-// Empties the errors of every page `openPenpa` opened so far and returns them, for a test whose pages raise one on
-// purpose.
 export function takePageErrors () {
   return pageErrors.flatMap((errs) => errs.splice(0))
 }
@@ -54,8 +45,6 @@ export function useBrowser () {
   return () => browser
 }
 
-// Answers every request under `base` (an origin, or an origin and path such as Pages' `/penpa-edit`) with the
-// matching file of this checkout's `docs/`.
 export function serveDocs (context, base) {
   const prefix = new URL(base).pathname.replace(/\/$/, '')
   return context.route(`${base.replace(/\/$/, '')}/**`, (route) => {
@@ -64,7 +53,6 @@ export function serveDocs (context, base) {
   })
 }
 
-// The requests a page makes for `docs/js/<file>`, with or without a query, for a test that serves its own copy.
 export function jsRequest (file) {
   return new RegExp(`/js/${file.replace(/\./g, '\\.')}(\\?|$)`)
 }
@@ -136,12 +124,10 @@ function wipeStorageInPage () {
   indexedDB.deleteDatabase('localforage')
 }
 
-// What closing the welcome on a page raised, other than the page navigating away or closing, checked after each test.
 const welcomeCloseErrors = []
 pageErrors.push(welcomeCloseErrors)
 
-// Has `page` close solve.html's welcome dialog on each load, as `closeWelcomeInPage` does. Not an init script: a context with one loses
-// kept card layouts over a reload under load (desk.live.mjs failed 21 of 36 runs, against 0 without one, #381).
+// Not an init script: a context with one loses kept card layouts over a reload under load (desk.live.mjs failed 21 of 36 runs, against 0 without one).
 function closeWelcomeOnEveryLoad (page) {
   page.on('domcontentloaded', () => {
     if (!new URL(page.url()).pathname.endsWith('/solve.html')) return
@@ -152,8 +138,6 @@ function closeWelcomeOnEveryLoad (page) {
   })
 }
 
-// Runs in solve.html: presses Start solving as soon as the welcome is in the page, before the page takes any event, so
-// the dialog takes no test's clicks.
 function closeWelcomeInPage () {
   const close = () => {
     const button = [...document.querySelectorAll('.ui-welcome wa-button')].find((node) => node.textContent === 'Start solving')
@@ -166,10 +150,8 @@ function closeWelcomeInPage () {
   watcher.observe(document.body, { childList: true, subtree: true })
 }
 
-// A context for Penpa+'s pages, answering its network loads, with `served` and `setup` as `openPenpa` takes them.
 async function penpaContext (browser, { served, setup, contextOptions }) {
   const context = await browser.newContext(contextOptions)
-  // Answers every network load empty, so a run needs no network and counts as no visit to anyone.
   await context.route(/^https?:\/\//, (route) => route.fulfill({ status: 200, body: '' }))
   if (served) {
     await serveDocs(context, PENPA_ORIGIN)
@@ -179,21 +161,16 @@ async function penpaContext (browser, { served, setup, contextOptions }) {
   return context
 }
 
-// Where Penpa+'s page, or with `solve` the solve page, is opened from.
 function penpaAddress (served, solve = false) {
   if (served) return PENPA_ORIGIN + (solve ? '/solve.html' : '/')
   return solve ? SOLVE_URL : PENPA_URL
 }
 
-// Passes `add` every page error and `console.error` of `page` from now on.
 function onErrors (page, add) {
-  // A page error as its stack, so a failure says where it came from.
   page.on('pageerror', (e) => add(e?.stack || String(e)))
   page.on('console', (m) => { if (m.type() === 'error') add(`console.error: ${m.text()}`) })
 }
 
-// Runs in the page: shades the cell at `cell` (an index of the center list, or `{ index, style }` for Penpa+'s surface style
-// `style`; 1 by default) as its own undo group, through the call a click makes.
 export function shadeInPage (cell) {
   const { index, style = 1 } = typeof cell === 'number' ? { index: cell } : cell
   pu.mode_set('surface')
@@ -202,13 +179,10 @@ export function shadeInPage (cell) {
   pu.redraw()
 }
 
-// The localStorage key `desk.js` keeps the desk's layout under.
 export const LAYOUT_KEY = 'chinstrap-solve-layout-v1'
 
-// The localStorage key `engine_bridge.js` keeps the solve page's theme under.
 export const THEME_KEY = 'chinstrap-solve-theme-v1'
-// The localStorage key `ui/welcome.js` marks the welcome seen under, as it opens. Its string is the old tour's, so a visitor
-// who has seen the tour is not welcomed (#408).
+// The localStorage key ui/welcome.js marks the welcome seen under. Its string is the old tour's, so a visitor who has seen the tour is not welcomed.
 export const WELCOME_KEY = 'chinstrap-solve-tour-v1'
 export const WELCOME_SEEN = 'seen'
 
@@ -216,7 +190,6 @@ export const GIVEN_CELL = 0
 export const ANSWER_CELL = 1
 export const SAME_ROW_CELL = 2
 
-// Indices in the page's `pu.centerlist` of cells the tests fill, clear of the given and the author's answer.
 export const DIGIT_CELL = 12
 export const MARK_CELL = 13
 export const SHADED_CELL = 14
@@ -231,13 +204,10 @@ export async function withPage (browser, query, act) {
   }
 }
 
-// Runs `inPage(arg)` on a fresh page of its own and returns what it returns: a puzzle link built on a new board.
 export const linkFromNewBoard = (browser, inPage, arg) => withPage(browser, '', (page) => page.evaluate(inPage, arg))
 
-// A Nurikabe, whose genre tag is neither Sudoku nor Star Battle.
 export const NURIKABE_IMPORT = 'https://puzz.link/p?nurikabe/v:/6/6/4j4p6h4p6j6'
 
-// The solve link `#` part of the puzz.link puzzle at `url`, which carries its genre tag.
 export const solveLinkOfImport = (browser, url) => linkFromNewBoard(browser, async (u) => {
   await import_url(u)
   const solve = pu.maketext_solve()
@@ -255,9 +225,6 @@ export const LONG_RULES_PUZZLE = {
   tabs: ['Surface', 'Line Normal', 'Composite']
 }
 
-// Runs in the page: a new board, 10x10 unless `size` says otherwise, with `puzzle`'s title, author, rules and Tab set; returns
-// its solve link's `#` part. `outsideClues` (numbers) give the board a one-cell margin all round and fill its first margin
-// cells with them.
 export function puzzleSolveLinkInPage ({ title, author, rules, tabs, size = 10, outsideClues = [] }) {
   document.getElementById('nb_size1').value = size
   document.getElementById('nb_size2').value = size
@@ -272,8 +239,6 @@ export function puzzleSolveLinkInPage ({ title, author, rules, tabs, size = 10, 
   return url.slice(url.indexOf('#'))
 }
 
-// Runs in the page. Builds a 4x4 grid whose given 1 is in the cell at `given` of the center list and whose author's
-// answer is a 2 in the cell at `answer`.
 export function buildNumberBoardInPage ({ given, answer }) {
   document.getElementById('nb_size1').value = 4
   document.getElementById('nb_size2').value = 4
@@ -282,13 +247,11 @@ export function buildNumberBoardInPage ({ given, answer }) {
   pu.pu_a.number[pu.centerlist[answer]] = [2, 2, '1']
 }
 
-// Runs in the page, on a board with an author's answer: its solve link's `#` part.
 function solveLinkInPage () {
   const url = pu.maketext_solve_solution()
   return url.slice(url.indexOf('#'))
 }
 
-// Runs in the page: types `digit` into the cell at `index` of the center list, as a key press in Number mode does.
 export function typeDigitInPage ({ index, digit }) {
   pu.mode_set('number')
   pu.cursol = pu.centerlist[index]
@@ -306,8 +269,6 @@ export function linkOfButtonInPage (handler) {
   return url.slice(url.indexOf('#'))
 }
 
-// The `#` part of a 4x4 Number solve link with a given 1 in GIVEN_CELL and an author's answer of 2 in ANSWER_CELL. Built
-// once per process: the link never changes.
 let numberLink
 export async function makeNumberSolveLink (browser) {
   numberLink ??= await withPage(browser, '', async (page) => {
@@ -323,7 +284,6 @@ export function boardCanvasInPage () {
   return canvases.find((c) => c.getBoundingClientRect().width > 0)
 }
 
-// Reads where the board's canvas lies against the Board card's body, in CSS px.
 export async function boardAgainstCard (page) {
   const boardCanvas = await page.evaluateHandle(boardCanvasInPage)
   try {
@@ -337,13 +297,8 @@ export async function boardAgainstCard (page) {
   }
 }
 
-// ---- solve.html ---------------------------------------------------------------------------------------------------
-
-// The window the tests lay solve.html's desk out in.
 export const DESK_SIZE = { viewport: { width: 1400, height: 900 } }
 
-// Runs in the page. A 6x6 board's solve link `#` part: its Tab set is `names` (Penpa+'s own names for them), or with no
-// names it has none; its rules are `rules`, or none.
 export function newBoardSolveLinkInPage ({ names, rules } = {}) {
   document.getElementById('nb_size1').value = 6
   document.getElementById('nb_size2').value = 6
@@ -354,23 +309,19 @@ export function newBoardSolveLinkInPage ({ names, rules } = {}) {
   return url.slice(url.indexOf('#'))
 }
 
-// One link per Tab set and rules text for a test file, since each costs a page of its own to build.
 const newBoardLinks = new Map()
 
-// `newBoardSolveLinkInPage`'s link for `names` and `rules`, built once per test file.
 export function newBoardSolveLink (browser, names, rules) {
   const key = JSON.stringify([names ?? null, rules ?? null])
   if (!newBoardLinks.has(key)) newBoardLinks.set(key, linkFromNewBoard(browser, newBoardSolveLinkInPage, { names, rules }))
   return newBoardLinks.get(key)
 }
 
-// Waits until solve.html has built its desk round the loaded puzzle.
 export async function waitForDesk (page) {
   await page.getByRole('region', { name: 'Board' }).waitFor()
   await page.evaluate(() => engine.ready)
 }
 
-// Opens solve.html on `query` in a DESK_SIZE window and returns once the desk is built; `options` go to `openPenpa`.
 export async function openSolvePage (browser, query, options = {}) {
   const opened = await openPenpa(browser, query, { solve: true, contextOptions: DESK_SIZE, ...options })
   await waitForDesk(opened.page)
@@ -403,7 +354,6 @@ export async function flipSettingsSwitch (page, name) {
   await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
 }
 
-// Presses Settings' Reset layout, which closes the dialog, as a visitor does now that the top bar has no such button.
 export async function resetLayoutInSettings (page) {
   const dialog = await openSettings(page)
   await dialog.getByRole('group', { name: 'Page' }).getByRole('button', { name: 'Reset layout' }).click()
@@ -416,48 +366,40 @@ export const cellSize = (page) => page.evaluate(() => engine.getState().cellSize
 // The Recent card.
 export const recentCard = (page) => page.getByRole('region', { name: 'Recent' })
 
-// The cards the solver can close, by name, in the Cards menu's order (#334).
+// The cards the solver can close, in the Cards menu's order.
 export const CLOSEABLE_CARDS = ['Rules', 'Mouse', 'Pinned', 'Mode', 'Recent']
 
-// The Cards menu's box for the card `name`.
 export const cardsMenuItem = (page, name) => page.getByRole('menuitemcheckbox', { name, exact: true })
 
-// Opens the top bar's Cards menu and waits for its boxes.
 export async function openCardsMenu (page) {
   await page.getByRole('button', { name: 'Cards', exact: true }).click()
   await cardsMenuItem(page, CLOSEABLE_CARDS[0]).waitFor()
 }
 
-// Closes the open Cards menu with Escape, which it needs after a box is toggled, since it stays open for another.
 export async function closeCardsMenu (page) {
   await page.keyboard.press('Escape')
   await cardsMenuItem(page, CLOSEABLE_CARDS[0]).waitFor({ state: 'hidden' })
 }
 
-// Shows or hides the card `name` from the Cards menu, as a visitor does, and closes the menu.
 export async function toggleInCardsMenu (page, name) {
   await openCardsMenu(page)
   await cardsMenuItem(page, name).click()
   await closeCardsMenu(page)
 }
 
-// The buttons in the body of the card `name`, the chips and their controls, not the ones in its header (its ×).
 export const cardBodyButtons = (page, name, options) => page.getByRole('region', { name }).locator('.ui-body').getByRole('button', options)
 
 // A chip's text is its shortcut key (Z, X, C or V) and then the tool's name; a later chip has no key.
 export const chipName = (text) => text.replace(/^[ZXCV]\s+/, '').trim()
 
 export const currentTool = (page) => page.evaluate(() => engine.getTool())
-// Every tool the page's engine lists, as `{ mode, submode }`.
 export const listedTools = (page) => page.evaluate(() => engine.listTools().map(({ mode, submode }) => ({ mode, submode })))
 
-// The `index`-th of `count` interleaved shares of `items`: a loop over many cases splits into one `it` per share, so each
-// gets its own `--test-timeout` and a failed check names its tool. The shares together hold every item once.
+// Splits a loop into one `it` per share so each gets its own `--test-timeout` and a failed check names its tool.
 export const shareOf = (items, index, count) => items.filter((_, i) => i % count === index)
 
 export const setTool = (page, tool) => page.evaluate((t) => engine.setTool(t), tool)
 
-// Waits for the tool in use to be `want`, a `{ mode, submode }`, fails with `message` when it never is, and returns it.
 export async function waitForTool (page, want, message = 'the tool settles') {
   const tool = await settle(async () => {
     const { mode, submode } = await currentTool(page)
@@ -470,13 +412,9 @@ export async function waitForTool (page, want, message = 'the tool settles') {
 // Two animation frames: the bridge's `change` fires in the first, and the UI has drawn it by the second. A ResizeObserver also runs in a frame, so this waits for a layout change the page reacts to.
 export const afterChange = (page) => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 
-// Waits until every running animation on the page (a dialog opening, colours easing to a new theme) has finished.
 export const animationsDone = (page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)))
 
-// Fails unless the engine reports fewer than 5 changes in one second with nobody touching the page (a "nothing happened in
-// N ms" check): a redraw that wakes the next change loops every frame, about 60 a second (#322). The bound is not zero
-// because Penpa+'s own clock (`h1#timer`, outside the UI) rewrites its text once a second, which the watcher sees as a
-// change, so an idle second holds one or two.
+// Fails on 5 or more engine changes in one idle second: a redraw that wakes the next change loops every frame, about 60 a second. Not zero, since Penpa+'s own clock (h1#timer) rewrites its text once a second.
 export async function assertQuiet (page) {
   await afterChange(page)
   const changes = await page.evaluate(() => new Promise((resolve) => {
@@ -487,8 +425,6 @@ export async function assertQuiet (page) {
   assert.ok(changes < 5, `${changes} engine changes in one idle second: a redraw keeps triggering the next`)
 }
 
-// What the solver has entered, the selection and the mode, read as Penpa+ would save them (`readEngineState`, defined by
-// recorder.js): what a key could change on the board.
 export const board = (page) => page.evaluate(() => {
   const state = readEngineState()
   // The undo and replay logs carry the time between keys, which differs between runs.
@@ -496,10 +432,8 @@ export const board = (page) => page.evaluate(() => {
   return { entered, selection: state.selection, mode: state.mode }
 })
 
-// What the page keeps in localStorage, whatever the UI calls its keys.
 export const storedEntries = (page) => page.evaluate(() => JSON.stringify(Object.entries(localStorage).sort()))
 
-// The text the solver has typed into Number mode cells, in cell order.
 export const typedDigits = async (page) => Object.values((await board(page)).entered.number ?? {}).map(([digit]) => digit)
 
 export function contrastHelpersInPage () {
@@ -520,7 +454,6 @@ export function contrastHelpersInPage () {
   return { luminance, parse, over, ratio }
 }
 
-// Runs in the page: the product of the opacities of a node and its flat-tree ancestors, which dims what the node shows.
 export function opacityOfInPage (node) {
   let product = 1
   for (let n = node; n; n = n.assignedSlot ?? n.parentElement ?? n.getRootNode()?.host ?? null) {
@@ -529,7 +462,6 @@ export function opacityOfInPage (node) {
   return product
 }
 
-// Runs in the page: the colour a node's own box shows, composited over its ancestors in the flat tree (a slotted node sits in its slot).
 export function groundOfInPage (node, parse, over) {
   const layers = []
   for (let n = node; n; n = n.assignedSlot ?? n.parentElement ?? n.getRootNode()?.host ?? null) {

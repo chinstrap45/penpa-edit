@@ -1,7 +1,3 @@
-// The Shift and Ctrl holds of `solve.html` (#99): a held Shift borrows Sudoku's Corner tool and a held Ctrl its Centre tool,
-// the Mouse card says so, and the hold always ends: on key-up wherever focus is, on a lost window, on a hidden tab, on a dialog
-// opening, on Tab and on any tool picked, whose later key-up then changes nothing. The UI is found by role and accessible
-// name, the tool through `engine`; the keys are real key presses, and a lost window is the `blur` event Chromium fires on it.
 import assert from 'node:assert/strict'
 import { before, after, describe, it } from 'node:test'
 import { cardBodyButtons, linkFromNewBoard, newBoardSolveLink, openSolvePage, setTool, storedEntries, useBrowser, waitForTool } from './page.mjs'
@@ -19,7 +15,6 @@ const LINE = { mode: 'line', submode: '1' }
 const headline = (page) => page.getByRole('region', { name: 'Mouse' }).getByRole('heading', { level: 3 })
 const headlineText = (page) => headline(page).textContent()
 
-// Settles on the Mouse card's headline reading `text`.
 const waitForHeadline = (page, text) => settle(() => headlineText(page), text)
 
 describe('a held Shift or Ctrl', () => {
@@ -105,7 +100,6 @@ describe('a held Shift or Ctrl', () => {
     await page.keyboard.press('Tab')
     await waitForTool(page, CORNER, 'Shift+Tab from Normal lands on the pin before it, Corner')
     await page.keyboard.up('Shift')
-    // Penpa+ would give Normal back on the key-up.
     assert.equal(await page.evaluate(() => engine.getState().held), false)
     await settle(() => headlineText(page), 'Sudoku > Corner')
     await waitForTool(page, CORNER)
@@ -198,8 +192,6 @@ describe('a Shift hold ended by Shift+Tab to a Line pin', () => {
   })
 })
 
-// A page of its own: Penpa+ treats a key pressed within 15 ms of a Shift release as a Shift press, which a Ctrl hold right after the
-// Shift tests would trip.
 describe('a held Ctrl', () => {
   let opened
   before(async () => { opened = await openSolve(['Sudoku Normal', 'Sudoku Corner']) })
@@ -240,7 +232,6 @@ describe('after a hold', () => {
   })
 })
 
-// Runs in the page. A hex board's solve link as the `#` part, with Digits in its Tab set.
 function hexSolveLinkInPage (names) {
   UserSettings.gridtype = 'hex'
   document.getElementById('nb_size1').value = 3
@@ -252,7 +243,6 @@ function hexSolveLinkInPage (names) {
   return url.slice(url.indexOf('#'))
 }
 
-// A page of its own, as above: Penpa+ treats a key pressed within 15 ms of a Shift release as a Shift press.
 describe('a held Shift or Ctrl on a hex grid, which has centre marks but no corner marks', () => {
   let opened
   before(async () => {
@@ -260,7 +250,6 @@ describe('a held Shift or Ctrl on a hex grid, which has centre marks but no corn
   })
   after(async () => { await opened?.context.close() })
 
-  // The tool in use and whether `listTools()` lists it, read in one call.
   const toolAndListed = (page) => page.evaluate(() => {
     const { mode, submode } = engine.getTool()
     return { mode, submode, listed: engine.listTools().some((t) => t.mode === mode && t.submode === submode) }
@@ -278,7 +267,7 @@ describe('a held Shift or Ctrl on a hex grid, which has centre marks but no corn
     await setTool(page, NORMAL)
     await page.keyboard.down('Shift')
     assert.deepEqual(await toolAndListed(page), { ...NORMAL, listed: true }, 'held')
-    await page.keyboard.down('Shift') // auto-repeat
+    await page.keyboard.down('Shift')
     assert.deepEqual(await toolAndListed(page), { ...NORMAL, listed: true }, 'repeating')
     await page.keyboard.up('Shift')
     assert.deepEqual(await toolAndListed(page), { ...NORMAL, listed: true }, 'released')

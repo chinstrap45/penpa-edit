@@ -1,4 +1,4 @@
-// A card whose content makes it taller on a layout the solver changed stays clear of its neighbours (#288): the UI fuzz's
+// A card whose content makes it taller on a layout the solver changed stays clear of its neighbours: the UI fuzz's
 // shrunk repros, and the rule's other cases, replayed as scripted lists on the solve page. `runScript` checks every UI
 // fuzz rule after each step, cards-do-not-overlap among them; the other tests read the cards' boxes themselves.
 import assert from 'node:assert/strict'
@@ -19,8 +19,6 @@ const LOAD_DEFAULTS = ['preset load', 0]
 const puzzle = (name) => puzzles.find((p) => p.name === name)
 const replays = (name, steps) => runScript({ openTarget: openTarget(browser()), puzzle: puzzle(name), actions: scriptedList(steps) })
 
-// Runs `steps` on `name` and returns each shown card's box (`x`, `y`, `width`, `height`) by card name, before the last step
-// and after it.
 async function boxesAround (name, steps) {
   const target = await openTarget(browser())(puzzle(name))
   const boxes = async () => Object.fromEntries((await target.snapshot()).cards.filter((c) => c.shown).map((c) => [c.name, c.rect]))
@@ -44,9 +42,7 @@ const bottom = (box) => box.y + box.height
 const SLACK_PX = 1
 const near = (actual, expected, what) => assert.ok(Math.abs(actual - expected) <= SLACK_PX, `${what}: ${actual}, expected ${expected}`)
 
-// Pinned dragged up and left, over Mode's column, and Mode dragged up to 10 px under it: the undo line's row reaches Mode.
 const MODE_UNDER_PINNED = [drag('Pinned', -240, -240), drag('Mode', 0, -240), drag('Mode', 0, 20)]
-// Rules dragged into the top corner, then a preset load, which sizes the cards the solver left alone again.
 const RULES_DRAGGED = [drag('Rules', -240, -240), ['preset load', 1]]
 
 describe('a card that grows on a layout the solver changed', () => {
@@ -74,7 +70,6 @@ describe('a card that grows on a layout the solver changed', () => {
   })
 
   it('a card the growth pushes moves on whatever it then covers', async () => {
-    // Recent dragged up to 10 px under Mode, so Mode's move reaches it.
     await replays('akari', [...MODE_UNDER_PINNED, drag('Recent', 0, -240), drag('Recent', 0, 20), LOAD_DEFAULTS])
   })
 
@@ -92,7 +87,6 @@ describe('a card that grows on a layout the solver changed', () => {
   })
 
   it('a card that grows over one with no room left below it stops above it', async () => {
-    // Mode at the desk's bottom, and Pinned dragged down to a few pixels above it.
     const { before, after } = await boxesAround('akari', [
       drag('Mode', 0, 240), drag('Mode', 0, 240),
       drag('Pinned', 0, 240), drag('Pinned', 0, 240), drag('Pinned', 0, 80), drag('Pinned', 0, -20),
@@ -102,7 +96,6 @@ describe('a card that grows on a layout the solver changed', () => {
     assert.ok(bottom(after.Pinned) + CARD_GAP_PX <= after.Mode.y + SLACK_PX, `Pinned ends at ${bottom(after.Pinned)}, over Mode at ${after.Mode.y}`)
   })
 
-  // The ticket's steps: Mode dragged down and left, then a preset load grows Mode and Recent, which sits at the desk's bottom.
   const MODE_DRAGGED_DOWN = [['mode pick', 232], drag('Mode', -240, 240), ['preset star', 39], ['mode pick', 465], ['preset load', 273]]
 
   it('Recent and a Mode card dragged down and left, both grown by a preset load, stay clear (#391)', async () => {

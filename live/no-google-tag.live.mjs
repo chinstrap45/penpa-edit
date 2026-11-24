@@ -1,4 +1,3 @@
-// Neither page reports a visit to Google (#374): opening index.html or solve.html requests no Google tag host.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'
@@ -7,7 +6,6 @@ const browser = useBrowser()
 
 const GOOGLE_TAG_HOST = /(^|\.)(googletagmanager|google-analytics)\.com$/
 
-// The hosts a page requests while it loads, recorded on the context before the page opens.
 async function hostsRequestedBy (options) {
   const hosts = []
   const { page } = await openPenpa(browser(), '', {

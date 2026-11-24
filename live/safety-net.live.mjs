@@ -1,7 +1,3 @@
-// Measuring the safety net (#32): a replay counts the `mouse_*` and `key_*` handlers of `class_p.js` its steps call,
-// a plant is refused unless it changes one line of its handler and leaves its file parsing, a hunt tells a catch from a
-// miss and from a harness error, and every plant undoing an audit fix still applies and is caught by a recording made
-// for that finding. The whole measurement, every recording against every plant, is `npm run measure`, run by hand.
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'

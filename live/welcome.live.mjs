@@ -1,4 +1,4 @@
-// The solve page's welcome dialog (#408, GLOSSARY.md **Welcome**): one dialog on a first visit. Escape or Start solving closes it, and after either it does not show again, across reloads, until Settings
+// The solve page's welcome dialog (GLOSSARY.md **Welcome**): one dialog on a first visit. Escape or Start solving closes it, and after either it does not show again, across reloads, until Settings
 // replays it. It is found by role and name, as a solver sees it.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
@@ -22,7 +22,6 @@ async function welcomeShownAfterLoad (page) {
   return welcomeBox(page).count()
 }
 
-// Presses Settings' Show the welcome, and waits for the dialog to show and Settings to close.
 async function replayFromSettings (page) {
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   const settings = page.getByRole('dialog', { name: 'Settings' })

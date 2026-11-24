@@ -1,4 +1,3 @@
-// A Penpa+ solve link, once the Redirect script has run, lands on the fork's solve.html with the same puzzle loaded.
 // Tampermonkey cannot run headless, so the script is injected at document start; its `@match` and `@run-at` lines are checked in `test/userscript.test.mjs`.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'

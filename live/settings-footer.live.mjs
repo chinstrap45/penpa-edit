@@ -1,4 +1,3 @@
-// Settings ends with where to send questions and bugs, and where to read about the Redirect script (#380).
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { SCRIPT_ENTRY_URL } from '../test/redirect-urls.mjs'

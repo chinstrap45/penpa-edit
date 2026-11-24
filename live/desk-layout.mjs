@@ -8,7 +8,6 @@ export const SLACK_PX = 1
 export const CARD_GAP_PX = 10
 // desk.js's Mouse body slack for its borders, and rounding.
 export const MOUSE_SLACK_PX = 3
-// The Mouse and Mode cards' smallest heights (desk.js's MIN_SIZE).
 export const MOUSE_MIN_HEIGHT_PX = 140
 export const MODE_MIN_HEIGHT_PX = 170
 
@@ -17,12 +16,10 @@ export const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
 // desk.js's margin above and below the columns.
 export const TOP_MARGIN_PX = 12
 
-// Whether two boxes (`x`, `y`, `w`, `h`) overlap by more than the rounding.
 export const overlaps = (a, b) => a.x < b.x + b.w - 0.5 && b.x < a.x + a.w - 0.5 && a.y < b.y + b.h - 0.5 && b.y < a.y + a.h - 0.5
 
-// Reads `inPage` until two reads in a row agree, and returns the last: the page lays out after it renders, so a read
-// is taken once nothing moves. Each read follows two rendered frames, since a ResizeObserver runs only in a frame: on a
-// loaded box two reads can both land before the frame that moves the page (#323).
+// Reads until two reads in a row agree. Each read follows two rendered frames, since a ResizeObserver runs only in a
+// frame and two reads can both land before the frame that moves the page.
 export async function steady (page, inPage, arg) {
   let last = null
   await settle(async () => {

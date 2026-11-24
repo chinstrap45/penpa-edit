@@ -1,9 +1,6 @@
-// The UI driver's per-recording comparisons with the engine driver (`compareDrivers` in `live/replay.mjs`), on Penpa+'s
-// page and on `solve.html`, split into UI_REPLAY_PARTS files that node's test workers run side by side as the engine
-// driver's are (`live/engine-replay-part.mjs`). Not a check itself, so `live/**/*.live.mjs` skips it.
-//
-// Every PR replays the hand-made recordings and a sample of the generated ones; with `REPLAY_UI_CORPUS=all` (the
-// nightly run, `.github/workflows/ui-corpus.yml`) every recording replays (the Safety net map's standing ruling, #6).
+// The UI driver compared with the engine driver on both pages, split into parts run side by side. A PR replays the
+// hand-made recordings and a sample; REPLAY_UI_CORPUS=all (the nightly) replays every one. Not a check itself, so
+// `live/**/*.live.mjs` skips it.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { useBrowser } from './page.mjs'
@@ -14,7 +11,6 @@ import { TIER_C_FAMILY } from './tier-c.mjs'
 
 export const UI_REPLAY_PARTS = 4
 
-// The pages the UI driver replays on, as `compareDrivers`'s `solve` option names them.
 const TARGETS = [{ name: "Penpa+'s page", solve: false }, { name: 'solve.html', solve: true }]
 
 // Tier C's full solves replayed on every PR: those whose replay takes seconds. The 9x9 sudoku and the killer take tens
@@ -41,7 +37,6 @@ const GENERATED_SAMPLE = ['genre/compass', 'genre/shimaguni', 'paint/multicolor-
 // agrees, so the entry goes when its ticket's fix lands. None is marked on Penpa+'s page.
 const SOLVE_TODO = {}
 
-// The ids each PR's run replays, or every id under `REPLAY_UI_CORPUS=all`; `ids` must be sorted.
 async function uiReplayIds (ids, all = process.env.REPLAY_UI_CORPUS === 'all') {
   if (all) return ids
   const chosen = []
@@ -51,15 +46,12 @@ async function uiReplayIds (ids, all = process.env.REPLAY_UI_CORPUS === 'all') {
   return chosen
 }
 
-// The call every `ui-replay-<k>.live.mjs` makes, `fileUrl` its `import.meta.url`, `k` read from its name.
 export const UI_REPLAY_CALL = 'await uiReplayPart(import.meta.url)'
 
-// The ids part `part` replays, of every recording under `all` (the nightly run's set) or of each PR's.
 export async function uiReplayPartIds (part, all) {
   return replayPartIds(await uiReplayIds(await listRecordings(), all), part, UI_REPLAY_PARTS)
 }
 
-// Registers the UI driver's comparisons of the part named by `fileUrl`.
 export async function uiReplayPart (fileUrl) {
   const part = Number(/ui-replay-(\d+)\.live\.mjs$/.exec(fileUrl)[1])
   const browser = useBrowser()

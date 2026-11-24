@@ -1,4 +1,4 @@
-// The bridge's change watcher (#322): the solve UI's own redraws on `change` (the coordinates' labels, the trial's depth, a
+// The bridge's change watcher: the solve UI's own redraws on `change` (the coordinates' labels, the trial's depth, a
 // tooltip outside the UI's root) are no page change for the engine, and Penpa+'s popups still are.
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, describe, it } from 'node:test'
@@ -18,7 +18,7 @@ describe('the engine while the solve UI redraws itself', () => {
     await assertQuiet(page)
   })
 
-  // The depth label is also written only when its text differs (#258), so this goes red only with that guard and the
+  // The depth label is also written only when its text differs, so this goes red only with that guard and the
   // watcher's filter both gone; the coordinates above are what reverting the filter alone breaks.
   it('stays quiet with a trial open', async () => {
     const { page } = opened

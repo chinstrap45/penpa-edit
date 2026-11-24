@@ -1,4 +1,4 @@
-// Pin presets of `solve.html` (#98, #159): the Pinned card's "Pin presets" combobox loads a built-in set (one per genre, filed by
+// Pin presets of `solve.html`: the Pinned card's "Pin presets" combobox loads a built-in set (one per genre, filed by
 // genre group) or one the solver saved, replacing the puzzle's pins. Typing filters the list; a star files a preset under Favourites;
 // a saved set can be deleted, with an undo. Saved sets and stars are kept in localStorage and offered on every puzzle. The UI is
 // found by role and accessible name; the pins are read by walking them with Tab and by `engine.getTool()`.
@@ -10,10 +10,8 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// A Tab set that names the modes the first built-in presets pin.
 const BROAD_TAB_SET = ['Sudoku Normal', 'Line Normal', 'Wall', 'Number Normal', 'Surface']
 
-// Every tab, so the link lists every tool a square grid has.
 const allTabs = async () => {
   const { page, context } = await openPenpa(browser(), '')
   try {
@@ -32,7 +30,6 @@ const optionsOfGroup = (page, title) => presetList(page).getByRole('group', { na
 const hasFavourites = (page) => groupTitles(page).then((titles) => titles.includes('Favourites'))
 const star = (page, name) => presetList(page).getByRole('button', { name: `Favourite ${name}`, exact: true })
 
-// Presses Tab and returns the tool it switched to.
 async function tabToNextTool (page) {
   const before = toolKeyOf(await currentTool(page))
   await page.keyboard.press('Tab')
@@ -40,7 +37,6 @@ async function tabToNextTool (page) {
   return toolKeyOf(await currentTool(page))
 }
 
-// The tools the pins hold, in order: starts on the first pin and Tabs round once.
 async function walkPins (page, count) {
   const keys = []
   await pinnedCard(page).getByRole('button', { name: /^Z/ }).click()
@@ -51,7 +47,6 @@ async function walkPins (page, count) {
   return keys
 }
 
-// Stores saved presets as an earlier visit would have, then reloads so the page starts from them.
 const seedSavedPresets = async (page, presets) => {
   await page.evaluate((value) => localStorage.setItem('chinstrap.pinPresets', JSON.stringify(value)), presets)
   await page.reload()
@@ -60,7 +55,7 @@ const seedSavedPresets = async (page, presets) => {
 
 const chipCount = (page) => pinChips(page).getByRole('button', { name: /^Unpin / }).count()
 
-// A pick hands the keyboard back to the puzzle (#157): focus is off the Pinned card, the preset's pins are loaded, and Tab lands on
+// A pick hands the keyboard back to the puzzle focus is off the Pinned card, the preset's pins are loaded, and Tab lands on
 // one of them without the focus returning to the card.
 const focusInPinnedCard = (page) => page.evaluate(() => document.activeElement?.closest('.ui-card-pins') !== null)
 const assertTabCyclesPins = async (page, keys) => {

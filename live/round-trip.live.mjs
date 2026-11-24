@@ -1,5 +1,3 @@
-// The round trip's pages (`openReloader` in `live/page.mjs`, `roundTrips` in `live/replay.mjs`): a page reused for
-// load after load boots each link as a fresh page would, and a link already loaded for the same board is not loaded again.
 import assert from 'node:assert/strict'
 import { afterEach, before, beforeEach, describe, it } from 'node:test'
 import { canonicalState, readEngineState } from './canonical-state.mjs'
@@ -11,7 +9,6 @@ const browser = useBrowser()
 
 const readPage = (page) => page.evaluate(readEngineState).then(canonicalState)
 
-// Runs in the page: leaves an entry in every store Penpa+ keeps between visits, and a JS global.
 async function leaveEntriesInPage () {
   window.leftover = 'global'
   localStorage.setItem('leftover', 'local')
@@ -20,7 +17,6 @@ async function leaveEntriesInPage () {
   document.cookie = 'leftover=cookie;path=/'
 }
 
-// Runs in the page: what the page finds of `leaveEntriesInPage`'s entries.
 async function entriesInPage () {
   return {
     global: window.leftover ?? null,
@@ -80,7 +76,6 @@ describe('roundTrips', () => {
     }
   })
 
-  // Each test starts with no link loaded.
   let trips
   beforeEach(() => { trips = roundTrips(browser()) })
   afterEach(async () => { await trips.close() })

@@ -1,4 +1,4 @@
-// Pins and presets made safe, stable and self-explaining (#202): a preset load and a same-name save can be undone, a tool keeps
+// Pins and presets made safe, stable and self-explaining: a preset load and a same-name save can be undone, a tool keeps
 // its pin colour, the first four chips are labelled with their keys, the controls say what they do, and the pins reorder by
 // dragging. The UI is found by role and accessible name; colours and storage are read as the page holds them.
 import assert from 'node:assert/strict'
@@ -20,12 +20,10 @@ const colourOfChip = async (page, name) => {
 }
 const undoLine = (page) => pinned(page).locator('.ui-preset-undo')
 const loadPreset = choosePreset
-// The `{ mode, submode }` of the tool a chip's name stands for.
 const toolNamed = (page, name) => page.evaluate((n) => {
   const tool = engine.listTools().find((t) => window.toolGuide.chipLabel(t) === n)
   return { mode: tool.mode, submode: tool.submode }
 }, name)
-// Pins the tool at `index` of the tool list, through the Mode card's pin button.
 const pinToolAt = async (page, index) => {
   const tool = await page.evaluate((i) => { const t = engine.listTools()[i]; return { mode: t.mode, submode: t.submode, name: window.toolGuide.chipLabel(t) } }, index)
   await setTool(page, { mode: tool.mode, submode: tool.submode })

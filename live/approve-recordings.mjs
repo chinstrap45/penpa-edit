@@ -1,4 +1,4 @@
-// `npm run recordings:approve -- <id> ...` (#33): replays each named recording on this checkout, prints what changes in
+// `npm run recordings:approve -- <id> ...`: replays each named recording on this checkout, prints what changes in
 // its `<id>.expected.json` in plain words, then writes the file. Named ids only, each a recording's id as
 // `live/replay.mjs` names it: there is no "update all", so a glob, a family or an unknown id is refused before
 // anything runs. A replay that does not end on the recording's final board writes nothing and fails. Run by the

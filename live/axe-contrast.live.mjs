@@ -1,6 +1,3 @@
-// WCAG AA colour contrast on `solve.html` (#378), read by axe-core's `color-contrast` rule on the loaded page: with a puzzle
-// loaded, with Settings open, with another dialog open and on the welcome dialog, in each theme. A planted low-contrast colour must fail it, so a
-// pass is a check that can fail.
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { describe, it } from 'node:test'
@@ -23,7 +20,6 @@ async function openIn (theme, { welcome = false } = {}) {
   return opened
 }
 
-// WCAG AA: 4.5:1, or 3:1 for large text (24px, or 18.66px and bold).
 const AA_TEXT = 4.5
 const AA_LARGE_TEXT = 3
 
@@ -52,16 +48,13 @@ async function violationsInPage ({ aaText, aaLargeText, scope }) {
   return { lines, measured: measured.length }
 }
 
-// The violations on the whole page, or only inside the element `scope` selects.
-// Axe's first run after a dialog has opened can judge only some of its text (4 of 30 nodes in Settings, #408); a run after it
-// judges all, so the first is a warm-up and the second is read.
+// Axe's first run after a dialog opens judges only some of its text; the second judges all, so the first is a warm-up.
 const contrastViolations = async (page, scope) => {
   const run = () => page.evaluate(violationsInPage, { aaText: AA_TEXT, aaLargeText: AA_LARGE_TEXT, scope })
   await run()
   return (await run()).lines
 }
 
-// The welcome dialog on a first visit, its opening animation over.
 const WELCOME_DIALOG = '.ui-welcome'
 async function openWelcomeIn (theme) {
   const opened = await openIn(theme, { welcome: true })

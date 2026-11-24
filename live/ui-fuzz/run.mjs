@@ -1,4 +1,4 @@
-// The UI fuzz from the command line (#195): `npm run fuzz:ui -- [--seed <n>] [--minutes <m>] [--puzzle <name>] [--max-steps
+// The UI fuzz from the command line: `npm run fuzz:ui -- [--seed <n>] [--minutes <m>] [--puzzle <name>] [--max-steps
 // <n>] [--path <printed path>] [--focus <area> ...]`, `--puzzle` running every list on that puzzle, `--max-steps` capping
 // a list's actions (20 by default) and `--focus` drawing that area's actions more often.
 // Random action lists on `solve.html` in headless Chromium, 2 minutes by default; a crash signal or a broken rule fails

@@ -1,7 +1,7 @@
-// The board coordinates of solve.html's Settings (#249, #250): off by default, kept across a reload, outside the canvas (so never over an
-// outside clue), following zoom and Fit. A square-cell grid gets row and column numbers 1..N aligned to the cell centres (#249); a hex, tri,
-// pyramid or truncated-square grid gets one number per row of cells (#350); every other shape gets reference bands, letters A, B, C... across the top and numbers 1, 2, 3... down the left, equal bands over the grid's bounding
-// box (#250). Label positions are read against the cells Penpa+ draws.
+// The board coordinates of solve.html's Settings: off by default, kept across a reload, outside the canvas (so never over an
+// outside clue), following zoom and Fit. A square-cell grid gets row and column numbers 1..N aligned to the cell centres; a hex, tri,
+// pyramid or truncated-square grid gets one number per row of cells; every other shape gets reference bands, letters A, B, C... across the top and numbers 1, 2, 3... down the left, equal bands over the grid's bounding
+// box. Label positions are read against the cells Penpa+ draws.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { boardCanvasInPage, linkFromNewBoard, solveLinkOfImport, openSolvePage, useBrowser, waitForDesk, openSettings, flipSettingsSwitch } from './page.mjs'
@@ -16,7 +16,6 @@ const SLACK_PX = 1.5
 // The drawn box includes the grid's outer line, which is a few px thick.
 const DRAWN_SLACK_PX = 4
 
-// Runs in the page: a new board of `columns` x `rows` cells with `space` outside-clue rows or columns on the top and the left.
 function newBoardInPage ({ columns, rows, space = 0, gridtype = 'square' }) {
   document.getElementById('gridtype').value = gridtype
   UserSettings.gridtype = gridtype
@@ -30,8 +29,6 @@ function newBoardInPage ({ columns, rows, space = 0, gridtype = 'square' }) {
 }
 const boardLink = (options) => linkFromNewBoard(browser(), newBoardInPage, options)
 
-// Runs in the page, given the board canvas: each cell's rectangle as drawn (viewport px) by its row and column, whatever order Penpa+ keeps
-// its cell list in, and the canvas's own.
 function cellRectsInPage (canvas) {
   const origin = canvas.getBoundingClientRect()
   const cells = {}
@@ -48,7 +45,6 @@ const readCells = async (page) => {
   try { return await page.evaluate(cellRectsInPage, canvas) } finally { await canvas.dispose() }
 }
 
-// Runs in the page: every shown label's text, axis and box.
 function labelsInPage () {
   return [...document.querySelectorAll('.ui-grid-coordinate')].map((node) => {
     const r = node.getBoundingClientRect()
@@ -56,8 +52,6 @@ function labelsInPage () {
   })
 }
 
-// Checks the labels of `page` against the grid: 1..columns across the top, 1..rows down the left, each on its cell's centre line, and
-// none inside the canvas.
 async function assertAligned (page, columns, rows) {
   const { canvas, cells } = await readCells(page)
   const labels = await page.evaluate(labelsInPage)
@@ -65,7 +59,6 @@ async function assertAligned (page, columns, rows) {
   const left = labels.filter((l) => l.axis === 'row' && l.side === 'start')
   assert.deepEqual(top.map((l) => l.text), Array.from({ length: columns }, (_, i) => String(i + 1)), 'columns are numbered 1..N')
   assert.deepEqual(left.map((l) => l.text), Array.from({ length: rows }, (_, i) => String(i + 1)), 'rows are numbered 1..N')
-  // Every cell of the grid, by position: the cells' own keys sort in row-major order.
   const keys = Object.keys(cells).sort((a, b) => { const [ar, ac] = a.split(',').map(Number); const [br, bc] = b.split(',').map(Number); return ar - br || ac - bc })
   const firstRow = Number(keys[0].split(',')[0])
   const firstColumn = Math.min(...keys.map((k) => Number(k.split(',')[1])))
@@ -101,7 +94,6 @@ function drawnBoxInPage (canvas) {
   }
 }
 
-// A, B, ... Z, AA, AB, ...: the names of the first `n` column bands.
 const bandNames = (n) => {
   const names = []
   for (let i = 0; i < n; i++) {
@@ -112,8 +104,6 @@ const bandNames = (n) => {
   return names
 }
 
-// Checks the bands of `page`: `columns` column bands named A, B, C... across the top and `rows` row bands numbered 1, 2, 3... down the left,
-// each label at the middle of an equal band, the bands together the box the board is drawn in, and every label outside the canvas.
 async function assertBands (page, columns, rows) {
   const handle = await page.evaluateHandle(boardCanvasInPage)
   let read
@@ -155,7 +145,6 @@ describe('board coordinates on a square-cell grid', () => {
     const body = await page.evaluate(() => { const b = document.querySelector('section[aria-label="Board"] .ui-body'); return { w: b.scrollWidth - b.clientWidth, h: b.scrollHeight - b.clientHeight } })
     assert.deepEqual(body, { w: 0, h: 0 }, 'the Board card does not scroll at Fit')
     await assertAligned(page, 9, 9)
-    // The fit leaves room for the numbers: at Fit every label is inside the Board card.
     const card = await page.evaluate(() => document.querySelector('section[aria-label="Board"]').getBoundingClientRect().toJSON())
     for (const l of await page.evaluate(labelsInPage)) {
       assert.ok(l.left >= card.left && l.right <= card.right && l.top >= card.top && l.bottom <= card.bottom, `label ${l.axis} ${l.text} is inside the Board card`)
@@ -219,9 +208,8 @@ describe('board coordinates on a square-cell grid', () => {
   })
 })
 
-// Column band counts for a 6 x 6 board of each shape, and a 20-side hexagon grid wide enough to run past Z. A band is about 1.5 cells wide, so these
-// are the grid's width over 1.5 cells, rounded. `rows` is the number of rows of cells for a grid type numbered by row (#350), else the number of
-// row bands.
+// Band counts for a 6 x 6 board of each shape, and a 20-side hexagon wide enough to run past Z. A band is about 1.5 cells wide, so columns is the
+// width over 1.5 cells, rounded; rows counts rows of cells on a grid numbered by row, else row bands.
 const SHAPES = [
   { gridtype: 'hex', size: 6, columns: 8, rows: 11, byRow: true },
   { gridtype: 'tri', size: 6, columns: 6, rows: 6, byRow: true },
@@ -236,7 +224,6 @@ const SHAPES = [
   { gridtype: 'deltoidal_trihexagonal', size: 6, columns: 10, rows: 11 }
 ]
 
-// Runs in the page: the y (viewport px) of the middle of every cell's drawn box, the distinct ones within `tolerance`, top to bottom.
 function cellRowsInPage ({ canvas, tolerance }) {
   const origin = canvas.getBoundingClientRect()
   const ys = pu.centerlist.map((id) => {
@@ -246,7 +233,6 @@ function cellRowsInPage ({ canvas, tolerance }) {
   return ys.filter((y, i) => i === 0 || y - ys[i - 1] > tolerance)
 }
 
-// Checks the labels of a grid numbered by row: letters across as bands, and the numbers 1..N down the left, one on each row of cells' centre line, repeated on the far sides.
 async function assertRowNumbers (page, columns, rows) {
   const handle = await page.evaluateHandle(boardCanvasInPage)
   let cellRows
@@ -259,7 +245,6 @@ async function assertRowNumbers (page, columns, rows) {
   assert.deepEqual(labels.filter((l) => l.axis === 'column' && l.side === 'start').map((l) => l.text), bandNames(columns), 'columns are lettered')
   assert.equal(left.some((l) => l.band), false, 'row numbers are exact, so not drawn as bands')
   assert.equal(labels.filter((l) => l.axis === 'column' && l.side === 'start').every((l) => l.band), true, 'column letters are bands')
-  // "Number the grid only" is on, so both axes repeat on the right and the bottom.
   const far = (axis) => labels.filter((l) => l.axis === axis && l.side === 'end').map((l) => l.text)
   assert.deepEqual(far('row'), left.map((l) => l.text), 'the row numbers repeat on the right')
   assert.deepEqual(far('column'), bandNames(columns), 'the column letters repeat at the bottom')
@@ -316,7 +301,6 @@ const GUTTER_PX = 30
 const LABEL_PX = 19
 const MIN_CLEARANCE_PX = 5
 
-// Zooms in (at most 8 steps) and checks the board then scrolls both ways.
 async function zoomIn (page) {
   const button = page.getByRole('button', { name: 'Zoom in' })
   for (let i = 0; i < 8 && await button.isEnabled(); i++) await button.click()
@@ -341,15 +325,12 @@ const scrollThird = (page) => page.evaluate((read) => new Promise((resolve) => {
   body.scrollTop = (body.scrollHeight - body.clientHeight) / 3
 }), stickOffsetsInPage.toString())
 
-// Each label's centre along its own axis, from the canvas's top left.
 async function alongBoard (page) {
   const { canvas } = await readCells(page)
   const labels = (await page.evaluate(labelsInPage)).filter((l) => l.side === 'start')
   return labels.map((l) => (l.axis === 'column' ? l.cx - canvas.left : l.cy - canvas.top))
 }
 
-// After a scroll, the labels still follow their cells along the board (`before` is each label's offset from the canvas, read unscrolled), and
-// every label beyond the gutter is inside the card's visible area, a column's at the card's top edge and a row's at its left edge.
 async function assertSticky (page, before) {
   const view = await page.evaluate(bodyViewInPage)
   const labels = (await page.evaluate(labelsInPage)).filter((l) => l.side === 'start')
@@ -378,7 +359,6 @@ describe('board coordinates when the board is zoomed past its card and scrolled'
       const { context, page } = await openSolvePage(browser(), await boardLink(options), { served: true })
       await flipSettingsSwitch(page, SWITCH)
       await zoomIn(page)
-      // Unscrolled, nothing slides: the labels sit where they do at Fit.
       assert.deepEqual(await page.evaluate(stickOffsetsInPage), { x: '0px', y: '0px' }, 'no slide before the board scrolls')
       if (!options.gridtype) await assertAligned(page, columns, rows)
       const home = await alongBoard(page)

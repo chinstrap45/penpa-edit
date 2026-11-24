@@ -1,4 +1,4 @@
-// The cards' automatic sizes on solve.html (#252): Mode and Mouse are as tall as the tallest of the pinned tools and the
+// The cards' automatic sizes on solve.html: Mode and Mouse are as tall as the tallest of the pinned tools and the
 // current tool, so stepping through the pins never changes their height; the Mouse and Recent cards end at the desk's
 // bottom; and a double-click on an edge the solver dragged returns that axis to its automatic size. Read through the
 // cards' bounding boxes and the bodies' scroll sizes.
@@ -14,17 +14,14 @@ const browser = useBrowser()
 const LAPTOP = { width: 1366, height: 768 }
 const FULL_HD = { width: 1920, height: 1080 }
 const HUGE = { width: 2560, height: 1440 }
-// The pins the ticket steps through on Long rules, by their chip names.
 const LONG_RULES_PINS = ['Surface', 'Line > Normal', 'Line x']
 // Line > Normal, and Number > Normal, whose Style and Orientation rows need more than the Mode card's smallest height.
 const TALL_PINS = ['Line > Normal', 'Number > Normal']
 // A window too short for Mode at the right column's middle once Pinned holds one row: Mode sits under where two rows
 // of pins would end.
 const SHORT = { width: 1366, height: 500 }
-// What every resize handle says on hover.
 const FIT_TOOLTIP = 'Double-click to fit automatically'
 
-// Runs in the page. Every card's box, rounded, and each body's hidden overflow.
 function readCardsInPage (names) {
   const section = (name) => document.querySelector(`section[aria-label="${name}"]`)
   return Object.fromEntries(names.map((name) => {
@@ -34,7 +31,6 @@ function readCardsInPage (names) {
   }))
 }
 
-// Runs in the page: pins the tools named `names` (chip names), in order, then picks the tool named `current` when given.
 function pinByNameInPage ({ names, current }) {
   const named = (name) => {
     const tool = engine.listTools().find((t) => window.toolGuide.chipLabel(t) === name)
@@ -51,7 +47,6 @@ describe('the Mode card while stepping through the pins', () => {
 
   const cards = (page) => steady(page, readCardsInPage, CARDS)
 
-  // Tab through every pin twice, reading the Mode card's box and Recent's top at the start and after each step.
   async function stepThroughPins (page) {
     const count = await page.evaluate(() => window.pinBoard.snapshot().length)
     const reads = []
@@ -119,7 +114,6 @@ describe('the side columns end at the desk\'s bottom', () => {
 
 const rowsOfChips = (page) => page.evaluate(() => new Set([...document.querySelectorAll('.ui-pins > *')].map((chip) => chip.offsetTop)).size)
 
-// Pins the tools not yet pinned, one at a time, from a single row of chips until the chips wrap to a second.
 async function pinUntilTwoRows (page) {
   assert.equal(await rowsOfChips(page), 1, 'the pins start in one row')
   while (await rowsOfChips(page) < 2) {
@@ -173,8 +167,6 @@ describe('the Mouse card while stepping through the pins', () => {
   let opened
   afterEach(async () => { await opened?.context.close() })
 
-  // Every pin in turn: the Mouse card's height, its body's hidden overflow, how far the last row ends below the body, and
-  // the room left under it past the body's padding.
   async function mouseAtEachPin (page) {
     const count = await page.evaluate(() => window.pinBoard.snapshot().length)
     const reads = []
@@ -316,8 +308,6 @@ describe('a layout the solver changed', () => {
   })
 })
 
-// Runs in the page: the Recent card's box, the height its content needs (the card's own chrome, the body's padding and its
-// chips' strip with its margin), and how much of the body is hidden.
 function readRecentInPage () {
   const card = document.querySelector('section[aria-label="Recent"]')
   const body = card.querySelector('.ui-body')
@@ -328,12 +318,11 @@ function readRecentInPage () {
   return { h: Math.round(box.height), bottom: Math.round(box.bottom), needs: Math.ceil(needs), hidden: body.scrollHeight - body.clientHeight, chips: card.querySelectorAll('.ui-chip').length }
 }
 
-describe('the Recent card\'s automatic height (#306)', () => {
+describe('the Recent card\'s automatic height', () => {
   let opened
   afterEach(async () => { await opened?.context.close() })
 
   const TOOLS = [{ mode: 'line', submode: '1' }, { mode: 'line', submode: '2' }, { mode: 'sudoku', submode: '1' }, { mode: 'number', submode: '1' }, { mode: 'line', submode: '5' }]
-  // The flush and fit checks of one read: Recent is as tall as its content, hides none, and ends on the Board's bottom.
   const fitsAndFlush = (read) => ({ fits: Math.abs(read.h - read.needs) <= SLACK_PX, hidden: read.hidden <= 0, flush: Math.abs(read.bottom - read.board) <= SLACK_PX })
   const FITS = { fits: true, hidden: true, flush: true }
   const read = async (page) => ({ ...(await steady(page, readRecentInPage)), board: (await steady(page, readCardsInPage, ['Board'])).Board.bottom })

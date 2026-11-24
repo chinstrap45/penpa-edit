@@ -1,4 +1,4 @@
-// The lint (#396): StandardJS over the JavaScript and shellcheck (error severity) over the shell scripts that
+// The lint: StandardJS over the JavaScript and shellcheck (error severity) over the shell scripts that
 // `.gitattributes` marks `merge=ours`, so an upstream merge never meets a style change of ours.
 // StandardJS comes from `node_modules`; shellcheck is the system's, found on PATH (`sudo apt-get install shellcheck`; GitHub's
 // ubuntu runners ship it), never a copy downloaded while the lint runs (Chris, 2026-11-24, #416).
@@ -10,7 +10,6 @@ import { fileURLToPath } from 'node:url'
 
 const JS_EXTENSIONS = ['.js', '.mjs']
 const SHELL_EXTENSIONS = ['.sh']
-// Owned files StandardJS must not read: a vendored bundle and a file `live/generate-gallery.mjs` writes.
 export const NOT_LINTED = ['docs/ui/vendor/', 'docs/gallery-puzzles.js']
 
 const git = (root, args, input) => {
@@ -43,7 +42,6 @@ export function lintScope (root) {
   }
 }
 
-// A tool that is not installed is a failure, never a pass.
 function bin (root, name) {
   const path = join(root, 'node_modules/.bin', name)
   if (!existsSync(path)) throw new Error(`${name} is not installed (${path}): run npm ci`)
@@ -76,7 +74,6 @@ function shellcheck (root, files, env) {
   return out.error || out.status !== 0 ? [out.error?.message ?? out.stdout + out.stderr] : []
 }
 
-// Each tool runs whatever the other did, so one tool's failure never hides the other's findings.
 const attempt = (run) => {
   try {
     return run()
@@ -85,7 +82,7 @@ const attempt = (run) => {
   }
 }
 
-// Returns the lines to print for a failure; an empty list is a pass. `env` is shellcheck's environment, its PATH where it is looked up.
+// `env` is shellcheck's environment, its PATH where it is looked up.
 export function runLint (root, env = process.env) {
   const scope = attempt(() => lintScope(root))
   if (Array.isArray(scope)) return [`lint scope unreadable: ${scope[0]}`]

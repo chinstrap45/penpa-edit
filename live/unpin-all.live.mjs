@@ -1,5 +1,3 @@
-// The Pinned card's Unpin all button (#271): one click removes every pin, the current tool stays current, Tab has nothing to
-// cycle, the empty set is kept across a reload, and "Puzzle defaults" brings the defaults back. Found by role and accessible name.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { UNPIN_SELECTOR } from './ui-fuzz/actions.mjs'

@@ -1,5 +1,3 @@
-// The recorder (`docs/js/recorder.js`) on a live page: with `?record=1` it writes a solver's real clicks, keys, mode
-// changes, undo and redo as steps and downloads them; without the flag it does nothing.
 import assert from 'node:assert/strict'
 import { before, describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'
@@ -7,7 +5,6 @@ import { clickCell, downloadRecording, makeSurfaceSolveLink, openRecordingPage }
 
 const browser = useBrowser()
 
-// Indices in `pu.centerlist` of the cells the test clicks.
 const LEFT_CELL = 5
 const RIGHT_CELL = 6
 const NUMBER_CELL = 10

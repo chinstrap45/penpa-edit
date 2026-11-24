@@ -1,5 +1,3 @@
-// Line widths on solve.html grow with the cell size past Penpa+'s normal 38 px a cell (#330): read as the run of line pixels
-// across a solver's line on the board's canvas, and as the width Penpa+'s line setter leaves on a context.
 import assert from 'node:assert/strict'
 import { before, describe, it } from 'node:test'
 import { linkFromNewBoard, openPenpa, openSolvePage, puzzleSolveLinkInPage, useBrowser } from './page.mjs'
@@ -12,11 +10,9 @@ const SOLVER_LINE = 3
 const SOLVER_LINE_PX = 3
 const CELL_SIZED_STYLES = [13, 17]
 const CELL_SIZED_PX_AT_ZOOMED = 7
-// The cell sizes the widths are read at: under Penpa+'s normal, its normal, and twice its normal.
 const SMALL = 24
 const NORMAL = 38
 const ZOOMED = 76
-// The middle cell of a 9x9 and its right-hand neighbour, and the first cell of the middle row, as indexes of the center list.
 const MIDDLE_CELL = 40
 const RIGHT_OF_MIDDLE = 41
 const ROW_START = 36
@@ -32,11 +28,7 @@ const SOLVER_LINE_GROWTH = 2
 const FRAME_GROWTH = 1.5
 const GROWTH_TOLERANCE = 0.25
 
-// Runs in the page: at `px` a cell, with the solver's line `solverLine` drawn (`{ from, to, style }`, cells as indexes of the
-// center list) or none, how wide the line is that crosses the point `dx`, `dy` cell widths from the centre of the cell at
-// `cell`, in CSS px. The width is the count of pixels, on a strip 0.8 cell long centred on that point (`down` a column or
-// `right` along a row), at least half as far from white as the darkest of them, over the canvas's resolution. A pixel is read
-// over white, since the canvas round the board may be transparent.
+// Each pixel is read over white, since the canvas round the board may be transparent.
 function lineWidthAtInPage ({ px, solverLine, cell, dx, dy, scan }) {
   engine.setCellSize(px)
   pu.pu_a.line = {}
@@ -61,8 +53,6 @@ function lineWidthAtInPage ({ px, solverLine, cell, dx, dy, scan }) {
   return { cellSize: engine.getState().cellSize, width: run / pu.resol }
 }
 
-// Runs in the page: the cell size, and the line width Penpa+'s setter leaves for `style` at `px` a cell, on the board's
-// context and on a context of its own.
 function setterWidthsInPage ({ px, style }) {
   if (typeof engine !== 'undefined') engine.setCellSize(px)
   else UserSettings.displaysize = px
@@ -72,7 +62,6 @@ function setterWidthsInPage ({ px, style }) {
   return { cellSize: pu.size, board: pu.ctx.lineWidth, scratch: scratch.lineWidth }
 }
 
-// The width of the line `where` names on `page` at `px` a cell, with the solver's line `solverLine` drawn or none.
 async function widthAt (page, px, where, solverLine = null) {
   const { cellSize, width } = await page.evaluate(lineWidthAtInPage, { px, solverLine, ...where })
   assert.equal(cellSize, px)

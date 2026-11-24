@@ -8,15 +8,13 @@ import { DESK_SIZE, makeNumberSolveLink, openPenpa, PENPA_MARK, PENPA_ORIGIN, us
 
 const browser = useBrowser()
 
-// A phone held upright: under the 768 px a desktop screen has at least.
 const PHONE_SIZE = { viewport: { width: 390, height: 844 } }
 
 const givens = (page) => page.evaluate(() => JSON.parse(JSON.stringify(pu.pu_q.number)))
 const pathOf = (page) => new URL(page.url()).pathname
 const dataOf = (page) => { const url = new URL(page.url()); return url.search + url.hash }
 
-// Opens `data` on the served index.html in a fresh context of `contextOptions`, after a blank page so Back has
-// somewhere to go, and returns once Penpa+ (`pu`) is up on whichever page the load ended on.
+// Starts from a blank page so Back has somewhere to go.
 async function openIndex (data, contextOptions = DESK_SIZE) {
   const { context, page } = await openPenpa(browser(), '', { served: true, contextOptions })
   await page.goto('about:blank')

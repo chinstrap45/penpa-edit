@@ -1,9 +1,7 @@
-// Canonical state (`live/canonical-state.mjs`) written from hand-built engine states: its ordering and its scrubbers.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { canonicalState } from '../live/canonical-state.mjs'
 
-// A hand-built engine state as `readEngineState` returns it, with `pu_a` and `pu_a_col` given by the caller.
 function engineState ({ pu_a: puA = {}, pu_a_col: puAcol = {} } = {}) {
   const board = (props) => ({ command_undo: [], command_redo: [], command_replay: [], ...props })
   return {

@@ -1,4 +1,3 @@
-// Picking a constraint and then All gives Line, Multicolor, Number and Sudoku their own defaults, so Sudoku mode enters a digit.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'
@@ -13,7 +12,6 @@ describe('the All constraint', () => {
 
   it('gives each mode its own defaults and keeps Sudoku mode entering a digit', async () => {
     const { page } = opened
-    // Fires the same `onchange` a pick in the constraint list does.
     const pick = (value) => page.evaluate((v) => {
       const select = document.getElementById('constraints_settings_opt')
       select.value = v

@@ -1,11 +1,9 @@
-// Undo after typing a number in a single cell: one undo removes one group of edits (#55).
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { openPenpa, shadeInPage, useBrowser } from './page.mjs'
 
 const browser = useBrowser()
 
-// Index in `pu.centerlist` of the cells the test shades and types into.
 const FIRST_SHADED = 20
 const SECOND_SHADED = 22
 const TYPED = 12
@@ -18,7 +16,6 @@ const WAYS = [
   { name: 'sudoku mode, center', editMode: 'sudoku', submode: '3' }
 ]
 
-// Runs in the page: types a digit into the single empty cell at `index` of the center list, as a key press does.
 function typeDigitInPage ({ index, editMode, submode }) {
   pu.mode_set(editMode)
   pu.mode.pu_a[editMode][0] = submode
@@ -27,14 +24,12 @@ function typeDigitInPage ({ index, editMode, submode }) {
   pu.key_number('5')
 }
 
-// The ways to delete the digit of one cell: the key handler and the edit mode it runs in.
 const DELETES = [
   { name: 'backspace in number mode', key: 'key_backspace', editMode: 'number' },
   { name: 'space in number mode', key: 'key_space', editMode: 'number' },
   { name: 'space in sudoku mode', key: 'key_space', editMode: 'sudoku' }
 ]
 
-// Runs in the page: puts a digit in the cell at `index` of the center list with no undo record, then deletes it through `key`.
 function deleteDigitInPage ({ index, key, editMode }) {
   const cell = pu.centerlist[index]
   pu.pu_a.number[cell] = ['5', 1, '1']

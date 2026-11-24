@@ -1,6 +1,3 @@
-// The keyboard shortcut sheet of `solve.html` (#259): `?` or Settings → Keys opens it, Escape closes it and hands the keyboard back,
-// its Z X C V row says whether the setting is on, and each group's keys do what the sheet says. Real key presses; the sheet is
-// read by role and accessible name, the board by what Penpa+ would save.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { board, currentTool, newBoardSolveLink, openPenpa, openSolvePage, typedDigits, useBrowser } from './page.mjs'

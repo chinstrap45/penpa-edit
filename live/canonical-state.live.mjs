@@ -1,5 +1,3 @@
-// Canonical state (`live/canonical-state.mjs`) read from a live page: two loads agree, it holds the page's values, a
-// moved digit moves one line, and a duplicate link reopens to the same state.
 import assert from 'node:assert/strict'
 import { before, describe, it } from 'node:test'
 import { canonicalState, readEngineState, REPLAY_TIMESTAMP } from './canonical-state.mjs'
@@ -8,9 +6,7 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// Index in `pu.centerlist` of a cell `makeNumberSolveLink`'s puzzle leaves empty.
 const OTHER_CELL = 2
-// A timer reading far from a fresh page's, in seconds.
 const LATE_SECONDS = 30
 
 async function openSolve (query) {
@@ -21,7 +17,6 @@ async function openSolve (query) {
 }
 
 const read = (page) => page.evaluate(readEngineState).then(canonicalState)
-// The line `key` writes in a canonical state.
 const lineOf = (key) => (state) => state.split('\n').find((l) => l.startsWith(`${key} = `))
 
 describe('canonical state on a live page', () => {

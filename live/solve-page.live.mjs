@@ -17,7 +17,6 @@ const TITLE = 'Desk test: <b>one</b>'
 const AUTHOR = 'Setter & Co'
 const RULES = 'Shade a<b cells.\nSecond line.'
 
-// Runs in the page. Builds a 6x6 board with a title, author and rules, and returns its edit link's and solve link's `#` parts.
 function linksInPage ({ title, author, rules }) {
   document.getElementById('nb_size1').value = 6
   document.getElementById('nb_size2').value = 6
@@ -72,7 +71,6 @@ describe('solve.html on a solve link', () => {
     assert.equal(await settle(read, true), true, 'smaller window, smaller board that still fits')
     const small = await boardAgainstCard(page)
     await page.setViewportSize({ width: 1400, height: 900 })
-    // A resize fits an untouched desk again, so the board grows back with the window.
     const grown = async () => { const r = await boardAgainstCard(page); return r.inside && r.w > small.w }
     assert.equal(await settle(grown, true), true, 'larger window, the board grows')
   })
@@ -200,7 +198,7 @@ describe('Multicolor', () => {
   })
   after(async () => { await opened?.context.close() })
 
-  // The selected cell's colours (Penpa+ saves one colour bare and several as a list), and whether there is anything to undo.
+  // Penpa+ saves one colour bare and several as a list.
   const cellAndUndo = () => opened.page.evaluate((index) => ({
     colours: [].concat(pu[pu.mode.qa].surface[pu.centerlist[index]] ?? []),
     canUndo: engine.getState().canUndo

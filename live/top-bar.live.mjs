@@ -1,6 +1,3 @@
-// The top bar of `solve.html` (#94): undo, redo, trial mode (#258), Restart, Pause, the timer, and the theme it applies.
-// The UI is found by role and accessible name and the state by `engine.getState()`; what the solver has entered is read
-// as Penpa+ would save it (`readEngineState`, defined by recorder.js); the keys and clicks are real.
 import assert from 'node:assert/strict'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { describe, it } from 'node:test'
@@ -11,7 +8,6 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// Index in `pu.centerlist` of a cell clear of the board's edges.
 const CELL = 12
 
 // How long a "the timer held" check watches a paused timer; a held clock cannot be waited for, only watched.
@@ -19,7 +15,6 @@ const HOLD_WATCH_MS = 1500
 
 async function openSolve (options) {
   const opened = await openSolvePage(browser(), await makeNumberSolveLink(browser()), options)
-  // The Number tool takes a digit in a selected cell.
   await setTool(opened.page, { mode: 'number', submode: '1' })
   return opened
 }
@@ -35,7 +30,6 @@ const boardCard = (page) => page.getByRole('region', { name: 'Board' })
 // tool-name flash that follows a tool change is not in the picture.
 const boardPicture = (page) => boardCard(page).locator('canvas:visible').screenshot({ animations: 'disabled' })
 
-// Waits for the button to be (or not be) disabled: the bar follows the engine on the next frame.
 async function assertDisabled (page, name, expected, message) {
   assert.equal(await settle(() => button(page, name).isDisabled(), expected), expected, message)
 }
@@ -113,7 +107,6 @@ describe('Pause', () => {
   it('covers the board; a click and a digit change nothing; F4 resumes', async (t) => {
     const { context, page } = await openSolve()
     t.after(() => context.close())
-    // A cell selected before the pause is where a digit would go.
     await clickCell(page, CELL)
     assert.equal(await page.evaluate(() => readEngineState().selection.length), 1)
     await button(page, 'Pause').click()
@@ -159,7 +152,7 @@ describe('Pause', () => {
     await button(page, 'Undo').click({ force: true })
     await button(page, 'Redo').click({ force: true })
     assert.deepEqual(await typedDigits(page), ['1'], 'the board did not change')
-    await button(page, 'Resume').first().click() // the top bar's; the cover has one too
+    await button(page, 'Resume').first().click()
     await assertDisabled(page, 'Undo', false, 'undo after resuming')
     await assertDisabled(page, 'Redo', false, 'redo after resuming')
   })
@@ -169,7 +162,7 @@ describe('Pause', () => {
     t.after(() => context.close())
     await button(page, 'Pause').click()
     await page.getByRole('region', { name: 'Paused' }).waitFor()
-    await button(page, 'Resume').first().click() // the top bar's; the cover has one too
+    await button(page, 'Resume').first().click()
     await page.getByRole('region', { name: 'Paused' }).waitFor({ state: 'hidden' })
     assert.equal((await timer(page)).paused, false)
   })
@@ -186,7 +179,6 @@ describe('the timer', () => {
     await page.getByRole('region', { name: 'Paused' }).waitFor()
     const held = await timer(page)
     const heldText = await timerText(page)
-    // A "nothing happened in N ms" check.
     await sleep(HOLD_WATCH_MS)
     assert.deepEqual(await timer(page), held)
     assert.equal(await timerText(page), heldText)
@@ -194,7 +186,6 @@ describe('the timer', () => {
 })
 
 describe('light and dark', () => {
-  // The theme is chosen in the Settings dialog (settings-dialog.live.mjs); the bar has no button for it (#181).
   it('applies the theme to the page, with no theme button in the bar', async (t) => {
     const { context, page } = await openSolve()
     t.after(() => context.close())
@@ -211,10 +202,7 @@ describe('light and dark', () => {
   })
 })
 
-// Trial mode (#258): Try marks a point in the undo history, Keep and Discard end the innermost stage, Keep all and Discard all
-// every stage. The depth shows as "Trial <n>" in the bar.
 describe('trial mode', () => {
-  // The bar's "Trial <n>", or null when no trial is on.
   const trialShown = async (page) => {
     const label = page.getByText(/^Trial \d+$/)
     return (await label.isVisible()) ? label.textContent() : null
@@ -312,7 +300,7 @@ describe('trial mode', () => {
     await press(page, 'Try')
     await button(page, 'Pause').click()
     for (const name of names) await assertDisabled(page, name, true, `${name} while paused`)
-    await button(page, 'Resume').first().click() // the top bar's; the cover has one too
+    await button(page, 'Resume').first().click()
     for (const name of names) await assertDisabled(page, name, false, `${name} after Resume`)
   })
 

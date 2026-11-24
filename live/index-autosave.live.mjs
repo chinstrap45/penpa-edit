@@ -1,5 +1,4 @@
-// index.html saves progress after each change (#162), so the last edit made there reaches the store solve.html reads without
-// waiting for the page to unload. Served over one origin so the two pages share the progress store.
+// The page is served over one origin so index.html and solve.html share the progress store.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { board, DIGIT_CELL, makeNumberSolveLink, openPenpa, SHADED_CELL, shadeInPage, typeDigitInPage, useBrowser, waitForDesk } from './page.mjs'

@@ -1,11 +1,5 @@
-// `npm run fuzz:ui:nightly`: the nightly workflow's 30-minute UI fuzz (#234). It runs `run.mjs` with a fresh seed and reads
-// what it prints. A failure files one `bug` and `needs-info` issue titled by the failure (the seed, the shrunk actions and
-// the replay command in the body); a title an open issue already has gets the body as a comment instead, and one night
-// files or comments once per title. After a failure the fuzz starts again on a new seed with the time left, so one
-// failure cannot use the whole night. A run that could not start or printed no verdict files one "did not run" issue and
-// ends the night. `node live/ui-fuzz/nightly.mjs --did-not-run <why>` files only that issue: the workflow runs it when a
-// step before the fuzz failed. `.github/scripts/file-issue-once.sh` does the filing; `FUZZ_DRY_RUN=1` prints each filing
-// instead of making it.
+// After a failure the fuzz starts again on a new seed with the time left, so one failure cannot use the whole night.
+// `--did-not-run <why>` files only the did-not-run issue: the workflow runs it when a step before the fuzz failed.
 import { spawn } from 'node:child_process'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -16,7 +10,6 @@ const FUZZ_MINUTES = 30
 const MINUTE_MS = 60000
 export const TITLE_MAX = 110
 const FILER = '.github/scripts/file-issue-once.sh'
-// Less time than this left is not worth a page start.
 const MIN_RUN_MINUTES = 1
 // The run's minutes, a shrink of up to 10 minutes (engine.mjs) and the page starts; a fuzz still running after this has hung.
 const FUZZ_TIMEOUT_MS = (FUZZ_MINUTES + 20) * MINUTE_MS
@@ -73,7 +66,6 @@ function fuzzIssue (f, { runUrl } = {}) {
   }
 }
 
-// The fixed title is the dedupe key.
 export const didNotRunIssue = (why, { runUrl } = {}) => ({
   title: 'UI fuzz did not run: the nightly UI fuzz could not be checked',
   body: [
@@ -115,7 +107,6 @@ export async function nightly ({ runFuzz, fileIssue, newSeed, now = Date.now, ru
   }
 }
 
-// Runs a command with its output both captured and echoed; `input` goes to its stdin.
 const run = (command, args, { input, timeout } = {}) => new Promise((resolve, reject) => {
   const child = spawn(command, args, { timeout, stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] })
   let output = ''
@@ -142,7 +133,6 @@ export async function fileIssue ({ title, body }, runFiler = run) {
 
 const printIssue = async ({ title, body }) => console.log(`fuzz:ui:nightly dry run, would file or comment on: ${title}\n\n${body}\n`)
 
-// The filer the environment asks for: `FUZZ_DRY_RUN=1` prints each issue, anything else files it with `runFiler`.
 export const filerFor = (env, runFiler = run) => env.FUZZ_DRY_RUN === '1' ? printIssue : (issue) => fileIssue(issue, runFiler)
 
 // Each run is told its seed in the log, since a run killed for hanging prints none.

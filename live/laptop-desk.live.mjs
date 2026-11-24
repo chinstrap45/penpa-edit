@@ -1,4 +1,4 @@
-// solve.html on a laptop screen (#181): the top bar keeps its title clear of the controls (centred, else at the left end,
+// solve.html on a laptop screen: the top bar keeps its title clear of the controls (centred, else at the left end,
 // else with smaller buttons, never cut short), every top-bar button names itself on hover, and the fitted desk puts Rules
 // over Mouse with no card over another and the right column in order down to the desk's bottom. Read through bounding boxes
 // and scroll sizes.
@@ -18,23 +18,17 @@ const HUGE = { width: 2560, height: 1440 }
 const BAR_PADDING_PX = 14
 // The Board card's smallest width (desk.js's MIN_SIZE).
 const MIN_BOARD_WIDTH_PX = 240
-// The tallest a card's header may be, controls and all.
 const HEAD_MAX_PX = 30
 // desk.js's EDGE_MARGIN_PX: the least room a dragged card keeps to the desk's edges.
 const EDGE_MARGIN_PX = 8
 // The share of the left column Rules stops at when Mouse needs the rest (Chris, 2026-11-17).
 const RULES_SHARE = 0.55
 
-// The long rules four times over: more than Rules can show at a laptop size.
 const LONG_RULES_FOURFOLD = { ...LONG_RULES_PUZZLE, rules: Array(4).fill(LONG_RULES_PUZZLE.rules).join('\n\n') }
-// The long rules with only Line's three Mouse rows to show.
 const LONG_LINE_RULES = { ...LONG_RULES_FOURFOLD, tabs: ['Line Normal'] }
-// The long rules on another puzzle: an 8x8 board.
 const OTHER_PUZZLE = { ...LONG_RULES_FOURFOLD, size: 8 }
-// One short line of rules.
 const ONE_LINE_RULES = { ...LONG_RULES_PUZZLE, rules: 'Shade some cells.' }
 
-// Runs in the page. The bar's box, the heading's, every visible control's, and whether the title is cut short.
 function readBarInPage () {
   const rect = (node) => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }
   const bar = document.querySelector('.ui-bar')
@@ -50,7 +44,6 @@ function readBarInPage () {
   }
 }
 
-// Runs in the page. Every card's box, the desk's, the card heads' and their buttons', and the bodies' overflow.
 function readDeskInPage (names) {
   const rect = (node) => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }
   const section = (name) => document.querySelector(`section[aria-label="${name}"]`)
@@ -66,8 +59,7 @@ function readDeskInPage (names) {
       return inner.top >= outer.top && inner.bottom <= outer.bottom
     })),
     zoomButtons: [...section('Board').querySelectorAll('.ui-head .ui-zoom wa-button')].map(rect),
-    // Each header group's buttons, by the corner radii of their drawn boxes [top-left, top-right]: a joined group rounds
-    // only its outer corners.
+    // A joined group rounds only its outer corners.
     groupCorners: [...document.querySelectorAll('.ui-zoom, .ui-rules-text')].map((group) => [...group.querySelectorAll('wa-button')].map((button) => {
       const base = getComputedStyle(button.shadowRoot.querySelector('[part~="base"]'))
       return [parseFloat(base.borderTopLeftRadius) > 0, parseFloat(base.borderTopRightRadius) > 0]
@@ -85,7 +77,6 @@ const shownTooltips = async (page) => (await page.locator('wa-tooltip[open]').al
 const barButton = (page, name) => page.locator('.ui-bar wa-button')
   .filter({ hasText: new RegExp(`^\\s*${name.replace(/[+]/g, '\\$&')}\\s*$`) })
 
-// One link per puzzle for the file, since each costs a page of its own to build.
 const links = new Map()
 function linkFor (puzzle) {
   const key = JSON.stringify(puzzle)
@@ -93,10 +84,8 @@ function linkFor (puzzle) {
   return links.get(key)
 }
 
-// Each bar control the heading overlaps, by name; none when the bar is clear.
 const overlapping = (read) => read.controls.filter((c) => overlaps(read.heading, c)).map((c) => c.name || `control at ${c.x}`)
 
-// Each pair of cards that overlap; none when the desk is clear.
 function cardOverlaps (read) {
   const found = []
   for (const a of CARDS) for (const b of CARDS) if (a < b && overlaps(read.cards[a], read.cards[b])) found.push(`${a}/${b}`)
@@ -294,8 +283,6 @@ describe('the desk on a laptop screen', () => {
     assert.equal(Rules.h > Mouse.h, true, `Rules ${Rules.h}px, Mouse ${Mouse.h}px`)
   })
 
-  // A right-column card resized by its corner, in the fitted layout and in the default one a window resize leaves: the
-  // restack that follows a card's change of height must not undo the solver's own resize.
   for (const after of ['the fitted layout', 'a window resize']) {
     it(`keeps a right-column card's resize in ${after}`, async () => {
       const page = await open(LAPTOPS[1])
@@ -366,7 +353,6 @@ describe('the desk on a laptop screen', () => {
     assert.equal(read.overflowY.Board, 0, 'the board body does not scroll')
   })
 
-  // Chris's case (Line x at 1366) and the longest Composite name, at each laptop size.
   for (const viewport of LAPTOPS) {
     it(`keeps the Board card's tool label on one line at ${viewport.width}x${viewport.height}, so a Composite tool never makes the board scroll`, async () => {
       const page = await open(viewport)
@@ -395,7 +381,6 @@ describe('the desk on a laptop screen', () => {
   }
 })
 
-// #199: the layout holds together through drags, resizes, window changes and puzzle changes.
 describe('the desk holds together', () => {
   let opened
   afterEach(async () => { await opened?.context.close() })
@@ -405,7 +390,6 @@ describe('the desk holds together', () => {
     return opened.page
   }
 
-  // `puzzle` in a second page of the opened page's context, which shares its localStorage.
   async function openBeside (puzzle) {
     const page = await opened.context.newPage()
     await page.goto(opened.page.url().replace(/#.*/, '') + await linkFor(puzzle))
@@ -414,7 +398,6 @@ describe('the desk holds together', () => {
   }
 
   const deskSettled = (page) => steady(page, readDeskInPage, CARDS)
-  // The layout the desk keeps in localStorage, as text, or null when none is kept.
   const keptLayout = (page) => page.evaluate((key) => localStorage.getItem(key), LAYOUT_KEY)
   const cardsOf = async (page) => (await page.evaluate(readDeskInPage, CARDS)).cards
 
@@ -426,7 +409,6 @@ describe('the desk holds together', () => {
     const box = await page.getByRole('region', { name }).getByTestId(`resize-${handle}`).boundingBox()
     return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
   }
-  // The card drawn on top at the middle of where cards `a` and `b` overlap, by name.
   const topAt = (page, a, b) => page.evaluate(([na, nb]) => {
     const r = (n) => document.querySelector(`section[aria-label="${n}"]`).getBoundingClientRect()
     const [ra, rb] = [r(na), r(nb)]
@@ -518,10 +500,8 @@ describe('the desk holds together', () => {
     assert.equal(await cell(), zoomed)
   })
 
-  // The killer recording's puzzle, the one the layout hunt shrank the window on.
   const KILLER = JSON.parse(readFileSync(new URL('./recordings/solve/killer.steps.json', import.meta.url))).header.source
 
-  // Each card with a move that puts it over no other card.
   for (const [card, dx, dy] of [['Recent', 0, 20], ['Board', 0, 20], ['Rules', -10, 0]]) {
     it(`puts no card over another after ${card} is moved at 1920x1080 and the window shrinks to 1366x768`, async () => {
       opened = await openSolvePage(browser(), KILLER, { contextOptions: { viewport: WIDE } })
@@ -548,7 +528,6 @@ describe('the desk holds together', () => {
       const { x, y, w, h } = read.cards[name]
       assert.equal(x >= -SLACK_PX && y >= -SLACK_PX && x + w <= LAPTOPS[1].width + SLACK_PX && y + h <= LAPTOPS[1].height + SLACK_PX, true, `${name} inside the window: ${JSON.stringify(read.cards[name])}`)
     }
-    // The card the solver placed keeps its gaps to the desk's bottom and right edges, as a window resize keeps them.
     const gaps = ({ desk, cards: { Recent } }) => ({ bottom: desk.y + desk.h - (Recent.y + Recent.h), right: desk.x + desk.w - (Recent.x + Recent.w), size: [Recent.w, Recent.h] })
     assert.deepEqual(gaps(read), gaps(before), 'Recent needed no move, and keeps its gaps and size')
   })
@@ -578,13 +557,12 @@ describe('the desk holds together', () => {
     const mended = (await deskSettled(page)).cards
     await page.reload()
     await waitForDesk(page)
-    // To the pixel: an empty Rules card's height is its text's, whole pixels while mended and a fraction after a reload (#204).
+    // To the pixel: an empty Rules card's height is its text's, whole pixels while mended and a fraction after a reload.
     const whole = (cards) => JSON.stringify(cards, (key, value) => (typeof value === 'number' ? Math.round(value) : value))
     const reloaded = await settle(async () => whole(await cardsOf(page)), whole(mended))
     assert.equal(reloaded, whole(mended))
   })
 
-  // This and the one-line Rules test held before #199 too (#181's restack and minimums); they keep its acceptance checks.
   it('lays the right column out again when nine pins make Pinned taller', async () => {
     const page = await open(LAPTOPS[1])
     await deskSettled(page)
@@ -633,7 +611,6 @@ describe('the desk holds together', () => {
     assert.equal((await deskSettled(page)).overflowY.Rules, 0)
   })
 
-  // The Mouse card's room below the lowest last row of any pinned tool, and its body's padding.
   const mouseSpare = (page) => page.evaluate(async () => {
     const body = document.querySelector('section[aria-label="Mouse"] .ui-body')
     const frames = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
@@ -671,7 +648,6 @@ describe('the desk holds together', () => {
     // The page opens on Surface, outside the pins; on the Line pin, Mouse is sized for Line alone.
     await page.keyboard.press('Tab')
     const lineOnly = (await deskSettled(page)).cards
-    // A pin with more Mouse rows than Line's, kept for the puzzle across the reload.
     await page.evaluate(() => {
       const rows = (tool) => window.toolGuide.mouseRows(tool).more.length
       window.pinBoard.replace([...window.pinBoard.snapshot(), [...engine.listTools()].sort((a, b) => rows(b) - rows(a))[0]])
@@ -689,7 +665,6 @@ describe('the desk holds together', () => {
   it('keeps Mouse about 45% of the column when its tools need it, Rules scrolling past about 55%', async () => {
     const page = await open(LAPTOPS[1], LONG_RULES_FOURFOLD)
     await deskSettled(page)
-    // A Tab set of the tools with the most Mouse rows, which need more than the column's lower 45%.
     await page.evaluate(() => {
       const rows = (tool) => window.toolGuide.mouseRows(tool).more.length
       window.pinBoard.replace([...engine.listTools()].sort((a, b) => rows(b) - rows(a)).slice(0, 6))
