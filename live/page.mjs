@@ -239,7 +239,7 @@ export const solveLinkOfImport = (browser, url) => linkFromNewBoard(browser, asy
   return solve.slice(solve.indexOf('#'))
 }, url)
 
-// The puzzle Chris reviewed the page with: its title, author and rules, on a 10x10 board with pins.
+// A placeholder puzzle with long lorem ipsum rules and the tabs the layout tests measure, on a 10x10 board.
 export const LONG_RULES_PUZZLE = {
   title: 'Long rules',
   author: '',

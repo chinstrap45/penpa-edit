@@ -28,11 +28,11 @@ const EDGE_MARGIN_PX = 8
 const RULES_SHARE = 0.55
 
 // The long rules four times over: more than Rules can show at a laptop size.
-const LONG_RULES = { ...LONG_RULES_PUZZLE, rules: Array(4).fill(LONG_RULES_PUZZLE.rules).join('\n\n') }
+const LONG_RULES_FOURFOLD = { ...LONG_RULES_PUZZLE, rules: Array(4).fill(LONG_RULES_PUZZLE.rules).join('\n\n') }
 // The long rules with only Line's three Mouse rows to show.
-const LONG_LINE_RULES = { ...LONG_RULES, tabs: ['Line Normal'] }
+const LONG_LINE_RULES = { ...LONG_RULES_FOURFOLD, tabs: ['Line Normal'] }
 // The long rules on another puzzle: an 8x8 board.
-const OTHER_PUZZLE = { ...LONG_RULES, size: 8 }
+const OTHER_PUZZLE = { ...LONG_RULES_FOURFOLD, size: 8 }
 // One short line of rules.
 const ONE_LINE_RULES = { ...LONG_RULES_PUZZLE, rules: 'Shade some cells.' }
 
@@ -292,7 +292,7 @@ describe('the desk on a laptop screen', () => {
   })
 
   it('gives Rules the larger share when its text cannot fit', async () => {
-    const read = await deskSettled(await open(LAPTOPS[0], LONG_RULES))
+    const read = await deskSettled(await open(LAPTOPS[0], LONG_RULES_FOURFOLD))
     const { Rules, Mouse } = read.cards
     assert.equal(read.overflowY.Rules > 0, true, 'the long rules do not fit')
     assert.equal(Rules.h > Mouse.h, true, `Rules ${Rules.h}px, Mouse ${Mouse.h}px`)
@@ -667,7 +667,7 @@ describe('the desk holds together', () => {
   // The long-rules puzzle's tools need more than 45% of the column, so Rules stops at 55% and Mouse takes the rest (the controller's
   // reading of Chris's ruling: the cap guarantees Mouse the lesser of its tallest tool and 45%).
   it('stops Rules at 55% of the column on the long-rules puzzle, whose tools need the rest', async () => {
-    const page = await open(LAPTOPS[1], LONG_RULES)
+    const page = await open(LAPTOPS[1], LONG_RULES_FOURFOLD)
     const read = await deskSettled(page)
     const column = read.desk.h - 2 * TOP_MARGIN_PX
     assert.equal(Math.abs(read.cards.Rules.h - Math.floor(RULES_SHARE * column)) <= SLACK_PX, true, `Rules is ${read.cards.Rules.h}px of a ${column}px column`)
@@ -697,7 +697,7 @@ describe('the desk holds together', () => {
   })
 
   it('keeps Mouse about 45% of the column when its tools need it, Rules scrolling past about 55%', async () => {
-    const page = await open(LAPTOPS[1], LONG_RULES)
+    const page = await open(LAPTOPS[1], LONG_RULES_FOURFOLD)
     await deskSettled(page)
     // A Tab set of the tools with the most Mouse rows, which need more than the column's lower 45%.
     await page.evaluate(() => {
