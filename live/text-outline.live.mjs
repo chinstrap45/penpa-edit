@@ -139,7 +139,8 @@ describe('the outline on board text of index.html', () => {
 
   it('is off by default and draws no white around a digit on a shaded cell', async () => {
     const { page } = opened
-    await settle(() => page.evaluate((index) => Boolean(pu.pu_q.number[pu.centerlist[index]]), GIVEN_CELL), true)
+    const loaded = await settle(() => page.evaluate((index) => Boolean(pu.pu_q.number[pu.centerlist[index]]), GIVEN_CELL), true)
+    assert.equal(loaded, true, 'the given digit is loaded (the premise)')
     assert.equal(await page.evaluate(() => UserSettings.outline_text), false)
     await shadeGiven(page)
     assert.equal(await whitePixels(page), 0)

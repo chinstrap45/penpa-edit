@@ -70,6 +70,8 @@ describe('tier C', () => {
       }
     }
 
+    // With no kept history recording the family below runs nothing, which `node:test` reports as passing; a todo says so.
+    if (historyIds.length === 0) it.todo(`solves the puzzle of each kept history recording under ${TIER_C_FAMILY}/ with every seed (none is kept)`)
     for (const id of historyIds) {
       it(`solves the puzzle of ${id} with every seed`, async () => {
         await fuzzSolves(await puzzleFromRecording(browser(), id, await readRecording(id)))

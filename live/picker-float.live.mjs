@@ -30,8 +30,8 @@ const rectOf = (locator) => locator.evaluate((node) => {
 })
 
 const CASES = [
-  { card: 'Mode', field: 'Tool', list: (card) => card.getByRole('tree', { name: 'Tools' }) },
-  { card: 'Pinned', field: 'Pin presets', list: (card) => card.getByRole('listbox', { name: 'Presets' }) }
+  { card: 'Mode', field: 'Tool', list: (card) => card.getByRole('tree', { name: 'Tools' }), row: 'treeitem' },
+  { card: 'Pinned', field: 'Pin presets', list: (card) => card.getByRole('listbox', { name: 'Presets' }), row: 'option' }
 ]
 
 for (const height of HEIGHTS) {
@@ -46,7 +46,7 @@ for (const height of HEIGHTS) {
     const page = () => opened.page
     const barBottom = () => rectOf(page().locator('.ui-bar')).then(({ y, height: barHeight }) => y + barHeight)
 
-    for (const { card: cardName, field: fieldName, list: listOf } of CASES) {
+    for (const { card: cardName, field: fieldName, list: listOf, row } of CASES) {
       describe(`the ${cardName} card's list`, () => {
         const card = () => page().getByRole('region', { name: cardName })
         // The default layout stacks the Recent card over the lower half of the Pinned card, where its preset field is, so it is
@@ -74,9 +74,16 @@ for (const height of HEIGHTS) {
         })
 
         it('scrolls to its last row', async () => {
-          await list().evaluate((node) => { node.scrollTop = node.scrollHeight })
-          const reached = await settle(() => list().evaluate((node) => node.scrollHeight - node.scrollTop - node.clientHeight < 1), true)
-          assert.equal(reached, true, 'the list scrolls until its content ends')
+          const at = await rectOf(list())
+          await page().mouse.move(at.x + at.width / 2, at.y + at.height / 2)
+          await page().mouse.wheel(0, 100000)
+          const last = listOf(card()).getByRole(row).last()
+          const reached = await settle(async () => {
+            const box = await rectOf(list())
+            const { y, height: rowHeight } = await rectOf(last)
+            return y >= box.y && y + rowHeight <= box.y + box.height + 1
+          }, true)
+          assert.equal(reached, true, 'the wheel brings the last row into the list\'s visible box')
         })
 
         it('closes on Escape and on a click outside', async () => {
