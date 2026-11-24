@@ -23,8 +23,9 @@ function commandWords (segment) {
 function isSymlink (path) {
   try {
     return lstatSync(path).isSymbolicLink()
-  } catch {
-    return false // no node_modules there: nothing to wipe
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false // no node_modules there: nothing to wipe
+    return true // unreadable (permissions, I/O): not known to be safe, so denied
   }
 }
 
