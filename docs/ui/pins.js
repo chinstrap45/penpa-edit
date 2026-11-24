@@ -64,7 +64,8 @@
     }
 
     let { pins, colours } = savedState() ?? seededState()
-    pins = pins.filter(toolOf)
+    // An older save gave each pin an `id`; only these three fields are kept, so the next save drops it.
+    pins = pins.filter(toolOf).map(({ mode, submode, style }) => ({ mode, submode, style }))
     const validColours = Object.fromEntries(Object.entries(colours ?? {}).filter(([, n]) => Number.isInteger(n) && n >= 0))
 
     const pinIndexOf = (tool) => pins.findIndex((p) => toolKey(p) === toolKey(tool))
