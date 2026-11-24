@@ -13,7 +13,7 @@ const GALLERY_FILE = new URL('../docs/gallery-puzzles.js', import.meta.url)
 const GALLERY_URL = new URL('../docs/gallery.html', import.meta.url).href
 
 // The puzzles the ticket lists, by id, in the order the list shows them.
-const IDS = ['sudoku-9x9', 'sudoku-6x6', 'killer', 'starbattle', 'slitherlink', 'or-shading', 'icebreaker', 'rectangle', 'hex', 'triangle', 'no-rules']
+const IDS = ['sudoku-9x9', 'sudoku-6x6', 'killer', 'starbattle', 'slitherlink', 'or-shading', 'long-rules', 'rectangle', 'hex', 'triangle', 'no-rules']
 const SIZES = { '1366x768': { width: 1366, height: 768 }, '1920x1080': { width: 1920, height: 1080 } }
 // Longer than a board takes to draw on a loaded box.
 const BOARD_MS = 15000

@@ -239,14 +239,14 @@ export const solveLinkOfImport = (browser, url) => linkFromNewBoard(browser, asy
   return solve.slice(solve.indexOf('#'))
 }, url)
 
-// The puzzle Chris reviewed the page with: its title, author and rules, on a 10x10 board with pins.
-export const ICEBREAKER = {
-  title: 'Icebreaker (Nurikabe + Icelom)',
-  author: 'Agent',
-  rules: 'Shade some cells so that the shaded cells form one connected area. Each number is part of an unshaded region of ' +
-    'that size, and every unshaded region holds exactly one number. No 2x2 area is all shaded.\n\nIcelom: draw a path ' +
-    'from the entrance to the exit that follows every arrow it passes and visits every ice cell; on ice it goes straight ' +
-    'on. The path may cross itself only on ice.\n\nThe white circles must be visited by the path.',
+// A placeholder puzzle with long lorem ipsum rules and the tabs the layout tests measure, on a 10x10 board.
+export const LONG_RULES_PUZZLE = {
+  title: 'Long rules',
+  author: '',
+  rules: 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna ' +
+    'aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex.\n\nCommodo consequat duis aute ' +
+    'irure in reprehenderit voluptate velit esse cillum fugiat nulla pariatur lorem ipsum dolor sit amet consectetur ' +
+    'adipiscing elit sed do eiusmod tempor.\n\nUt labore et dolore magna aliqua enim ad minim.',
   tabs: ['Surface', 'Line Normal', 'Composite']
 }
 

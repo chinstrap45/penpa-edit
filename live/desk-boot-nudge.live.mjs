@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import { overlaps, steady } from './desk-layout.mjs'
-import { DESK_SIZE, ICEBREAKER, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, useBrowser, waitForDesk } from './page.mjs'
+import { DESK_SIZE, LONG_RULES_PUZZLE, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, useBrowser, waitForDesk } from './page.mjs'
 
 const browser = useBrowser()
 const SMALLER = { width: 1100, height: 700 }
@@ -36,7 +36,7 @@ describe('opening a saved layout in a smaller window (#371)', () => {
   // A page on the DESK_SIZE desk whose kept layout has Rules and Mouse as `entriesFor(desk)` says, the rest as the fit kept
   // them. Returns the page and those entries.
   async function openSaved (entriesFor) {
-    opened = await openSolvePage(browser(), await linkFromNewBoard(browser(), puzzleSolveLinkInPage, ICEBREAKER), { contextOptions: DESK_SIZE })
+    opened = await openSolvePage(browser(), await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE), { contextOptions: DESK_SIZE })
     const { page } = opened
     // A kept layout is written by the first card the solver drags.
     const head = await page.getByRole('region', { name: 'Rules' }).getByRole('heading', { name: 'Rules' }).boundingBox()
@@ -82,7 +82,7 @@ describe('opening a saved layout in a smaller window (#371)', () => {
   })
 
   it('keeps no layout for a page first opened in a small window', async () => {
-    opened = await openSolvePage(browser(), await linkFromNewBoard(browser(), puzzleSolveLinkInPage, ICEBREAKER), { contextOptions: { viewport: { width: 900, height: 500 } } })
+    opened = await openSolvePage(browser(), await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE), { contextOptions: { viewport: { width: 900, height: 500 } } })
     await steady(opened.page, readCardsInPage, CARDS)
     assert.equal(await opened.page.evaluate((key) => localStorage.getItem(key), LAYOUT_KEY), null)
   })

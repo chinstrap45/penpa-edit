@@ -2,7 +2,7 @@
 // click, takes the tool's pin colour, and stays on the visible part of a zoomed, scrolled board.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
-import { boardCanvasInPage, ICEBREAKER, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, setTool, solveLinkOfImport, useBrowser } from './page.mjs'
+import { boardCanvasInPage, LONG_RULES_PUZZLE, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, setTool, solveLinkOfImport, useBrowser } from './page.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
 
 const browser = useBrowser()
@@ -12,7 +12,7 @@ const DESK_WIDTHS = [LAPTOP, { width: 2560, height: 1440 }]
 const TOOLS = [{ mode: 'line', submode: '1' }, { mode: 'sudoku', submode: '2' }, { mode: 'surface', style: 2 }, { mode: 'combi', submode: 'linedir' }]
 const PUZZLES = {
   'sudoku-9x9': (b) => solveLinkOfImport(b, IMPORTS['sudoku-9x9']),
-  Icebreaker: (b) => linkFromNewBoard(b, puzzleSolveLinkInPage, ICEBREAKER)
+  'Long rules': (b) => linkFromNewBoard(b, puzzleSolveLinkInPage, LONG_RULES_PUZZLE)
 }
 // Box edges may differ by rounding.
 const SLACK_PX = 1
