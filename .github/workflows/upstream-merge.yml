@@ -1,6 +1,7 @@
 name: Upstream merge
 
-# Merges upstream Penpa+ into master with a merge commit and pushes only when both test suites pass on the merged
+# Merges upstream Penpa+ into master with a merge commit (docs/solve.html rebuilt from index.html by
+# live/build-solve.mjs inside it, #431) and pushes only when both test suites pass on the merged
 # tree and it changes no recording's expected file (each such change is Chris's to rule on, #33); master:/docs is what
 # Pages serves, so the push publishes. A conflict, a red run, a changed expected file or a refused push pushes nothing
 # and files one issue, or comments on it while it is open. Each upstream commit that touched a file we own

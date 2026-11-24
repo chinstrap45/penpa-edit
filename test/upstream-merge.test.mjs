@@ -126,6 +126,38 @@ describe('the upstream merge script', () => {
     assert.equal(git(dir, 'rev-parse', 'HEAD'), oursTip)
   })
 
+  describe('the solve page build (#431)', () => {
+    const repoFile = (path) => readFileSync(fileURLToPath(new URL(`../${path}`, import.meta.url)), 'utf8')
+    const SOLVE_BASE = {
+      '.gitattributes': 'docs/solve.html merge=ours\nlive/** merge=ours\n',
+      'live/build-solve.mjs': repoFile('live/build-solve.mjs'),
+      'docs/index.html': repoFile('docs/index.html'),
+      'docs/solve.html': repoFile('docs/solve.html')
+    }
+
+    it('rebuilds solve.html from the merged index.html, in the merge commit', () => {
+      const theirIndex = SOLVE_BASE['docs/index.html'].replace('<title>', '<title>upstream ')
+      const { dir } = scratchRepo({ base: SOLVE_BASE, theirs: { 'docs/index.html': theirIndex } })
+      const { status, stderr } = runMerge(dir)
+      assert.equal(status, 0, stderr)
+      assert.ok(readFileSync(join(dir, 'docs/index.html'), 'utf8').includes('<title>upstream '))
+      assert.ok(readFileSync(join(dir, 'docs/solve.html'), 'utf8').includes('<title>upstream '))
+      assert.equal(git(dir, 'status', '--porcelain'), '')
+      assert.match(git(dir, 'diff', '--name-only', 'HEAD^1', 'HEAD'), /^docs\/solve\.html$/m)
+    })
+
+    it('fails, names the edit and leaves no merge behind when upstream moved the text an edit needs', () => {
+      const theirIndex = SOLVE_BASE['docs/index.html'].replace('<!-- SCRIPTS -->', '<!-- scripts -->')
+      const { dir, oursTip } = scratchRepo({ base: SOLVE_BASE, theirs: { 'docs/index.html': theirIndex } })
+      const { status, report } = runMerge(dir)
+      assert.notEqual(status, 0)
+      assert.match(report, /^## The solve page build failed$/m)
+      assert.match(report, /"solve UI styles" occurs 0 times/)
+      assert.equal(git(dir, 'rev-parse', 'HEAD'), oursTip)
+      assert.equal(git(dir, 'status', '--porcelain'), '')
+    })
+  })
+
   it('keeps our side of a merge=ours file with no driver configured outside the repo, and reports the upstream commit', () => {
     const { dir, theirsTip } = scratchRepo({
       base: OWNED_BASE,

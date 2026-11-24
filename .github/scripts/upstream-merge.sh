@@ -64,6 +64,17 @@ for file in ${owned:+"${owned_files[@]}"}; do
   fi
 done
 
+# solve.html is built from index.html (#431): rebuild it so an upstream change to index.html reaches it. A build that
+# fails (upstream moved text an edit of live/build-solve.mjs names) leaves nothing merged and says which edit.
+if [[ -f live/build-solve.mjs ]]; then
+  if ! build_error=$(node live/build-solve.mjs 2>&1); then
+    printf '## The solve page build failed\n\n```\n%s\n```\n' "$build_error" >>"$report"
+    git merge --abort
+    exit 1
+  fi
+  git add docs/solve.html
+fi
+
 message=(-m "Merge $upstream")
 if [[ -n $owned_section ]]; then message+=(-m "$owned_section"); fi
 git commit -q "${message[@]}"
