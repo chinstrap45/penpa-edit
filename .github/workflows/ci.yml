@@ -30,6 +30,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-tests
+      # shellcheck is the runner image's own, never downloaded (#416): a runner without it fails here, by name.
+      - run: shellcheck --version
       # A tool missing from the install fails the lint (#396).
       - run: npm run lint
       - shell: bash
