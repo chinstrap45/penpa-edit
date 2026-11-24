@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url'
 
 const JS_EXTENSIONS = ['.js', '.mjs']
 const SHELL_EXTENSIONS = ['.sh']
-export const NOT_LINTED = ['docs/ui/vendor/', 'docs/gallery-puzzles.js']
+// `docs/js/puzzlink_import.js` is a classic browser script in upstream's style (it calls globals defined by other scripts), not a module.
+export const NOT_LINTED = ['docs/ui/vendor/', 'docs/gallery-puzzles.js', 'docs/js/puzzlink_import.js']
 
 const git = (root, args, input) => {
   const out = spawnSync('git', args, { cwd: root, input, encoding: 'utf8', maxBuffer: 1 << 28 })
