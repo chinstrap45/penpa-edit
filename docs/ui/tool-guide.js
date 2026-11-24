@@ -81,7 +81,7 @@
   }
 
   const toolKey = (tool) => `${tool.mode}/${tool.submode ?? ''}`
-  const findTool = (tools, x) => tools.find((t) => toolKey(t) === toolKey(x))
+  const findTool = (tools, like) => tools.find((t) => toolKey(t) === toolKey(like))
 
   function describeTool (tool) {
     const known = ENTRIES[toolKey(tool)]

@@ -1,4 +1,3 @@
-
 body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4dc; }
 
 /* The page dialogs' font and text colour; Penpa's popups sit outside `.ui-root`, so they name them too. */
