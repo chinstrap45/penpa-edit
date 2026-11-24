@@ -65,6 +65,23 @@ describe('the tool across a reload', () => {
   }
 })
 
+describe('the orientation across a reload', () => {
+  it('keeps an orientation changed on its own when the unload save is held back', async () => {
+    const link = await makeNumberSolveLink(browser())
+    const { context, page } = await openWithUnloadSaveOff(link, NUMBER_TOOL)
+    try {
+      const want = (await page.evaluate(() => engine.listOrientations())).find((direction) => direction !== 'R')
+      await changeAndWaitForSave(page, () => page.evaluate((direction) => engine.setOrientation(direction), want))
+
+      await page.reload()
+      await waitForDesk(page)
+      assert.equal(await settle(() => page.evaluate(() => engine.getOrientation()), want), want, 'the orientation is the one chosen last after the reload')
+    } finally {
+      await context.close()
+    }
+  })
+})
+
 describe('a Restart across a reload', () => {
   it('stays restarted when the unload save is held back', async () => {
     const link = await makeNumberSolveLink(browser())
