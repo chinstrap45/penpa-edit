@@ -3,7 +3,7 @@
 // one but the safety net's, and the parts CI spreads them over hold each file once.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { globSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
@@ -234,5 +234,40 @@ describe('node live/run-live.mjs', () => {
   it('lists only its own part with --part', () => {
     const { dir } = scratchRepo()
     assert.deepEqual(list(dir, '--part', '3/3').files, [PINS])
+  })
+})
+
+// The replay parts are spread over files by hand (`live/engine-replay-<k>.live.mjs`), and `SAFETY_NET_FILES` is a hand-kept
+// list: a part file left off it would run as an ordinary live file and skip the safety net's rules. The part counts are read
+// from the part modules' text, since the runner must not import them (they open a browser when imported).
+const ROOT = fileURLToPath(new URL('..', import.meta.url))
+const partCount = (file, name) => Number(readFileSync(join(ROOT, file), 'utf8').match(new RegExp(`export const ${name} = (\\d+)`))[1])
+const REPLAY_PART_KINDS = [
+  { kind: 'engine', glob: 'live/engine-replay-*.live.mjs', count: partCount('live/engine-replay-part.mjs', 'REPLAY_PARTS') },
+  { kind: 'UI', glob: 'live/ui-replay-*.live.mjs', count: partCount('live/ui-replay-part.mjs', 'UI_REPLAY_PARTS') }
+]
+
+// What is wrong with `listed` against the part files on disk, one sentence each.
+function replayPartProblems (listed, onDisk, kinds) {
+  return kinds.flatMap(({ kind, glob, count }) => {
+    const prefix = glob.replace('*.live.mjs', '')
+    const mine = (files) => files.filter((file) => file.startsWith(prefix) && /-\d+\.live\.mjs$/.test(file)).sort()
+    const problems = mine(onDisk).filter((file) => !listed.includes(file)).map((file) => `${file} is not in SAFETY_NET_FILES`)
+    if (mine(onDisk).length !== count) problems.push(`${mine(onDisk).length} ${kind} part files on disk, ${count} parts declared`)
+    return problems
+  })
+}
+
+describe('SAFETY_NET_FILES', () => {
+  it('names every engine and UI replay part file, and the part counts match the files', () => {
+    assert.deepEqual(replayPartProblems(SAFETY_NET_FILES, globSync('live/*.live.mjs', { cwd: ROOT }), REPLAY_PART_KINDS), [])
+  })
+
+  it('finds a replay part file left off the list, and a count that no longer matches the files', () => {
+    const onDisk = [...globSync('live/*.live.mjs', { cwd: ROOT }), 'live/ui-replay-4.live.mjs']
+    assert.deepEqual(replayPartProblems(SAFETY_NET_FILES, onDisk, REPLAY_PART_KINDS), [
+      'live/ui-replay-4.live.mjs is not in SAFETY_NET_FILES',
+      '5 UI part files on disk, 4 parts declared'
+    ])
   })
 })
