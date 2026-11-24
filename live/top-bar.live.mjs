@@ -1,3 +1,4 @@
+// The top bar of `solve.html`: undo, redo, trial mode, Restart, Pause, the timer, and the theme it applies.
 import assert from 'node:assert/strict'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { describe, it } from 'node:test'

@@ -1,3 +1,4 @@
+// The solved state on `solve.html`: the solved message is the desk's own dialog and shows once; the clock stops at the first solve and never runs again.
 import assert from 'node:assert/strict'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { describe, it } from 'node:test'

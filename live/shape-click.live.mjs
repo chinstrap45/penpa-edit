@@ -1,3 +1,4 @@
+// A left click with a Shape tool on `solve.html` places the shape's first variant, and again clears it, whatever Penpa+'s hidden input-panel setting is.
 // A Shape click must work whatever Penpa+'s hidden input-panel setting is, and picking the tool must not change it.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'

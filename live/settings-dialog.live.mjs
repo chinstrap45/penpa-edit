@@ -1,4 +1,4 @@
-// Settings live in cookies, so every page is served over https://penpa.test/.
+// The Settings dialog of `solve.html`; the page is served over https://penpa.test/ because Settings live in cookies.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { AKARI_SOLVE, board, boardCanvasInPage, linkFromNewBoard, makeNumberSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, typedDigits, useBrowser, waitForDesk, openSettings } from './page.mjs'

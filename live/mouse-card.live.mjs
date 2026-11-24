@@ -1,3 +1,4 @@
+// The Mouse card on `solve.html` says true things: each gesture a row names is performed for real on a cleared board and the change is checked against the row.
 // Each change is written one entry per line as `layer@kind=value`: `kind` names the board points the key holds (a cell, a
 // corner, an edge's middle), so a check says where a mark went without hard-coding Penpa+'s point numbers.
 import assert from 'node:assert/strict'

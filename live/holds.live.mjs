@@ -1,3 +1,4 @@
+// The Shift and Ctrl holds of `solve.html`: the hold always ends, on key-up wherever focus is, on a lost window, a hidden tab, a dialog opening, Tab and any tool picked.
 import assert from 'node:assert/strict'
 import { before, after, describe, it } from 'node:test'
 import { cardBodyButtons, linkFromNewBoard, newBoardSolveLink, openSolvePage, setTool, storedEntries, useBrowser, waitForTool } from './page.mjs'

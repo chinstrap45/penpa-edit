@@ -1,3 +1,4 @@
+// The tool in use, and a Restart, survive a reload of solve.html whatever the timing of Penpa+'s unload save.
 // Penpa+'s own save as the page unloads is not awaited, so it is switched off here: only the progress autosave can have stored the change.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'

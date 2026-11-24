@@ -1,3 +1,4 @@
+// Change size on solve.html: a removal that would take a given or an entry with it is refused, as is any change on a grid that is not square.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { ANSWER_CELL, boardAgainstCard, cardBodyButtons, chipName, DIGIT_CELL, linkFromNewBoard, makeNumberSolveLink, newBoardSolveLink, openSolvePage, setTool, typedDigits, typeDigitInPage, useBrowser, openSettings, waitForDesk, cellSize } from './page.mjs'

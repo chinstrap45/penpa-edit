@@ -1,3 +1,4 @@
+// The Board card's zoom on solve.html: the card follows the cursor while zoomed, and a zoom the solver set survives a layout change until Fit.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { afterChange, boardCanvasInPage, linkFromNewBoard, openSolvePage, useBrowser, cellSize } from './page.mjs'
