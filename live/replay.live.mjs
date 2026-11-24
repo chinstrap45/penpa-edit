@@ -10,10 +10,8 @@ import { fileURLToPath } from 'node:url'
 import { canonicalState, readEngineState } from './canonical-state.mjs'
 import { jsRequest, useBrowser } from './page.mjs'
 import { REPLAY_CALL, REPLAY_PARTS, assertPartFiles, replayPartIds } from './engine-replay-part.mjs'
-import {
-  ANSWER_CELLS, CELL_ONLY_TOOLS, cellPixel, clickCell, compareDrivers, downloadRecording, listRecordings, makeSurfaceSolveLink,
-  openRecordingPage, readExpected, readRecording, replay, uiDriver
-} from './replay.mjs'
+import { listRecordings, readExpected, readRecording } from './recordings.mjs'
+import { ANSWER_CELLS, CELL_ONLY_TOOLS, cellPixel, clickCell, compareDrivers, downloadRecording, makeSurfaceSolveLink, openRecordingPage, replay, uiDriver } from './replay.mjs'
 import { UI_REPLAY_CALL, UI_REPLAY_PARTS, uiReplayPartIds } from './ui-replay-part.mjs'
 
 const browser = useBrowser()
@@ -224,7 +222,7 @@ describe('the engine driver', () => {
         id: SURFACE_ID,
         expected: await readExpected(SURFACE_ID),
         served: true,
-        roundTripEvery: 1,
+        fullRoundTrips: true,
         setup: (context) => context.route(jsRequest('class_p.js'), (route) => route.fulfill({
           contentType: 'text/javascript', body: planted
         }))

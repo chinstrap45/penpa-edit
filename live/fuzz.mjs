@@ -6,13 +6,13 @@
 // Not checked: that the redo stacks survive a save (`maketext_duplicate` drops them by design), and the edit-mode
 // share link, which a solver does not save progress in.
 import { execFile } from 'node:child_process'
-import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { canonicalState, readEngineState } from './canonical-state.mjs'
 import { jsRequest, openPenpa } from './page.mjs'
-import { changedKeys, endsGroup, engineDriver, entries, recordingText, roundTrips, stepWords } from './replay.mjs'
+import { changedKeys, diffLine, entries, stepWords, withoutDuplicateDrops, writeRecording } from './recordings.mjs'
+import { endsGroup, engineDriver, roundTrips } from './replay.mjs'
 import { settle } from './settle.mjs'
 
 // Where a failing run's recording goes, as `fuzz/<puzzle>-seed-<seed>` among the recordings. It has no expected file
@@ -136,19 +136,11 @@ function cloneLinkInPage () {
   return link.slice(link.indexOf('#'))
 }
 
-// The canonical state a save/load round trip of `state` reopens to. `maketext_duplicate` writes no selection and empties
-// the redo stacks of the answer, by design.
-function afterRoundTrip (state) {
-  return state
-    .replace(/^selection = .*$/m, 'selection = []')
-    .replace(/^(pu_a(?:_col)?\.command_redo\.length) = \d+$/gm, '$1 = 0')
-}
-
 // How `got` differs from `want`, one line per changed key.
 function diffLines (want, got) {
   const w = entries(want)
   const g = entries(got)
-  return changedKeys(w, g).map((k) => `  ${k}: ${w.get(k) ?? 'absent'} → ${g.get(k) ?? 'absent'}`).join('\n')
+  return changedKeys(w, g).map((k) => `  ${diffLine(k, w, g)}`).join('\n')
 }
 
 // The next input as its steps, drawn by `rand` from what the page offers now, and no more than `room` steps long.
@@ -200,10 +192,7 @@ async function headCommit () {
 async function saveRecording (dir, { puzzle, seed, page, final, steps }) {
   const { gridtype, genre } = await page.evaluate(() => ({ gridtype: pu.gridtype, genre: pu.user_tags }))
   const header = { source: puzzle.source, gridtype, genre, commit: await headCommit(), fuzz: { puzzle: puzzle.name, seed } }
-  await mkdir(dir, { recursive: true })
-  const file = join(dir, `${puzzle.name}-seed-${seed}.steps.json`)
-  await writeFile(file, recordingText({ header, final, steps }))
-  return file
+  return writeRecording(`${puzzle.name}-seed-${seed}`, { header, final, steps }, pathToFileURL(join(dir, '/')))
 }
 
 // Fuzzes `puzzle` ({ name, source }, `source` its link's query and `#` part) with `seed` for `count` steps. `failure` is
@@ -299,8 +288,8 @@ async function checkpoint ({ page, errors, at, state }) {
 // Resolves to how the save/load round trip of `link`, the Clone link of the board whose canonical state is `state`,
 // breaks an invariant, in words, or to null.
 async function roundTrip (trips, at, link, state) {
-  const want = afterRoundTrip(state)
-  const loaded = await trips.load(link, want, (page) => page.evaluate(readEngineState).then(canonicalState))
+  const want = withoutDuplicateDrops(state)
+  const loaded = await trips.load(link, want, (page) => page.evaluate(readEngineState).then(canonicalState).then(withoutDuplicateDrops))
   if (!loaded) return null
   if (loaded.errors.length) return `${at}: the save/load round trip's page raised: ${loaded.errors[0]}`
   if (loaded.got !== want) return `${at}: the save/load round trip changed the state:\n${diffLines(want, loaded.got)}`

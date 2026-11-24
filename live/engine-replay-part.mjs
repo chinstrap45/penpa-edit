@@ -4,7 +4,8 @@ import assert from 'node:assert/strict'
 import { readdir, readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'
 import { useBrowser } from './page.mjs'
-import { listRecordings, readExpected, readRecording, replay } from './replay.mjs'
+import { listRecordings, readExpected, readRecording } from './recordings.mjs'
+import { replay } from './replay.mjs'
 
 export const REPLAY_PARTS = 3
 

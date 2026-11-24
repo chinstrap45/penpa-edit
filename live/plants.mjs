@@ -11,7 +11,8 @@
 import { readFile } from 'node:fs/promises'
 import { Script } from 'node:vm'
 import { jsRequest } from './page.mjs'
-import { methodStart, readExpected, readRecording, replay } from './replay.mjs'
+import { readExpected, readRecording } from './recordings.mjs'
+import { methodStart, replay } from './replay.mjs'
 
 const DOCS = new URL('../docs/', import.meta.url)
 

@@ -1,7 +1,7 @@
 // The puzzles a UI fuzz list runs on (#195): tier C's, each opened by the link its kept recording was made on, and Akari.
 // A list names its puzzle, so a replay opens the same one. Not a check itself.
 import { AKARI_SOLVE } from '../page.mjs'
-import { readRecording } from '../replay.mjs'
+import { readRecording } from '../recordings.mjs'
 import { TIER_C_FAMILY } from '../tier-c.mjs'
 import { TIER_C_PUZZLES } from '../tier-c-puzzles.mjs'
 
