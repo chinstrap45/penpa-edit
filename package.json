@@ -30,6 +30,7 @@
       "Swal",
       "THEME_DARK",
       "THEME_LIGHT",
+      "TOOL_CALLS",
       "UserSettings",
       "axe",
       "create_newboard",
