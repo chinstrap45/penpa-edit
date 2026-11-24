@@ -7,11 +7,11 @@
 // - The converter: a solver's Share > Replay link turned into a recording.
 import { readEngineState } from './canonical-state.mjs'
 import { random } from './fuzz.mjs'
-import { openPenpa } from './page.mjs'
+import { openPenpa, withPage } from './page.mjs'
 import { stepWords } from './recordings.mjs'
 import { dragSteps, endsGroup, engineDriver, linkHash, pauseClock, pressSteps, typedSteps } from './replay.mjs'
 import {
-  answerLinkInPage, boardLoaded, historyPuzzle, openingModeInPage, pointsInPage, withPage
+  answerLinkInPage, boardLoaded, historyPuzzle, openingModeInPage, pointsInPage
 } from './tier-c-puzzles.mjs'
 
 // The directory of `live/recordings/` tier C's recordings go in, as the first part of their ids.

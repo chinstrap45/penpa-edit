@@ -3,6 +3,7 @@
 // that leaves the mouse up, no key held and no list or dialog open, so a shrunk list reads as plain steps and replays from
 // its numbers. A list names its puzzle first, so its path replays on the same one. Not a check itself.
 import fc from 'fast-check'
+import { CARDS } from '../desk-layout.mjs'
 import { DRAG_REACH, pointsInPage } from '../fuzz.mjs'
 import { cardsMenuItem, CLOSEABLE_CARDS, closeCardsMenu, openCardsMenu, waitForDesk } from '../page.mjs'
 import { choosePreset, closed, openList, pinnedCard, presetField, presetList, saveButton, savePreset } from '../pin-card.mjs'
@@ -26,11 +27,10 @@ const REDO_KEY = 'Control+y'
 export const AREAS = ['bar', 'board', 'pinned', 'mode', 'recent', 'layout', 'theme']
 // How many times more often a focused area's kinds are drawn.
 const FOCUS_FACTOR = 5
-// The cards a card action picks from, by name, and the resize handles by their `data-testid` suffix (desk.js).
-export const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
-export const HANDLES = ['top', 'right', 'bottom', 'left', 'top-left', 'top-right', 'bottom-right', 'bottom-left']
+// The resize handles a card resize picks from, by their `data-testid` suffix (desk.js).
+const HANDLES = ['top', 'right', 'bottom', 'left', 'top-left', 'top-right', 'bottom-right', 'bottom-left']
 // The moves a card drag or resize picks from, in pixels, each way.
-export const MOVES = [-240, -80, -20, 0, 20, 80, 240]
+const MOVES = [-240, -80, -20, 0, 20, 80, 240]
 const MOVE = fc.nat({ max: MOVES.length - 1 })
 // A drag is let go in this many mouse moves, so the page sees it travel.
 const DRAG_MOVES = 5
@@ -563,6 +563,14 @@ export const actionList = (puzzles, { maxCommands = DEFAULT_MAX_COMMANDS, replay
   const action = fc.oneof(...KINDS.map((k) => ({ weight: weight(k), arbitrary: k.arg.map((arg) => commandOf(k, arg)) })))
   return fc.commands([action], { maxCommands, size: 'max', replayPath }).map((commands) => ({ puzzle, commands, toString: () => String(commands) }))
 })
+
+// An action's argument as the tables above index it: a card by name, a resize handle, a move in pixels.
+const cardArg = (name) => CARDS.indexOf(name)
+const handleArg = (name) => HANDLES.indexOf(name)
+const moveArg = (px) => MOVES.indexOf(px)
+export const dragAction = (name, dx, dy) => ['card drag', [cardArg(name), moveArg(dx), moveArg(dy)]]
+export const interruptedDragAction = (name, how) => ['interrupted drag', [cardArg(name), how]]
+export const resizeAction = (name, edge, dx, dy) => ['card resize', [cardArg(name), handleArg(edge), moveArg(dx), moveArg(dy)]]
 
 // A list written out by hand: `actions` are `[kind, arg]` of the kinds above.
 export function scriptedList (actions) {

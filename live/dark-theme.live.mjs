@@ -24,10 +24,8 @@ const DARK_GROUND_LUMINANCE = 0.1
 // Three of the tools: two whose style buttons are colour swatches, and one whose are not.
 const TOOLS = [{ mode: 'surface' }, { mode: 'multicolor' }, { mode: 'number', submode: '1' }]
 
-let numberLink
 async function openIn (theme) {
-  numberLink ??= await makeNumberSolveLink(browser())
-  const opened = await openSolvePage(browser(), numberLink)
+  const opened = await openSolvePage(browser(), await makeNumberSolveLink(browser()))
   await opened.page.addScriptTag({ content: `window.__helpers = ${contrastHelpersInPage}; window.__groundOf = ${groundOfInPage}; window.__opacityOf = ${opacityOfInPage}; window.__boardCanvas = ${boardCanvasInPage}` })
   await opened.page.evaluate((t) => engine.setTheme(t), theme)
   await settle(() => opened.page.evaluate(() => document.documentElement.classList.contains('wa-dark')), theme === 'dark')

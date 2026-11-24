@@ -3,7 +3,7 @@
 // dragging. The UI is found by role and accessible name; colours and storage are read as the page holds them.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { newBoardSolveLink, openSolvePage, setTool, useBrowser, waitForDesk, waitForTool } from './page.mjs'
+import { newBoardSolveLink, openSolvePage, setTool, useBrowser, waitForDesk, waitForTool, recentCard } from './page.mjs'
 import { choosePreset, openList, PIN_TAB_SET, pinChips, pinChipTexts, pinnedCard, presetField, presetList, savePreset, withPinnedPage } from './pin-card.mjs'
 import { settle } from './settle.mjs'
 
@@ -11,7 +11,6 @@ const browser = useBrowser()
 
 const pinned = pinnedCard
 const modeCard = (page) => page.getByRole('region', { name: 'Mode' })
-const recentCard = (page) => page.getByRole('region', { name: 'Recent' })
 const chips = pinChips
 const chipTexts = pinChipTexts
 const chipColours = (page) => chips(page).evaluateAll((nodes) => nodes.map((n) => n.style.getPropertyValue('--ui-pin-colour')))

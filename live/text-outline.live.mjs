@@ -2,7 +2,7 @@
 // The outline is read as white pixels around a black digit on a black cell, where nothing else on the board is white.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
-import { GIVEN_CELL, makeNumberSolveLink, openPenpa, openSolvePage, shadeInPage, useBrowser, waitForDesk } from './page.mjs'
+import { GIVEN_CELL, makeNumberSolveLink, openPenpa, openSolvePage, shadeInPage, useBrowser, waitForDesk, flipSettingsSwitch } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -34,15 +34,6 @@ async function shadeGiven (page) {
 
 const outlineSetting = (page) => page.evaluate(() => engine.getSettings().outline_text)
 
-// Flips the dialog's Outline on text switch as a visitor does, and closes the dialog.
-async function flipOutlineSwitch (page) {
-  await page.getByRole('button', { name: 'Settings' }).click()
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-  await page.locator('wa-switch').filter({ has: page.getByRole('switch', { name: 'Outline on text' }) }).click()
-  await page.keyboard.press('Escape')
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
-}
-
 describe('the outline on board text of solve.html', () => {
   let link
   before(async () => { link = await makeNumberSolveLink(browser()) })
@@ -62,7 +53,7 @@ describe('the outline on board text of solve.html', () => {
     const { context, page } = await openSolvePage(browser(), link, { served: true })
     try {
       await shadeGiven(page)
-      await flipOutlineSwitch(page)
+      await flipSettingsSwitch(page, 'Outline on text')
       assert.equal(await outlineSetting(page), false)
       assert.equal(await whitePixels(page), 0, 'no white pixels with the switch off, and no reload')
 
@@ -70,7 +61,7 @@ describe('the outline on board text of solve.html', () => {
       await waitForDesk(page)
       assert.equal(await outlineSetting(page), false, 'off survives a reload')
 
-      await flipOutlineSwitch(page)
+      await flipSettingsSwitch(page, 'Outline on text')
       await shadeGiven(page)
       assert.notEqual(await whitePixels(page), 0, 'white pixels with the switch back on')
       await page.reload()

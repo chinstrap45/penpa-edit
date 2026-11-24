@@ -2,7 +2,7 @@
 // Every directory made here is removed when the test process exits.
 import { execFileSync, spawnSync } from 'node:child_process'
 import { strict as assert } from 'node:assert'
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -37,20 +37,25 @@ export function tree (files) {
   return dir
 }
 
-// A scratch repo holding the real package.json, one engine-side file, one UI-driver replay, one solve-UI file, a page
-// naming one script and a file it does not have yet, and the solve UI's source.
-export function scratchRepo () {
-  const dir = tree({
-    ...Object.fromEntries([ENGINE, UI, PINS, 'docs/ui/pins.js', 'docs/js/class_p.js', 'docs/js/engine_bridge.js']
-      .map((file) => [file, '// one\n'])),
-    'docs/index.html': '<script>load(["./js/class_p.js", "./js/new.js"])</script>\n'
-  })
+// A git repo in a scratch directory with `files` committed as `base`, and the git runner for it.
+export function committedTree (files) {
+  const dir = tree(files)
   const git = (...args) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' })
   git('init', '-q', '-b', 'master')
   git('config', 'user.name', 'test')
   git('config', 'user.email', 'test@example.com')
-  cpSync(fileURLToPath(new URL('../package.json', import.meta.url)), join(dir, 'package.json'))
   git('add', '-A')
   git('commit', '-q', '-m', 'base')
   return { dir, git }
+}
+
+// A scratch repo holding the real package.json, one engine-side file, one UI-driver replay, one solve-UI file, a page
+// naming one script and a file it does not have yet, and the solve UI's source.
+export function scratchRepo () {
+  return committedTree({
+    ...Object.fromEntries([ENGINE, UI, PINS, 'docs/ui/pins.js', 'docs/js/class_p.js', 'docs/js/engine_bridge.js']
+      .map((file) => [file, '// one\n'])),
+    'docs/index.html': '<script>load(["./js/class_p.js", "./js/new.js"])</script>\n',
+    'package.json': readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')
+  })
 }

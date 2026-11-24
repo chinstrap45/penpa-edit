@@ -12,7 +12,7 @@
 import { rm } from 'node:fs/promises'
 import { chromium } from 'playwright'
 import { canonicalState, readEngineState } from './canonical-state.mjs'
-import { openPenpa } from './page.mjs'
+import { openPenpa, withPage } from './page.mjs'
 import { cases, readSnapshot } from './puzzlink-cases.mjs'
 import { EXPECTED_SUFFIX, RECORDINGS, writeExpected, writeRecording } from './recordings.mjs'
 import {
@@ -288,15 +288,10 @@ function importsPerGenre () {
 
 // The `#` part of a solve link to the board `build(page)` makes on a page of its own, since a new board keeps the last
 // one's modes (`create_newboard`).
-async function solveLink (browser, build) {
-  const { context, page } = await openPenpa(browser)
-  try {
-    await build(page)
-    return linkHash(await page.evaluate(solveLinkInPage))
-  } finally {
-    await context.close()
-  }
-}
+const solveLink = (browser, build) => withPage(browser, '', async (page) => {
+  await build(page)
+  return linkHash(await page.evaluate(solveLinkInPage))
+})
 
 // Runs in the page: the modes whose buttons the mode bar shows.
 function shownModesInPage () {

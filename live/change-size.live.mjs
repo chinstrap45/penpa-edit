@@ -4,7 +4,7 @@
 // back. Read through where Penpa+ draws the cells and the given.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { ANSWER_CELL, boardAgainstCard, cardBodyButtons, chipName, DIGIT_CELL, linkFromNewBoard, makeNumberSolveLink, newBoardSolveLink, openSolvePage, setTool, typedDigits, typeDigitInPage, useBrowser, waitForDesk } from './page.mjs'
+import { ANSWER_CELL, boardAgainstCard, cardBodyButtons, chipName, DIGIT_CELL, linkFromNewBoard, makeNumberSolveLink, newBoardSolveLink, openSolvePage, setTool, typedDigits, typeDigitInPage, useBrowser, openSettings, waitForDesk, cellSize } from './page.mjs'
 import { clickCell } from './replay.mjs'
 import { settle } from './settle.mjs'
 
@@ -47,10 +47,8 @@ function refusalInPage ([side, change]) {
 }
 const refusal = (page, side, change) => page.evaluate(refusalInPage, [side, change])
 
-let numberLink
 const openNumberBoard = async (options) => {
-  numberLink ??= await makeNumberSolveLink(browser())
-  return openSolvePage(browser(), numberLink, options)
+  return openSolvePage(browser(), await makeNumberSolveLink(browser()), options)
 }
 
 // Runs in the page: a new board of `columns` x `rows` cells of `gridtype`, `space` of them blank on every side, the grid's
@@ -280,7 +278,6 @@ const openDialog = async (page) => {
   // The dialog's content is slotted into Web Awesome's shadow `dialog`, so it is found from the host.
   return page.locator('wa-dialog[open]')
 }
-const cellSize = (page) => page.evaluate(() => engine.getState().cellSize)
 // The wa-button named `label`: the element its look is set on, where `getByRole` finds the button inside it.
 const sideHost = (dialog, label) => dialog.locator('wa-button').filter({ hasText: label })
 
@@ -357,9 +354,7 @@ describe('a resize keeps what the solver set on the puzzle', () => {
   // Unpins the first pin, turns conflict detection off for this puzzle and widens the Rules card, as a solver would.
   async function setThings (page) {
     await page.getByRole('button', { name: 'Unpin Line > Normal' }).click()
-    await page.getByRole('button', { name: 'Settings', exact: true }).click()
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-    await page.locator('wa-dialog[open]').getByRole('combobox', { name: 'Conflict detection' }).click()
+    await (await openSettings(page)).getByRole('combobox', { name: 'Conflict detection' }).click()
     await page.getByRole('option', { name: 'Off for this puzzle' }).click()
     await page.keyboard.press('Escape')
     await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })

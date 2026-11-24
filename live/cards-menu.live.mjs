@@ -5,10 +5,10 @@
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import {
-  cardsMenuItem, CLOSEABLE_CARDS, closeCardsMenu, DESK_SIZE, newBoardSolveLink, openCardsMenu, openSolvePage, setTool,
+  cardsMenuItem, CLOSEABLE_CARDS, closeCardsMenu, DESK_SIZE, newBoardSolveLink, openCardsMenu, openSettings, openSolvePage, setTool,
   toggleInCardsMenu, useBrowser, waitForDesk, waitForTool
 } from './page.mjs'
-import { steady } from './desk-layout.mjs'
+import { CARDS, readDeskInPage, steady, TOP_MARGIN_PX } from './desk-layout.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -17,24 +17,10 @@ const FULL_HD = { viewport: { width: 1920, height: 1080 } }
 // The link carries rules, so the Rules card is more than its one-line note, and pins, so Z, X, C and V and Tab have tools.
 const SOME_RULES = 'Put a digit from 1 to 9 in every cell.'
 const PINS = ['Sudoku Normal', 'Line Normal', 'Wall']
-const CARDS = ['Board', ...CLOSEABLE_CARDS]
 const LEFT = ['Rules', 'Mouse']
 const RIGHT = ['Pinned', 'Mode', 'Recent']
-// desk.js's margin above and below the columns, and how far two edges may differ by rounding.
-const TOP_MARGIN_PX = 12
+// How far two edges may differ by rounding.
 const ROUNDING_PX = 2
-
-// Runs in the page. The desk's box and each card's, null for a card that is not shown.
-function readDeskInPage (names) {
-  const rect = (node) => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }
-  return {
-    desk: rect(document.querySelector('.ui-desk')),
-    cards: Object.fromEntries(names.map((name) => {
-      const node = document.querySelector(`section[aria-label="${name}"]`)
-      return [name, node.offsetParent === null ? null : rect(node)]
-    }))
-  }
-}
 
 const read = (page) => steady(page, readDeskInPage, CARDS)
 const open = (contextOptions = FULL_HD) => newBoardSolveLink(browser(), PINS, SOME_RULES)
@@ -110,8 +96,7 @@ describe('The Cards menu', () => {
       nodes.map((node) => [node.textContent.trim(), node.type, node.checked]))
     assert.deepEqual(items, [...CLOSEABLE_CARDS.map((name) => [name, 'checkbox', true]), ['Reset layout', 'normal', false]])
     await closeCardsMenu(page)
-    await page.getByRole('button', { name: 'Settings', exact: true }).click()
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor()
+    await openSettings(page)
     assert.equal(await page.getByRole('switch', { name: 'Show Mouse card' }).count(), 0, 'Settings no longer shows or hides Mouse')
   })
 

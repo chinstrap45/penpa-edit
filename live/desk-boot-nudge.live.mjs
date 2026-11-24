@@ -2,7 +2,7 @@
 // each other in a desk of the same size stays, every other overlap moves apart, and what moved is kept for a reload.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
-import { overlaps, steady } from './desk-layout.mjs'
+import { overlaps, steady, CARDS } from './desk-layout.mjs'
 import { DESK_SIZE, LONG_RULES_PUZZLE, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, useBrowser, waitForDesk } from './page.mjs'
 
 const browser = useBrowser()
@@ -26,7 +26,6 @@ function readCardsInPage (names) {
     return [name, { x: node.offsetLeft, y: node.offsetTop, w: node.offsetWidth, h: node.offsetHeight }]
   }))
 }
-const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
 const boxOf = ({ x, y, w, h }) => ({ x, y, w, h })
 
 describe('opening a saved layout in a smaller window (#371)', () => {

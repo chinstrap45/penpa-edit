@@ -4,16 +4,14 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { describe, it } from 'node:test'
-import { animationsDone, contrastHelpersInPage, groundOfInPage, makeNumberSolveLink, opacityOfInPage, openSolvePage, useBrowser } from './page.mjs'
+import { animationsDone, contrastHelpersInPage, groundOfInPage, makeNumberSolveLink, opacityOfInPage, openSolvePage, useBrowser, openSettings } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 const AXE_SOURCE = createRequire(import.meta.url).resolve('axe-core/axe.min.js')
 
-let numberLink
 async function openIn (theme, { welcome = false } = {}) {
-  numberLink ??= await makeNumberSolveLink(browser())
-  const opened = await openSolvePage(browser(), numberLink, { welcome })
+  const opened = await openSolvePage(browser(), await makeNumberSolveLink(browser()), { welcome })
   await opened.page.addScriptTag({ path: AXE_SOURCE })
   await opened.page.addScriptTag({ content: `window.__helpers = ${contrastHelpersInPage}; window.__groundOf = ${groundOfInPage}; window.__opacityOf = ${opacityOfInPage}` })
   // The page's `body` is 0 high with `overflow: hidden`; axe counts the fixed desk inside it as clipped and skips all its text.
@@ -84,8 +82,7 @@ for (const theme of ['light', 'dark']) {
     it('holds with Settings open', async () => {
       const { context, page } = await openIn(theme)
       try {
-        await page.getByRole('button', { name: 'Settings' }).click()
-        await page.getByRole('dialog', { name: 'Settings' }).waitFor()
+        await openSettings(page)
         await animationsDone(page)
         assert.deepEqual(await contrastViolations(page), [])
       } finally { await context.close() }
@@ -123,8 +120,7 @@ describe('the contrast check', () => {
   it('fails on a planted low-contrast colour in the Settings dialog, which axe cannot judge itself', async () => {
     const { context, page } = await openIn('light')
     try {
-      await page.getByRole('button', { name: 'Settings' }).click()
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
+      await openSettings(page)
       await animationsDone(page)
       await page.addStyleTag({ content: 'wa-dialog[open] legend { color: #ddd !important; }' })
       const found = await contrastViolations(page)

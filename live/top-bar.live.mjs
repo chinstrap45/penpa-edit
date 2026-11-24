@@ -17,10 +17,8 @@ const CELL = 12
 // How long a "the timer held" check watches a paused timer; a held clock cannot be waited for, only watched.
 const HOLD_WATCH_MS = 1500
 
-let numberLink
 async function openSolve (options) {
-  numberLink ??= await makeNumberSolveLink(browser())
-  const opened = await openSolvePage(browser(), numberLink, options)
+  const opened = await openSolvePage(browser(), await makeNumberSolveLink(browser()), options)
   // The Number tool takes a digit in a selected cell.
   await setTool(opened.page, { mode: 'number', submode: '1' })
   return opened

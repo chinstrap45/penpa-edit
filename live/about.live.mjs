@@ -2,7 +2,7 @@
 // bottom of Settings with Penpa+'s MIT lines and this fork's repository, both read at 1366x768 in both themes.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { AKARI_SOLVE, openSolvePage, useBrowser } from './page.mjs'
+import { AKARI_SOLVE, openSolvePage, useBrowser, openSettings } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -61,9 +61,7 @@ describe('the About group in Settings', () => {
   it('is the last group, and names Penpa+ and its author, the engine, the MIT lines, and both repositories', async () => {
     const { context, page } = await open('light')
     try {
-      await page.getByRole('button', { name: 'Settings' }).click()
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-      const dialog = page.locator('wa-dialog[open]')
+      const dialog = await openSettings(page)
       const about = dialog.getByRole('group', { name: 'About' })
       assert.equal(await dialog.locator('fieldset > legend').last().textContent(), 'About', 'About is the last group')
       const text = await about.textContent()
@@ -81,8 +79,7 @@ describe('the About group in Settings', () => {
   it('ends the groups with Page, Pins and About', async () => {
     const { context, page } = await open('light')
     try {
-      await page.getByRole('button', { name: 'Settings' }).click()
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
+      await openSettings(page)
       const legends = await page.locator('wa-dialog[open] fieldset > legend').allTextContents()
       assert.deepEqual(legends.slice(-3), ['Page', 'Pins', 'About'])
     } finally {
@@ -93,9 +90,7 @@ describe('the About group in Settings', () => {
   it('says "desk" nowhere a solver reads it: not in Settings, not in a tooltip', async () => {
     const { context, page } = await open('light')
     try {
-      await page.getByRole('button', { name: 'Settings' }).click()
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-      const dialog = page.locator('wa-dialog[open]')
+      const dialog = await openSettings(page)
       const inPage = await dialog.getByRole('group', { name: 'Page' }).getByRole('switch', { name: 'Show board coordinates' }).count()
       assert.equal(inPage, 1, 'Show board coordinates is in the Page group')
       // The words a control shows are text and attributes alike: Web Awesome's select takes its label and placeholder as attributes.
@@ -111,8 +106,7 @@ describe('the About group in Settings', () => {
   it('brings Shift+Tab that leaves the dialog back inside it, reaching an About link', async () => {
     const { context, page } = await open('light')
     try {
-      await page.getByRole('button', { name: 'Settings' }).click()
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
+      await openSettings(page)
       // A press that leaves the dialog is answered in a timeout, which the next macrotask of the page follows.
       const afterTimeouts = () => page.evaluate(() => new Promise((resolve) => setTimeout(resolve)))
       const reached = []

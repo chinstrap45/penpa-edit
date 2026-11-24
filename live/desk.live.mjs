@@ -5,10 +5,9 @@ import assert from 'node:assert/strict'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { boardAgainstCard, newBoardSolveLink, openSolvePage, resetLayoutInSettings, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
+import { CARDS } from './desk-layout.mjs'
 
 const browser = useBrowser()
-
-const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
 
 // The desk's link carries rules: with none the Rules card stays one line tall, its - and + hidden and its height unkept.
 const SOME_RULES = 'Put a digit from 1 to 9 in every cell.'

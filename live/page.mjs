@@ -219,15 +219,18 @@ export const DIGIT_CELL = 12
 export const MARK_CELL = 13
 export const SHADED_CELL = 14
 
-// Runs `inPage(arg)` on a fresh page of its own and returns what it returns: a puzzle link built on a new board.
-export async function linkFromNewBoard (browser, inPage, arg) {
-  const { context, page } = await openPenpa(browser)
+// Opens Penpa+ at `query` on a page of its own, returns what `act(page)` returns and closes the page's context.
+export async function withPage (browser, query, act) {
+  const { context, page } = await openPenpa(browser, query)
   try {
-    return await page.evaluate(inPage, arg)
+    return await act(page)
   } finally {
     await context.close()
   }
 }
+
+// Runs `inPage(arg)` on a fresh page of its own and returns what it returns: a puzzle link built on a new board.
+export const linkFromNewBoard = (browser, inPage, arg) => withPage(browser, '', (page) => page.evaluate(inPage, arg))
 
 // A Nurikabe, whose genre tag is neither Sudoku nor Star Battle.
 export const NURIKABE_IMPORT = 'https://puzz.link/p?nurikabe/v:/6/6/4j4p6h4p6j6'
@@ -301,15 +304,15 @@ export function linkOfButtonInPage (handler) {
   return url.slice(url.indexOf('#'))
 }
 
-// The `#` part of a 4x4 Number solve link with a given 1 in GIVEN_CELL and an author's answer of 2 in ANSWER_CELL.
+// The `#` part of a 4x4 Number solve link with a given 1 in GIVEN_CELL and an author's answer of 2 in ANSWER_CELL. Built
+// once per process: the link never changes.
+let numberLink
 export async function makeNumberSolveLink (browser) {
-  const { context, page } = await openPenpa(browser)
-  try {
+  numberLink ??= await withPage(browser, '', async (page) => {
     await page.evaluate(buildNumberBoardInPage, { given: GIVEN_CELL, answer: ANSWER_CELL })
-    return await page.evaluate(solveLinkInPage)
-  } finally {
-    await context.close()
-  }
+    return page.evaluate(solveLinkInPage)
+  })
+  return numberLink
 }
 
 // Runs in the page. The board's canvas in the Board card: the drawn one, since Penpa+ keeps a hidden pause canvas beside it.
@@ -382,13 +385,34 @@ async function welcomeClosed (page) {
   await page.waitForFunction(() => !document.querySelector('.ui-welcome'))
 }
 
-// Presses Settings' Reset layout, which closes the dialog, as a visitor does now that the top bar has no such button.
-export async function resetLayoutInSettings (page) {
+// Opens Settings and returns the open dialog. Its rows are the host's children, outside the shadow DOM's inner `dialog`
+// that holds the role.
+export async function openSettings (page) {
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-  await page.locator('wa-dialog[open]').getByRole('group', { name: 'Page' }).getByRole('button', { name: 'Reset layout' }).click()
+  return page.locator('wa-dialog[open]')
+}
+
+// Flips the Settings switch named `name` as a visitor does, and closes the dialog.
+export async function flipSettingsSwitch (page, name) {
+  const dialog = await openSettings(page)
+  await dialog.locator('wa-switch').filter({ has: page.getByRole('switch', { name }) }).click()
+  await page.keyboard.press('Escape')
   await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
 }
+
+// Presses Settings' Reset layout, which closes the dialog, as a visitor does now that the top bar has no such button.
+export async function resetLayoutInSettings (page) {
+  const dialog = await openSettings(page)
+  await dialog.getByRole('group', { name: 'Page' }).getByRole('button', { name: 'Reset layout' }).click()
+  await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
+}
+
+// The board's cell size in pixels.
+export const cellSize = (page) => page.evaluate(() => engine.getState().cellSize)
+
+// The Recent card.
+export const recentCard = (page) => page.getByRole('region', { name: 'Recent' })
 
 // The cards the solver can close, by name, in the Cards menu's order (#334).
 export const CLOSEABLE_CARDS = ['Rules', 'Mouse', 'Pinned', 'Mode', 'Recent']

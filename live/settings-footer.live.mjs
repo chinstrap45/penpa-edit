@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { SCRIPT_ENTRY_URL } from '../test/redirect-urls.mjs'
-import { AKARI_SOLVE, openSolvePage, useBrowser } from './page.mjs'
+import { AKARI_SOLVE, openSolvePage, useBrowser, openSettings } from './page.mjs'
 
 const browser = useBrowser()
 
@@ -12,9 +12,7 @@ describe('the footer of Settings', () => {
   it('names @ChinStrap on Discord and links the Redirect script, each in a new tab that leaves the page as it was', async () => {
     const { context, page } = await openSolvePage(browser(), AKARI_SOLVE, { served: true })
     try {
-      await page.getByRole('button', { name: 'Settings' }).click()
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-      const dialog = page.locator('wa-dialog[open]')
+      const dialog = await openSettings(page)
       const footer = dialog.locator('.ui-settings-footer')
       assert.match(await footer.textContent(), /Questions, bugs or suggestions\? Message me on Discord: @ChinStrap/)
       const links = await footer.getByRole('link').evaluateAll((nodes) => nodes.map((n) => [n.href, n.target, n.rel]))
