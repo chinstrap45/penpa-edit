@@ -229,11 +229,13 @@ describe('typing in the preset field', () => {
 
   it('Puzzle defaults replaces the pins and shows the Undo line', async () => {
     const { page } = opened
-    const seeded = await page.evaluate(() => engine.tabSet().length)
+    const tabSet = await page.evaluate(() => engine.tabSet().map((t) => `${t.mode}/${t.submode ?? ''}`))
+    const seeded = tabSet.length
     assert.equal(seeded > 0, true, 'the link seeds pins')
     await choosePreset(page, 'Classic sudoku')
     await choosePreset(page, 'Puzzle defaults')
     assert.equal(await settle(() => chipCount(page), seeded), seeded)
+    assert.deepEqual(await walkPins(page, seeded), tabSet, 'the link\'s own pins, in its order')
     await pinnedCard(page).locator('.ui-preset-undo').getByText('Loaded “Puzzle defaults”.').waitFor()
   })
 

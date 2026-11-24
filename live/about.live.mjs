@@ -78,14 +78,24 @@ describe('the About group in Settings', () => {
     }
   })
 
+  it('ends the groups with Page, Pins and About', async () => {
+    const { context, page } = await open('light')
+    try {
+      await page.getByRole('button', { name: 'Settings' }).click()
+      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
+      const legends = await page.locator('wa-dialog[open] fieldset > legend').allTextContents()
+      assert.deepEqual(legends.slice(-3), ['Page', 'Pins', 'About'])
+    } finally {
+      await context.close()
+    }
+  })
+
   it('says "desk" nowhere a solver reads it: not in Settings, not in a tooltip', async () => {
     const { context, page } = await open('light')
     try {
       await page.getByRole('button', { name: 'Settings' }).click()
       await page.getByRole('dialog', { name: 'Settings' }).waitFor()
       const dialog = page.locator('wa-dialog[open]')
-      const legends = await dialog.locator('fieldset > legend').allTextContents()
-      assert.deepEqual(legends.slice(-3), ['Page', 'Pins', 'About'])
       const inPage = await dialog.getByRole('group', { name: 'Page' }).getByRole('switch', { name: 'Show board coordinates' }).count()
       assert.equal(inPage, 1, 'Show board coordinates is in the Page group')
       // The words a control shows are text and attributes alike: Web Awesome's select takes its label and placeholder as attributes.

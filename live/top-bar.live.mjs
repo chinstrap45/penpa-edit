@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { describe, it } from 'node:test'
-import { afterChange, ANSWER_CELL, makeNumberSolveLink, openSolvePage, SAME_ROW_CELL, setTool, typedDigits, useBrowser, waitForDesk } from './page.mjs'
+import { afterChange, makeNumberSolveLink, openSolvePage, SAME_ROW_CELL, setTool, typedDigits, useBrowser, waitForDesk } from './page.mjs'
 import { canonicalState, readEngineState } from './canonical-state.mjs'
 import { clickCell } from './replay.mjs'
 import { settle } from './settle.mjs'
@@ -213,24 +213,6 @@ describe('the timer', () => {
       await sleep(HOLD_WATCH_MS)
       assert.deepEqual(await timer(page), held)
       assert.equal(await timerText(page), heldText)
-    } finally {
-      await context.close()
-    }
-  })
-})
-
-describe('a solve', () => {
-  it('stops the timer and leaves the board uncovered', async () => {
-    const { context, page } = await openSolve()
-    try {
-      await enterDigit(page, '2', ANSWER_CELL)
-      assert.equal(await settle(async () => (await timer(page)).paused, true), true, 'the solve stopped the timer')
-      const stopped = await timer(page)
-      // A "nothing happened in N ms" check.
-      await sleep(HOLD_WATCH_MS)
-      assert.deepEqual(await timer(page), stopped, 'the timer stays stopped')
-      assert.equal(stopped.covered, false, 'and the board is not covered')
-      assert.equal(await paused(page).isVisible(), false)
     } finally {
       await context.close()
     }

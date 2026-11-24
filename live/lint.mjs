@@ -8,8 +8,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const JS_EXTENSIONS = ['.js', '.mjs']
-export const SHELL_EXTENSIONS = ['.sh']
+const JS_EXTENSIONS = ['.js', '.mjs']
+const SHELL_EXTENSIONS = ['.sh']
 // Owned files StandardJS must not read: a vendored bundle and a file `live/generate-gallery.mjs` writes.
 export const NOT_LINTED = ['docs/ui/vendor/', 'docs/gallery-puzzles.js']
 

@@ -9,7 +9,6 @@ import {
 } from './page.mjs'
 import { cellPixel, clickCell } from './replay.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
-import { choosePreset, pinChips } from './pin-card.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -762,10 +761,6 @@ describe('each Board look and Checking setting, on a board where it applies', ()
 })
 
 describe('the desk\'s own settings in the dialog', () => {
-  // The pins, by their unpin buttons' names.
-  const pinNames = (page) => pinChips(page).getByRole('button', { name: /^Unpin / })
-    .evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-label')))
-
   it('switches the theme, and keeps it for the next visit', async () => {
     const { context, page } = await openSolve()
     try {
@@ -796,20 +791,6 @@ describe('the desk\'s own settings in the dialog', () => {
       const dialog = await openDialog(page)
       await pageGroup(dialog).getByRole('button', { name: 'Reset layout' }).click()
       assert.deepEqual(await settle(() => rules.boundingBox(), start), start)
-    } finally {
-      await context.close()
-    }
-  })
-
-  it('the Puzzle defaults preset resets the pins to the link\'s Tab set', async () => {
-    const { context, page } = await openSolve()
-    try {
-      assert.equal(await settle(async () => (await pinNames(page)).length > 1, true), true, 'the Tab set seeds two pins or more')
-      const seeded = await pinNames(page)
-      await page.getByRole('button', { name: seeded[0] }).click()
-      assert.deepEqual(await settle(() => pinNames(page), seeded.slice(1)), seeded.slice(1), 'a pin is gone')
-      await choosePreset(page, 'Puzzle defaults')
-      assert.deepEqual(await settle(() => pinNames(page), seeded), seeded)
     } finally {
       await context.close()
     }

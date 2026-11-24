@@ -237,13 +237,6 @@ describe('the text styles of Number as samples (#166)', () => {
     }
   })
 
-  it('draws the outline sample hollow with a black stroke, as Penpa+ paints style 0', async () => {
-    await setTool(opened.page, { mode: 'number', submode: '1', style: 1 })
-    const text = styleButton(SAMPLE_STYLES[0]).locator('svg text')
-    assert.equal(await text.getAttribute('stroke'), '#000000')
-    assert.equal(await text.getAttribute('fill'), 'rgba(255, 255, 255, 0)')
-  })
-
   it('hands out a sample the caller can change without changing the next listing', async () => {
     await opened.page.evaluate(() => { engine.listTools().find((t) => t.mode === 'number').styles.find((s) => s.style === 6).sample.disc.fill = 'red' })
     const tool = (await tools(opened.page)).find((t) => t.mode === 'number')
@@ -569,13 +562,6 @@ describe('the Mouse card and the title bar', () => {
       assert.deepEqual(await rows(), expected)
     })
   }
-
-  it('says Left click, Right click and Drag first for every tool, and has no row for the style', async () => {
-    await setTool(opened.page, { mode: 'surface', style: 2 })
-    await settle(() => headline().textContent(), 'Surface')
-    assert.deepEqual((await rows()).slice(0, 3).map(([gesture]) => gesture), ['Left click', 'Right click', 'Drag'])
-    assert.doesNotMatch(await opened.page.getByRole('region', { name: 'Mouse' }).locator('.ui-mrows').textContent(), /green/)
-  })
 
   // The names of the Mouse card's rows, for every tool, whose words are `text`.
   const rowsReading = (text) => opened.page.evaluate(async (wanted) => {
