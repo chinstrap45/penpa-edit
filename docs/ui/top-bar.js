@@ -114,10 +114,7 @@
       onConfirm: goToPenpa
     })
 
-    const clock = document.createElement('span')
-    clock.className = 'ui-timer'
-    clock.setAttribute('role', 'timer')
-    clock.setAttribute('aria-label', 'Time')
+    const clock = el('span', { class: 'ui-timer', role: 'timer', 'aria-label': 'Time' })
 
     // The Restart question is the UI's own dialog; Penpa+'s popup library stays out of the solve page.
     const restartDialog = confirmDialog({
@@ -132,32 +129,24 @@
     })
 
     // Over the whole Board card while paused, so no click reaches the board; it is opaque so a pause hides the puzzle.
-    const cover = document.createElement('section')
-    cover.className = 'ui-paused'
-    cover.setAttribute('aria-label', 'Paused')
-    cover.hidden = true
-    cover.innerHTML = `<div>Paused</div><div class="ui-paused-hint">Press ${PAUSE_KEY} or Resume to continue</div>`
     // The top bar's Resume is an icon, so the cover that names "Resume" has a button of its own.
-    const coverResume = document.createElement('wa-button')
-    coverResume.setAttribute('variant', 'brand')
-    coverResume.textContent = 'Resume'
+    const coverResume = el('wa-button', { variant: 'brand' }, ['Resume'])
     coverResume.addEventListener('click', () => engine.startTimer())
-    cover.append(coverResume)
+    const cover = el('section', { class: 'ui-paused', 'aria-label': 'Paused', hidden: '' }, [
+      el('div', {}, ['Paused']),
+      el('div', { class: 'ui-paused-hint' }, [`Press ${PAUSE_KEY} or Resume to continue`]),
+      coverResume
+    ])
     cards.board.node.append(cover)
 
     // The solved message: the UI's own dialog, never Penpa+'s popup. Its words are the setter's, shown as text.
-    const solvedDialog = document.createElement('wa-dialog')
-    solvedDialog.setAttribute('label', 'Puzzle solved')
-    const solvedTitle = document.createElement('div')
-    solvedTitle.className = 'ui-solved-title'
-    const solvedMessage = document.createElement('div')
-    solvedMessage.className = 'ui-solved-message'
-    const solvedClose = document.createElement('wa-button')
-    solvedClose.setAttribute('slot', 'footer')
-    solvedClose.setAttribute('variant', 'brand')
-    solvedClose.setAttribute('data-dialog', 'close')
-    solvedClose.textContent = 'Close'
-    solvedDialog.append(solvedTitle, solvedMessage, solvedClose)
+    const solvedTitle = el('div', { class: 'ui-solved-title' })
+    const solvedMessage = el('div', { class: 'ui-solved-message' })
+    const solvedDialog = el('wa-dialog', { label: 'Puzzle solved' }, [
+      solvedTitle,
+      solvedMessage,
+      el('wa-button', { slot: 'footer', variant: 'brand', 'data-dialog': 'close' }, ['Close'])
+    ])
     engine.on('solved', ({ title, message }) => {
       solvedTitle.textContent = title
       solvedTitle.hidden = !title

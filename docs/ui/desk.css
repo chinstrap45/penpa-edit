@@ -77,12 +77,9 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
     background: #ece8de;
     border-bottom: 1px solid #ddd7c8;
     border-radius: 9px 9px 0 0;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: #6b6656;
 }
+/* The small-caps label of a card's title bar and of a Settings group. */
+.ui-head, .ui-settings-group legend { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6b6656; }
 /* A card the solver sized (or that shrank to fit the desk) has a height of its own, which its body then fills and scrolls in. */
 .ui-card.is-sized .ui-body { flex: 1 1 auto; min-height: 0; }
 .ui-card-rules.is-sized .ui-body { max-height: none; }
@@ -351,7 +348,7 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 
 /* The Settings dialog: one fieldset per group, one setting per row. */
 .ui-settings-group { border: 0; border-top: 1px solid #ddd7c8; margin: 0 0 12px; padding: 8px 0 0; display: grid; gap: 10px; }
-.ui-settings-group legend { padding: 0 8px 0 0; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6b6656; }
+.ui-settings-group legend { padding: 0 8px 0 0; }
 .ui-setting { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px 12px; }
 .ui-setting[hidden] { display: none; }
 .ui-setting wa-select { min-width: 250px; }

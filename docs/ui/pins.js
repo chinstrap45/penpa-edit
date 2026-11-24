@@ -7,7 +7,6 @@
 
   const { chipLabel, tooltipAttrs, toolKey } = window.toolGuide
   const { el, iconButton, luminance, onDeskReady, visibleBox } = window.uiKit
-  const { puzzleHash } = window
 
   const STORAGE_PREFIX = 'chinstrap.pins:'
   // Z, X, C and V jump to pins 1 to 4, and label those chips.
@@ -65,7 +64,7 @@
 
   onDeskReady(({ cards, fit }) => {
     const tools = engine.listTools()
-    const storageKey = STORAGE_PREFIX + puzzleHash()
+    const storageKey = STORAGE_PREFIX + engine.getOriginalPuzzleId()
     const toolOf = (pin) => tools.find((t) => toolKey(t) === toolKey(pin))
 
     // ---- The pins, kept ---------------------------------------------------------------------------------------------

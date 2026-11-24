@@ -62,7 +62,6 @@ export const EDITS = [
             "./js/chinstrap_button.js" // caneff: a Back to new UI button back to solve.html (#364)
 `,
     replace: `            "./ui/vendor/webawesome/webawesome.iife.js",
-            "./ui/puzzle-hash.js",
             "./ui/ui-kit.js",
             "./ui/desk.js",
             "./ui/tool-guide.js",

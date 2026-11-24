@@ -1,4 +1,4 @@
-// Pin presets: ready-made sets of pins, one per puzzle genre and filed by family, and the sets the solver saves. A searchable list on
+// Pin presets: ready-made sets of pins, one per puzzle genre and filed by genre group, and the sets the solver saves. A searchable list on
 // the Pinned card loads one, replacing the puzzle's pins; the solver stars favourites, which are listed first, and saves or deletes
 // sets of their own. The saved sets and the stars are kept in localStorage for every puzzle. Reaches Penpa+ only through `engine`
 // (test/ui-boundary.test.mjs fails otherwise).
@@ -30,7 +30,7 @@
   const NUMBERS = ['number/1', 'number/5', 'number/7']
   const BLOCKS = ['combi/blpo']
 
-  // [family, genre, tools as 'mode/submode' ('mode/' for a mode with none)], the families in the order the list shows them. A
+  // [genreGroup, genre, tools as 'mode/submode' ('mode/' for a mode with none)], the genre groups in the order the list shows them. A
   // preset holds the tools a solver uses while solving, not the ones a setter draws a Sudoku's clues with (thermometers, cages,
   // dots, arrows): a Sudoku variant needs only the entry modes and Surface, so it is Classic sudoku. A tool a puzzle's grid lacks is left out on load.
   const BUILT_IN = [
@@ -63,8 +63,8 @@
     ['Objects and placement', 'Pencils', ['symbol/pencils', 'line/4']],
     ['Objects and placement', 'Darts', ['symbol/darts', 'number/1']]
   ]
-  // The families, in the order BUILT_IN lists them.
-  const FAMILIES = [...new Set(BUILT_IN.map(([family]) => family))]
+  // The genre groups, in the order BUILT_IN lists them.
+  const GENRE_GROUPS = [...new Set(BUILT_IN.map(([genreGroup]) => genreGroup))]
 
   const toolOfKey = (key) => {
     const [mode, submode] = key.split('/')
@@ -275,7 +275,7 @@
       return [
         { title: THIS_PUZZLE, entries: [puzzleDefaults] },
         { title: FAVOURITES, entries: entries(presets.filter((p) => starred.has(p.key))) },
-        ...FAMILIES.map((title) => ({ title, entries: unstarred(title) })),
+        ...GENRE_GROUPS.map((title) => ({ title, entries: unstarred(title) })),
         { title: YOUR_PRESETS, entries: unstarred(YOUR_PRESETS) }
       ]
     }
@@ -301,7 +301,6 @@
           ? [star, entryButton('ui-entry-delete', `Delete preset ${preset.name}`, DELETE_KEY, icon(TRASH_ICON), () => deleteSaved(preset))]
           : [star]
       },
-      currentText: () => '',
       onPick: ({ preset }) => {
         const earlier = window.pinBoard.snapshot()
         if (preset.isPuzzleDefaults) {
