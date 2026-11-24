@@ -63,7 +63,8 @@
       "update_textarea",
       "update_title",
       "withPenpaMark",
-      "withoutPenpaMark"
+      "withoutPenpaMark",
+      "penpaLinkParams"
     ]
   },
   "devDependencies": {

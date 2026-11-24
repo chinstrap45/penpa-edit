@@ -5,17 +5,26 @@
 // The parameter that keeps a solve link on index.html.
 const PENPA_MARK = 'ui=penpa'
 
-// A link's parameters, from its query and its `#` data both: Penpa+ reads one or the other, and the Redirect script
-// (userscript/penpa-redirect.user.js) calls a link a solve when either says `m=solve`.
-function linkParts (data) {
-  return data.split(/[?#&]/)
+// A link's parameters, read the way Penpa+ reads them: from its query, or from its `#` data when it has no query (Chris,
+// 2026-11-24, #430). `data` is a page's query and `#` data. The forward below and index.html's ChinStrap button both
+// decide what is a solve link from this, so they cannot disagree.
+// eslint-disable-next-line no-unused-vars -- a global the page's scripts call
+function penpaLinkParams (data) {
+  const hash = data.indexOf('#')
+  const query = hash === -1 ? data : data.slice(0, hash)
+  return new URLSearchParams(query.startsWith('?') && query.length > 1 ? query.slice(1) : data.slice(hash + 1 || data.length))
 }
 
 // `data` (a page's query and `#` data) with the mark added to the part last in it, unless it is there already. No data is
 // no link, and stays none.
 // eslint-disable-next-line no-unused-vars -- a global the page's scripts call
 function withPenpaMark (data) {
-  return !data || linkParts(data).includes(PENPA_MARK) ? data : `${data}&${PENPA_MARK}`
+  if (!data || penpaLinkParams(data).get('ui') === 'penpa') {
+    return data
+  }
+  // The mark goes where Penpa+ reads the parameters: the end of the query, when the link has one.
+  const hash = data.indexOf('#')
+  return data.startsWith('?') && data.length > 1 && hash !== -1 ? `${data.slice(0, hash)}&${PENPA_MARK}${data.slice(hash)}` : `${data}&${PENPA_MARK}`
 }
 
 // `data` with every mark taken out, and the `?` or `#` of a part the mark led kept.
@@ -29,8 +38,8 @@ function withoutPenpaMark (data) {
 // eslint-disable-next-line no-unused-vars -- a global the page's scripts call
 function forwardSolveLink () {
   const data = location.search + location.hash
-  const parts = linkParts(data)
-  if (!parts.includes('m=solve') || parts.includes(PENPA_MARK)) {
+  const params = penpaLinkParams(data)
+  if (params.get('m') !== 'solve' || params.get('ui') === 'penpa') {
     return
   }
   if (matchMedia('(pointer: coarse)').matches || window.innerWidth < 768) {
