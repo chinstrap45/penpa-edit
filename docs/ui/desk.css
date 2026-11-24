@@ -1,5 +1,3 @@
-/* The solve page: the top bar and the desk of cards (variant L of the prototype, `a023d8a`). */
-
 body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4dc; }
 
 /* The page dialogs' font and text colour; Penpa's popups sit outside `.ui-root`, so they name them too. */
@@ -32,13 +30,10 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
     box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
     z-index: var(--ui-bar-z);
 }
-/* Title and author sit at the bar's centre, or at its left end when centred they would reach the controls; never cut
-   short (desk.js's placeHeading). */
 .ui-heading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: baseline; gap: 12px; white-space: nowrap; pointer-events: none; }
 .ui-bar.is-heading-left .ui-heading { left: var(--ui-bar-padding); transform: translateY(-50%); }
 .ui-root .ui-title { margin: 0; font-size: 30px; font-weight: 800; line-height: 1.1; color: #fff; }
 .ui-author { font-size: 19px; color: #c9cfda; }
-/* Smaller controls, for a heading that reaches them even at the bar's left end. */
 .ui-bar.is-compact { gap: 4px; }
 .ui-bar.is-compact wa-button { --wa-form-control-height: 28px; --wa-form-control-padding-inline: .6em; }
 .ui-bar.is-compact .ui-timer { font-size: 13px; }
@@ -69,7 +64,7 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
     display: flex;
     align-items: center;
     gap: 6px;
-    /* One slim height for every card, with or without controls (#181); the controls are sized to fit inside it. */
+    /* One height for every card, with or without controls; the controls are sized to fit inside it. */
     box-sizing: border-box;
     height: 28px;
     flex: none;
@@ -77,27 +72,20 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
     background: #ece8de;
     border-bottom: 1px solid #ddd7c8;
     border-radius: 9px 9px 0 0;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: #6b6656;
 }
-/* A card the solver sized (or that shrank to fit the desk) has a height of its own, which its body then fills and scrolls in. */
+/* The small-caps label of a card's title bar and of a Settings group. */
+.ui-head, .ui-settings-group legend { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6b6656; }
 .ui-card.is-sized .ui-body { flex: 1 1 auto; min-height: 0; }
 .ui-card-rules.is-sized .ui-body { max-height: none; }
 .ui-card[hidden] { display: none; }
 .ui-close, .ui-unpin-all { order: 2; margin-left: auto; }
-/* A card's × is the last control of its header; Rules's - and + stay beside its title, and Pinned's Unpin all takes the free room. */
 .ui-close { order: 3; }
 .ui-head:has(.ui-unpin-all) .ui-close { margin-left: 0; }
 .ui-head { cursor: grab; }
-/* A card being dragged looks picked up. */
 .ui-card.is-dragging { box-shadow: 0 12px 32px rgba(40, 35, 20, .32); }
 .ui-card.is-dragging .ui-head { cursor: grabbing; }
 .ui-root .ui-head h2 { margin: 0; flex: none; }
 .ui-head wa-button { cursor: pointer; font-size: 12px; --wa-form-control-height: 22px; --wa-form-control-padding-inline: .65em; }
-/* Board's - / + / Fit and Rules's - / +: one joined group each. */
 .ui-zoom, .ui-rules-text { order: 2; display: flex; flex: none; }
 .ui-rules-text[hidden] { display: none; }
 :is(.ui-zoom, .ui-rules-text) wa-button:not(:first-child)::part(base) { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid rgba(0, 0, 0, .12); }
@@ -121,7 +109,6 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-resize-bottom-right { right: 0; bottom: 0; }
 .ui-resize-bottom-left { left: 0; bottom: 0; }
 .ui-body { padding: 10px 12px; min-height: 48px; overflow: auto; }
-/* The side cards' text grows with a wide desk: desk.js sets --ui-text-scale on the desk. */
 :where(.ui-card:not(.ui-card-board)) .ui-body { font-size: calc(13px * var(--ui-text-scale, 1)); }
 
 .ui-card-board .ui-body { flex: 1 1 auto; min-height: 0; padding: 8px; display: flex; }
@@ -129,7 +116,6 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
    board outgrows the card it starts at the top left and the body scrolls. */
 .ui-card-board .ui-body > * { margin: auto; flex: none; position: relative; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
 .ui-card-board canvas { background: #fff; }
-/* The board coordinates sit in a gutter above and left of the canvas (and below and right of it, with `ui-coordinates-four-sides`), outside any outside-clue band the canvas holds. */
 .ui-card-board .ui-body > .ui-coordinates-on { --ui-coordinates-gutter: calc(30px * var(--ui-text-scale, 1)); padding: var(--ui-coordinates-gutter) 0 0 var(--ui-coordinates-gutter); box-sizing: content-box; width: auto; }
 .ui-card-board .ui-body > .ui-coordinates-four-sides { padding: var(--ui-coordinates-gutter); }
 .ui-grid-coordinates { position: absolute; inset: 0; pointer-events: none; }
@@ -140,28 +126,25 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-grid-coordinate[data-axis="row"][data-side="end"] { transform: translate(calc(-50% + var(--ui-stick-end-x, 0px)), -50%); }
 .ui-dark .ui-grid-coordinate { color: #f3f4f6; }
 .ui-card-rules .ui-body { --ui-rules-text: 14px; max-height: 520px; font-size: calc(var(--ui-rules-text) * var(--ui-text-scale, 1)); color: #3b3e45; white-space: pre-wrap; tab-size: 2; overflow-wrap: anywhere; }
-/* Each rules line is a block; a list item's marker is its own flex item, so a wrapped line hangs under the text. */
+/* A list item's marker is its own flex item, so a wrapped line hangs under the text. */
 .ui-rules-line { min-height: 1.4em; }
 .ui-rules-item { display: flex; }
 .ui-rules-marker { flex: none; white-space: pre; }
 .ui-rules-item-text { min-width: 0; }
 .ui-rules-line a { color: #2f5bb2; }
-/* A link with no rules: a note on one line. */
 .ui-card-rules .ui-body.ui-rules-empty { min-height: 0; padding: 6px 12px; font-style: italic; color: #5a5d66; }
 
-/* The board's title bar: the current tool's name, after the card's title, drawn like the current chip: white on the tool's colour (pins.js). */
 .ui-tool-name { margin-left: auto; font-size: 15px; line-height: 1.2; font-weight: 700; letter-spacing: 0; text-transform: none; color: #fff;
-    /* One line, cut short with its whole text as its tooltip, so a long name never makes the header taller (#181). */
+    /* One line with the whole name as its tooltip, so a long name never makes the header taller. */
     min-width: 0; flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     padding: 1px 10px; border-radius: 999px; background: var(--ui-tool-colour, var(--ui-neutral-colour)); }
 /* A white ring, so a style dot of the pin's own hue still shows on the pill. */
 .ui-tool-name .ui-dot { border-color: #fff; }
 
-/* The Mouse card. */
 .ui-headline { font-size: calc(22px * var(--ui-text-scale, 1)); font-weight: 700; line-height: 1.2; color: #17305f; margin: 0 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-held { margin-left: 8px; padding: 1px 6px; border-radius: 4px; background: #e8a33d; color: #3a2600; font-size: calc(11px * var(--ui-text-scale, 1)); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; vertical-align: 2px; }
 .ui-dot { display: inline-block; width: 13px; height: 13px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; border: 1px solid rgba(0, 0, 0, .25); }
-/* A non-colour style's sample, one line of the label's text tall; a line sample takes the label's colour, a text style Penpa+'s own. */
+/* A line sample takes the label's colour, a text style Penpa+'s own. */
 .ui-mark { display: inline-block; margin-right: 5px; vertical-align: -.2em; line-height: 0; }
 .ui-mark svg { width: 1.1em; height: 1.1em; }
 .ui-mrows { display: grid; gap: 4px; }
@@ -172,7 +155,6 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-keypad { display: grid; grid-template-columns: repeat(3, max-content); gap: 2px 12px; margin-top: 4px; font-family: monospace; }
 .ui-mrow .ui-dot { width: 10px; height: 10px; margin: 0 0 0 4px; vertical-align: -1px; }
 
-/* The Mode card: the combobox, its list, then the style buttons. */
 .ui-picker { position: relative; }
 .ui-search { box-sizing: border-box; width: 100%; font: inherit; padding: 4px 8px; border: 1px solid #cfcabd; border-radius: 6px; background: #fff; color: inherit; }
 .ui-search:focus { outline: 2px solid #3b6fd4; outline-offset: -1px; }
@@ -216,19 +198,16 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-stylebtn[aria-pressed="true"] { border-color: #3b6fd4; box-shadow: 0 0 0 2px #3b6fd4; background: #eef3fd; }
 .ui-stylebtn:focus-visible { outline: 2px solid #3b6fd4; outline-offset: 2px; }
 
-/* The board's frame: the current tool's colour (a pin's own, or the neutral one off the pins). */
 .ui-card-board { outline: 5px solid var(--ui-tool-colour, var(--ui-neutral-colour)); outline-offset: -1px; }
 
-/* The Pinned card: one-line chips, each tinted with its pin's colour and barred with it on the left edge; the current one is filled with it. */
 .ui-pins, .ui-recent { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
 .ui-card-pins .ui-body { padding: 6px 10px; }
-/* Recent is as tall as its chips, so its body has no minimum of its own (#306). */
+/* Recent is as tall as its chips, so its body has no minimum of its own. */
 .ui-card-recent .ui-body { min-height: 0; }
 .ui-chip { display: flex; align-items: center; font-size: calc(12px * var(--ui-text-scale, 1)); border: 1px solid #cfcabd; border-left: 5px solid var(--ui-pin-colour, #cfcabd); border-radius: 6px; background: #fff; white-space: nowrap; user-select: none; }
 .ui-chip.is-current { background: var(--ui-pin-colour); border-color: var(--ui-pin-colour); color: #fff; }
 .ui-chip button { font: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; }
 .ui-recent .ui-chip.is-current { --ui-pin-colour: var(--ui-neutral-colour); }
-/* A Recent chip has no pin, so no colour bar. */
 .ui-recent .ui-chip { border-left-width: 1px; }
 .ui-chip:not(.is-current):hover { background: #f3f0e6; }
 .ui-pins .ui-chip:not(.is-current) { background: color-mix(in srgb, var(--ui-pin-colour) 14%, #fff); }
@@ -238,12 +217,10 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-pins-empty { margin: 0; font-size: 12px; color: #6b6656; }
 .ui-chip-main { display: flex; gap: 5px; padding: 1px 2px 1px 6px; }
 .ui-chip-num { font: 700 calc(11px * var(--ui-text-scale, 1)) ui-monospace, monospace; opacity: .7; align-self: center; }
-/* The preset field, the save row under it and the undo line for a deleted preset. */
 .ui-preset-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
 .ui-preset-row > .ui-picker, .ui-preset-row > wa-input { flex: 1; min-width: 0; }
 .ui-preset-row[hidden] { display: none; }
 .ui-preset-row > wa-button { flex: none; }
-/* Set apart from the load field: a gap and a rule, so it does not read as part of it. */
 .ui-preset-save { margin-left: 8px; padding-left: 8px; border-left: 1px solid #cfcabd; }
 .ui-dark .ui-preset-save { border-left-color: #4a5060; }
 .ui-preset-row > wa-button::part(base) { height: 28px; min-height: 0; padding: 0 8px; }
@@ -271,29 +248,24 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-flash.is-flashing { animation: ui-flash .8s ease-out; }
 @keyframes ui-flash { 0%, 55% { opacity: 1; } 100% { opacity: 0; } }
 
-/* The top bar's controls. */
 .ui-timer { font: 700 15px ui-monospace, monospace; font-variant-numeric: tabular-nums; color: #fff; min-width: 3.4em; text-align: center; }
 .ui-timer.is-solved { color: #7bd88f; }
 
-/* Trial mode's controls (#258): the depth is bold white text on the bar, as the timer is, and the controls hide with no trial on. */
+/* The depth is bold white text on the bar, as the timer is. */
 .ui-trial, .ui-trial-all { display: inline-flex; align-items: center; gap: 6px; }
 .ui-trial[hidden], .ui-trial-all[hidden] { display: none; }
 .ui-trial-depth { font: 700 13px system-ui, sans-serif; color: #fff; white-space: nowrap; }
 
-/* The cover a paused board wears: over the whole Board card, opaque, taking every click. */
 .ui-paused { position: absolute; inset: 0; z-index: 30; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 6px; border-radius: 9px; background: #ece8de; color: #3b3e45; font-size: 28px; font-weight: 700; }
 .ui-paused[hidden] { display: none; }
 .ui-paused wa-button { margin-top: 14px; }
-/* A paused board takes only Resume, Settings and Penpa+: the cards that change the tool are dimmed and inert. */
 .ui-body[inert] { opacity: 0.45; }
 
-/* The solved dialog's words: the setter's message is text, its line breaks kept. */
 .ui-solved-title { font-weight: 700; margin-bottom: 8px; }
 .ui-solved-message { white-space: pre-wrap; }
 .ui-paused-hint { font-size: 13px; font-weight: 400; color: #6b6656; }
 
-/* Dark: the desk, the cards and their text; the bar is dark already. */
 body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { background: #16181d; }
 .ui-dark { color: #e3e6eb; }
 .ui-dark .ui-desk { background: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .07) 1px, transparent 0) 0 0 / 22px 22px, #16181d; }
@@ -345,13 +317,12 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 .ui-bar wa-button:not([disabled])::part(base):hover { background: var(--ui-btn-hover); }
 .ui-bar wa-button[disabled] { opacity: 1; }
 .ui-bar wa-button[disabled]::part(base) { color: #8d94a1; }
-/* The Settings dialog's buttons, which Web Awesome fills light in the dark theme. */
+/* Web Awesome fills the Settings dialog's buttons light in the dark theme. */
 .wa-dark wa-dialog wa-button:is(:not([variant]), [variant="neutral"]):not([appearance="plain"])::part(base) { background: var(--ui-btn-fill); border-color: var(--ui-btn-edge); color: var(--ui-btn-ink); }
 .wa-dark wa-dialog wa-button:is(:not([variant]), [variant="neutral"]):not([appearance="plain"]):not([disabled])::part(base):hover { background: var(--ui-btn-hover); }
 
-/* The Settings dialog: one fieldset per group, one setting per row. */
 .ui-settings-group { border: 0; border-top: 1px solid #ddd7c8; margin: 0 0 12px; padding: 8px 0 0; display: grid; gap: 10px; }
-.ui-settings-group legend { padding: 0 8px 0 0; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6b6656; }
+.ui-settings-group legend { padding: 0 8px 0 0; }
 .ui-setting { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px 12px; }
 .ui-setting[hidden] { display: none; }
 .ui-setting wa-select { min-width: 250px; }
@@ -368,7 +339,6 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 .ui-dark .ui-settings-about { color: #a9b0bd; }
 .ui-dark .ui-tag { background: #2f3c5c; color: #b7caff; }
 
-/* The pin toggles: beside the Mode card's picker, on each tool row of its tree and inside each Recent chip. */
 .ui-picker-row { display: flex; gap: 6px; align-items: flex-start; }
 .ui-picker-row > .ui-picker { flex: 1; min-width: 0; }
 .ui-chip .ui-pin-toggle, .ui-pin-toggle { display: inline-flex; align-items: center; justify-content: center; padding: 4px 6px; border: 0; background: transparent; color: inherit; cursor: pointer; opacity: .6; }
@@ -379,7 +349,6 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 .ui-pin-toggle:focus-visible { outline: 2px solid #3b6fd4; outline-offset: 1px; }
 .ui-dark .ui-picker-row > .ui-pin-toggle { background: #1b1e24; border-color: #4a5060; color: #e3e6eb; }
 
-/* The paste-a-link page a bare solve.html shows. */
 .ui-paste-page { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; color: #23262c; }
 .ui-paste { display: flex; flex-direction: column; gap: 8px; width: min(640px, 90vw); padding: 24px; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, .2); }
 .ui-paste h1 { font-size: 22px; margin: 0; }
@@ -391,7 +360,7 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 .ui-dark .ui-paste { background: #22252c; box-shadow: 0 2px 10px rgba(0, 0, 0, .5); }
 .ui-paste-error[hidden] { display: none; }
 
-/* Change size: + and - on each side of a small board showing its columns x rows. A refused button stays pressable, to say why. */
+/* A refused button stays pressable, to say why. */
 .ui-size-grid { display: grid; grid-template-columns: auto 132px auto; grid-template-rows: auto 88px auto; gap: 8px; place-items: center; }
 .ui-size-top { grid-area: 1 / 2; }
 .ui-size-left { grid-area: 2 / 1; }
@@ -418,6 +387,5 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 .swal2-container .swal2-styled:is(:focus, :focus-visible) { box-shadow: none; }
 .swal2-container .swal2-styled:focus-visible { outline: var(--wa-focus-ring); outline-offset: var(--wa-focus-ring-offset); }
 
-/* The welcome dialog (welcome.js): a wa-dialog with a short list. */
 .ui-welcome-lead { margin: 0 0 8px; }
 .ui-welcome-list { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }

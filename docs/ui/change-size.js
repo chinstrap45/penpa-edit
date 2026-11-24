@@ -1,13 +1,11 @@
-// The Board card's Change size dialog (#274): + and - on each side of a small board add or remove a blank row or column there,
-// and the board is fitted to its card again after each. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails
-// otherwise).
+// Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
   const { el, iconButton, onDeskReady } = window.uiKit
+  const { fitBoard } = window.boardView
 
   const TITLE = 'Change size'
-  // A board with a tick off the middle of each side.
   const ICON = '<rect x="4.5" y="4.5" width="7" height="7"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/>'
 
   const SIDE_LABELS = {
@@ -20,7 +18,7 @@
   const kindOf = (change) => (change > 0 ? 'add' : 'remove')
   const refusalOf = (changes, side, change) => changes.sides[side][kindOf(change)]
 
-  onDeskReady(({ cards, fitBoard }) => {
+  onDeskReady(({ cards }) => {
     const size = el('div', { class: 'ui-size-board' })
     const status = el('p', { class: 'ui-size-note', role: 'status' })
     const buttons = []
@@ -43,7 +41,6 @@
     engine.ignoreChangesIn(dialog)
     document.body.append(dialog)
 
-    // Shows the board's size and which buttons are refused; the status line says `message`, or why no side can change.
     function show (message = '') {
       const changes = engine.getSizeChanges()
       size.textContent = changes.unavailable ? '' : `${changes.columns} \u00d7 ${changes.rows}`
@@ -66,8 +63,7 @@
       show()
     }
 
-    // A grid that is not square stays one for the page's life, so the button is dimmed and names the reason once; it still
-    // opens the dialog, which says the same. An icon, so the Board card's header keeps room for its tool name.
+    // An icon, so the Board card's header keeps room for its tool name.
     const { unavailable } = engine.getSizeChanges()
     const open = iconButton(ICON, unavailable ? `${TITLE}: ${unavailable}` : TITLE, () => {
       show()

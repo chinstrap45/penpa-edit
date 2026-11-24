@@ -27,16 +27,14 @@ function readEngineState () {
   const RECORDER_VERSION = 2
   const FILE_NAME = 'recording.steps.json'
   const KEY_CALLS = ['key_number', 'key_space', 'key_shiftspace', 'key_backspace', 'key_arrow']
-  // `subsymbolmode` and `subcombimode` keep the Shape or Composite tool where other modes keep their sub-mode.
-  const MODE_CALLS = ['mode_set', 'submode_check', 'stylemode_check', 'subsymbolmode', 'subcombimode', 'set_orientation']
   // The modes in which Alt starts a rectangle selection on a square grid (`handle_rect_mousedown` in class_p.js).
   const RECT_SELECT_MODES = ['sudoku', 'number', 'surface', 'multicolor']
-  // A solver's input arrives by one of these. Listening in the capture phase on `window` wraps a new `pu` before
-  // `main.js`'s own handlers call it.
+  // A solver's input arrives by one of these. Capture phase on `window`, so a new `pu` is wrapped before main.js's own
+  // handlers call it.
   const INPUT_EVENTS = ['mousedown', 'mousemove', 'mouseup', 'mouseout', 'dblclick', 'keydown', 'click']
 
   const otherParams = location.search.slice(1).split('&').filter((p) => p && p !== 'record=1')
-  // The Penpa+ button's mark (solve_forward.js, #376) only keeps a link on index.html, so the link replayed from leaves it out.
+  // The Penpa+ button's mark only keeps a link on index.html, so the link replayed from leaves it out.
   const source = withoutPenpaMark((otherParams.length ? '?' + otherParams.join('&') : '') + location.hash)
   const steps = []
   let hookedPu = null
@@ -63,7 +61,6 @@ function readEngineState () {
     return mode === 'number' ? { kind: 'mode', mode, submode, style, orientation } : { kind: 'mode', mode, submode, style }
   }
 
-  // `before` makes the step from the state at the call, `after` from the state the call left.
   function wrap (p, name, { before, after }) {
     const original = p[name]
     p[name] = function (...args) {
@@ -87,7 +84,7 @@ function readEngineState () {
       before: (p, [x, y, num, ctrl = false]) => ({ kind: 'pointer', action: 'double', button: 'left', ctrl, x, y, num })
     })
     for (const call of KEY_CALLS) wrap(pu, call, { before: (p, args) => ({ kind: 'key', call, args }) })
-    for (const call of MODE_CALLS) wrap(pu, call, { after: modeStep })
+    for (const call of TOOL_CALLS) wrap(pu, call, { after: modeStep })
     // `undo(true)` and `redo(true)` are Penpa+'s own replay stepping through the log.
     wrap(pu, 'undo', { before: (p, [replay]) => replay ? null : { kind: 'undo' } })
     wrap(pu, 'redo', { before: (p, [replay]) => replay ? null : { kind: 'redo' } })

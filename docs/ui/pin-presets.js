@@ -1,17 +1,12 @@
-// Pin presets: ready-made sets of pins, one per puzzle genre and filed by family, and the sets the solver saves. A searchable list on
-// the Pinned card loads one, replacing the puzzle's pins; the solver stars favourites, which are listed first, and saves or deletes
-// sets of their own. The saved sets and the stars are kept in localStorage for every puzzle. Reaches Penpa+ only through `engine`
-// (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
-  const { el, onDeskReady } = window.uiKit
+  const { el, onDeskReady, readStored } = window.uiKit
   const { toolKey } = window.toolGuide
 
   const STORAGE_KEY = 'chinstrap.pinPresets'
   const STARS_KEY = 'chinstrap.pinPresetStars'
   const SAVE_LABEL = 'Save pins…'
-  // Keys that act on the highlighted preset, with Shift held; the buttons' hints name the same chords.
   const STAR_KEY = 'Enter'
   const DELETE_KEY = 'Delete'
   const FAVOURITES = 'Favourites'
@@ -19,7 +14,6 @@
   const THIS_PUZZLE = 'This puzzle'
   const PUZZLE_DEFAULTS = 'Puzzle defaults'
   const PUZZLE_DEFAULTS_NOTE = 'the pins this puzzle\'s link opens with'
-  // How long the line offering an Undo stays, when nothing else clears it.
   const UNDO_VISIBLE_MS = 8000
 
   const STAR_ICON = '<path d="M8 1.8l1.9 4 4.3.6-3.1 3 .8 4.3L8 11.6l-3.9 2.1.8-4.3-3.1-3 4.3-.6z"/>'
@@ -30,7 +24,7 @@
   const NUMBERS = ['number/1', 'number/5', 'number/7']
   const BLOCKS = ['combi/blpo']
 
-  // [family, genre, tools as 'mode/submode' ('mode/' for a mode with none)], the families in the order the list shows them. A
+  // [genreGroup, genre, tools as 'mode/submode' ('mode/' for a mode with none)], the genre groups in the order the list shows them. A
   // preset holds the tools a solver uses while solving, not the ones a setter draws a Sudoku's clues with (thermometers, cages,
   // dots, arrows): a Sudoku variant needs only the entry modes and Surface, so it is Classic sudoku. A tool a puzzle's grid lacks is left out on load.
   const BUILT_IN = [
@@ -63,48 +57,26 @@
     ['Objects and placement', 'Pencils', ['symbol/pencils', 'line/4']],
     ['Objects and placement', 'Darts', ['symbol/darts', 'number/1']]
   ]
-  // The families, in the order BUILT_IN lists them.
-  const FAMILIES = [...new Set(BUILT_IN.map(([family]) => family))]
+  // The genre groups, in the order BUILT_IN lists them.
+  const GENRE_GROUPS = [...new Set(BUILT_IN.map(([genreGroup]) => genreGroup))]
 
   const toolOfKey = (key) => {
     const [mode, submode] = key.split('/')
     return { mode, submode: submode === '' ? null : submode, style: null }
   }
 
-  // What an earlier visit stored under `key`: the array it wrote, or [] for none. A stored value that is unreadable, or that this
-  // code did not write, offers nothing; the next write replaces it, which the console says, so the loss is never silent.
-  function storedList (key, isValid, what) {
-    const raw = localStorage.getItem(key)
-    if (raw === null) {
-      return []
-    }
-    let stored
-    try {
-      stored = JSON.parse(raw)
-    } catch (e) {
-      console.warn(`${key} is unreadable (${e.message}); no ${what} is offered, and the next write replaces it.`)
-      return []
-    }
-    if (!Array.isArray(stored) || !stored.every(isValid)) {
-      console.warn(`${key} does not hold ${what} as this page saves them; none is offered, and the next write replaces it.`)
-      return []
-    }
-    return stored
-  }
-
-  // `{ name, tools }` entries.
-  const savedPresets = () => storedList(STORAGE_KEY, (p) => typeof p?.name === 'string' && Array.isArray(p.tools), 'saved preset')
+  const isListOf = (isValid) => (stored) => Array.isArray(stored) && stored.every(isValid)
+  const savedPresets = () => readStored(STORAGE_KEY, isListOf((p) => typeof p?.name === 'string' && Array.isArray(p.tools)), [], 'saved presets')
   const writePresets = (presets) => localStorage.setItem(STORAGE_KEY, JSON.stringify(presets))
   // Preset keys: `builtInKey(name)` or `savedKey(name)`.
   // A star on a built-in preset this page no longer lists is left out, so the next write drops it from storage.
-  const starredKeys = () => storedList(STARS_KEY, (key) => typeof key === 'string', 'favourite')
+  const starredKeys = () => readStored(STARS_KEY, isListOf((key) => typeof key === 'string'), [], 'favourites')
     .filter((key) => !key.startsWith(BUILT_IN_PREFIX) || BUILT_IN.some(([, name]) => builtInKey(name) === key))
   const writeStars = (keys) => localStorage.setItem(STARS_KEY, JSON.stringify(keys))
   const BUILT_IN_PREFIX = 'built-in:'
   const builtInKey = (name) => `${BUILT_IN_PREFIX}${name}`
   const savedKey = (name) => `saved:${name}`
 
-  // Every preset: built-ins first, then the saved ones. `tools` are `{ mode, submode, style }` objects.
   function allPresets () {
     return [
       ...BUILT_IN.map(([group, name, keys]) => ({ key: builtInKey(name), group, name, tools: keys.map(toolOfKey), saved: false })),
@@ -112,7 +84,6 @@
     ]
   }
 
-  // A 14 px line icon for a button.
   const icon = (inner) => `<svg ${ICON_ATTRS}>${inner}</svg>`
 
   function entryButton (cls, label, key, svg, onClick) {
@@ -174,7 +145,6 @@
 
     saveName.addEventListener('click', saveFromForm)
     cancelName.addEventListener('click', closeForm)
-    // Enter in the name field saves, unless it confirms an input method's composition; a half-typed name is not a name.
     nameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.isComposing) {
         e.preventDefault()
@@ -189,8 +159,6 @@
         closeForm()
       }
     })
-    // The line offering to undo the last load, delete or replacing save, until the next one, a few seconds, or (for a delete) the
-    // list closing.
     const undoRow = el('div', { class: 'ui-preset-undo', role: 'status' })
     let undoTimer = null
     let clearOnListClose = false
@@ -225,7 +193,6 @@
       picker.redraw()
     }
 
-    // Takes a saved preset out of storage, with its star; returns what undo needs: the preset, where it stood and whether it was starred.
     function removeSaved (name) {
       const all = savedPresets()
       const index = all.findIndex((p) => p.name === name)
@@ -236,7 +203,6 @@
       return { preset: all[index], index, wasStarred: starred.includes(key) }
     }
 
-    // Puts `preset` back among the saved ones at `index`, in place of one of its name.
     function restoreSaved (preset, index) {
       const others = savedPresets().filter((p) => p.name !== preset.name)
       others.splice(index, 0, preset)
@@ -275,7 +241,7 @@
       return [
         { title: THIS_PUZZLE, entries: [puzzleDefaults] },
         { title: FAVOURITES, entries: entries(presets.filter((p) => starred.has(p.key))) },
-        ...FAMILIES.map((title) => ({ title, entries: unstarred(title) })),
+        ...GENRE_GROUPS.map((title) => ({ title, entries: unstarred(title) })),
         { title: YOUR_PRESETS, entries: unstarred(YOUR_PRESETS) }
       ]
     }
@@ -301,7 +267,6 @@
           ? [star, entryButton('ui-entry-delete', `Delete preset ${preset.name}`, DELETE_KEY, icon(TRASH_ICON), () => deleteSaved(preset))]
           : [star]
       },
-      currentText: () => '',
       onPick: ({ preset }) => {
         const earlier = window.pinBoard.snapshot()
         if (preset.isPuzzleDefaults) {
@@ -341,7 +306,6 @@
 
     cards.pins.body.append(el('div', { class: 'ui-preset-row' }, [picker.node, save]), nameForm, undoRow)
 
-    // The solver's saved presets, for the Settings dialog to list and delete.
     window.pinPresets = {
       savedNames: () => savedPresets().map((p) => p.name),
       remove: removeSaved

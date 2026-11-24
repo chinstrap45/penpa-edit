@@ -1,36 +1,45 @@
-// caneff: index.html forwards a solve link to the ChinStrap solve page on a desktop-sized screen (#376, spec #373 § Forwarding).
-// The solve page's Penpa+ button marks the link it opens with PENPA_MARK so the forward skips it, and index.html's ChinStrap
-// button drops the mark again. Call forwardSolveLink before anything else loads, so a forwarded page never paints.
+// caneff: the solve page's Penpa+ button marks its link with PENPA_MARK so the forward skips it. forwardSolveLink runs before
+// anything else loads, so a forwarded page never paints.
+const PENPA_MARK_KEY = 'ui'
+const PENPA_MARK_VALUE = 'penpa'
+const PENPA_MARK = `${PENPA_MARK_KEY}=${PENPA_MARK_VALUE}`
 
-// The parameter that keeps a solve link on index.html.
-const PENPA_MARK = 'ui=penpa'
-
-// A link's parameters, from its query and its `#` data both: Penpa+ reads one or the other, and the Redirect script
-// (userscript/penpa-redirect.user.js) calls a link a solve when either says `m=solve`.
-function linkParts (data) {
-  return data.split(/[?#&]/)
+// A link's data split at its first `#`: the query with its `?`, and the `#` data with its `#` (empty when there is none).
+function splitAtHash (data) {
+  const hash = data.indexOf('#')
+  return hash === -1 ? [data, ''] : [data.slice(0, hash), data.slice(hash)]
 }
 
-// `data` (a page's query and `#` data) with the mark added to the part last in it, unless it is there already. No data is
-// no link, and stays none.
+// Read the way Penpa+ reads them: from the query, or from the `#` data when there is no query (Chris, 2026-11-24).
+// eslint-disable-next-line no-unused-vars -- a global the page's scripts call
+function penpaLinkParams (data) {
+  const [query, hashData] = splitAtHash(data)
+  return new URLSearchParams(query.startsWith('?') && query.length > 1 ? query.slice(1) : hashData.slice(1))
+}
+
+const isMarkedForPenpa = (params) => params.get(PENPA_MARK_KEY) === PENPA_MARK_VALUE
+
 // eslint-disable-next-line no-unused-vars -- a global the page's scripts call
 function withPenpaMark (data) {
-  return !data || linkParts(data).includes(PENPA_MARK) ? data : `${data}&${PENPA_MARK}`
+  if (!data || isMarkedForPenpa(penpaLinkParams(data))) {
+    return data
+  }
+  // The mark goes where Penpa+ reads the parameters: the end of the query, when the link has one.
+  const [query, hashData] = splitAtHash(data)
+  return query.startsWith('?') ? `${query}&${PENPA_MARK}${hashData}` : `${data}&${PENPA_MARK}`
 }
 
-// `data` with every mark taken out, and the `?` or `#` of a part the mark led kept.
 // eslint-disable-next-line no-unused-vars -- a global the page's scripts call
 function withoutPenpaMark (data) {
   return data.replace(new RegExp(`([?#&])${PENPA_MARK}(&|(?=#|$))`, 'g'), (whole, before, after) => (before === '&' ? after : before))
 }
 
-// Opens a solve link on solve.html in place of this page, so Back does not return here, unless the screen is phone-sized
-// (a coarse pointer, or narrower than 768 px), the link is not a solve or the Penpa+ button marked it.
+// location.replace, so Back does not return here.
 // eslint-disable-next-line no-unused-vars -- a global the page's scripts call
 function forwardSolveLink () {
   const data = location.search + location.hash
-  const parts = linkParts(data)
-  if (!parts.includes('m=solve') || parts.includes(PENPA_MARK)) {
+  const params = penpaLinkParams(data)
+  if (params.get('m') !== 'solve' || isMarkedForPenpa(params)) {
     return
   }
   if (matchMedia('(pointer: coarse)').matches || window.innerWidth < 768) {

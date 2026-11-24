@@ -1,24 +1,16 @@
-// The Pinned card, the Tab cycle, the pin toggles (the Mode card's, the picker's rows', and `window.pinBoard.toggleButton` for the Recent chips) and
-// the colour that says which tool is current. A pin is a mode, a sub-mode and the last
-// style used on it; the pins are seeded once per puzzle from the link's Tab set and kept per puzzle in localStorage.
 // Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
-  const { chipLabel, tooltipAttrs, toolKey } = window.toolGuide
-  const { el, iconButton, luminance, onDeskReady, visibleBox } = window.uiKit
-  const { puzzleHash } = window
+  const { chipLabel, tooltipAttrs, toolKey, findTool } = window.toolGuide
+  const { el, iconButton, luminance, onDeskReady, readStored, visibleBox } = window.uiKit
 
   const STORAGE_PREFIX = 'chinstrap.pins:'
-  // Z, X, C and V jump to pins 1 to 4, and label those chips.
   const SHORTCUT_SLOT_BY_CODE = { KeyZ: 0, KeyX: 1, KeyC: 2, KeyV: 3 }
   const SHORTCUT_LABELS = Object.keys(SHORTCUT_SLOT_BY_CODE).map((code) => code.slice('Key'.length))
-  // Tab and Enter step to the next pin, and with Shift to the previous one.
   const STEP_KEYS = ['Tab', 'Enter']
-  // The mouse wheel over the board steps the same way, one step per this much `deltaY` (Chris, 2026-11-23). A Windows Chrome
-  // wheel notch sends one event of about 100 (Chrome's `deltaY` is in pixels, 100 per notch, 120 on some mice) and a trackpad
-  // sends a stream of events of a few pixels to a few tens, so one event this large is a step of its own and smaller ones add up.
-  // These sizes are what Chrome on Windows documents, not read from a trackpad here: tune the number against one.
+  // One wheel step per this much deltaY (Chris, 2026-11-23): a Chrome wheel notch sends about 100 (120 on some mice), a trackpad
+  // a stream of small deltas, so one large event is a step and small ones add up. Chrome's documented sizes, not measured here: tune against a trackpad.
   const WHEEL_STEP_DELTA = 100
   // Deltas that came a pause apart are not one swipe, so a leftover from the last one does not count towards the next.
   const WHEEL_SWIPE_GAP_MS = 300
@@ -38,15 +30,12 @@
   const PIN_LUMINANCE = 0.16
   const LIGHTNESS_STEPS = 20
   const NEUTRAL_COLOUR = 'var(--ui-neutral-colour)'
-  // A pin seen from the side: the head and the needle.
   const PIN_SHAPE = '<path d="M5.5 1.5h5l-.8 4.2 2.3 2.8H4l2.3-2.8z"/><path d="M8 8.5v6"/>'
   const UNPIN_ALL_ICON = `${PIN_SHAPE}<path d="M2 2l12 12"/>`
   // A circled minus, not a ×: a tool's name can end in one ("○ △ □ ×, black").
   const REMOVE_ICON = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" ' +
         'stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M5 8h6"/></svg>'
 
-  // The pin colour of hue `h`: the lightest, to a tenth of a percent, whose luminance stays under PIN_LUMINANCE. One lightness for
-  // every hue would leave yellow too light for white text or blue darker than it need be.
   function pinColourOfHue (h) {
     const hsl = (lightness) => `hsl(${h} ${PIN_SATURATION_PERCENT}% ${lightness}%)`
     let [dark, light] = [0, 100]
@@ -65,45 +54,19 @@
 
   onDeskReady(({ cards, fit }) => {
     const tools = engine.listTools()
-    const storageKey = STORAGE_PREFIX + puzzleHash()
-    const toolOf = (pin) => tools.find((t) => toolKey(t) === toolKey(pin))
+    const storageKey = STORAGE_PREFIX + engine.getOriginalPuzzleId()
+    const toolOf = (pin) => findTool(tools, pin)
 
-    // ---- The pins, kept ---------------------------------------------------------------------------------------------
-
-    // What an earlier visit saved: pins in the shape `save` writes, or null for none. A saved value that is unreadable,
-    // or that this code did not write (another version's, or edited by hand), cannot be shown as pins: the Tab set seeds
-    // them again and replaces it, which the console says, so the loss is never silent.
-    function savedState () {
-      const raw = localStorage.getItem(storageKey)
-      if (raw === null) {
-        return null
-      }
-      let saved
-      try {
-        saved = JSON.parse(raw)
-      } catch (e) {
-        console.warn(`${storageKey} is unreadable (${e.message}); the Tab set seeds the pins and replaces it.`)
-        return null
-      }
-      const valid = Array.isArray(saved?.pins) && Number.isInteger(saved.nextId) &&
-                saved.pins.every((p) => Number.isInteger(p.id) && typeof p.mode === 'string')
-      if (!valid) {
-        console.warn(`${storageKey} does not hold pins as this page saves them; the Tab set seeds the pins and replaces it.`)
-        return null
-      }
-      return saved
-    }
+    const isSavedState = (saved) => Array.isArray(saved?.pins) && saved.pins.every((p) => typeof p.mode === 'string')
+    const savedState = () => readStored(storageKey, isSavedState, null, 'pins')
 
     function seededState () {
-      const pins = engine.tabSet().map((tool, id) => ({ id, mode: tool.mode, submode: tool.submode, style: null }))
-      return { nextId: pins.length, pins }
+      return { pins: engine.tabSet().map((tool) => ({ mode: tool.mode, submode: tool.submode, style: null })) }
     }
 
-    // A pin for a tool the link no longer offers is dropped.
-    let { nextId, pins, colours } = savedState() ?? seededState()
-    pins = pins.filter(toolOf)
-    // Each tool's colour number, kept with the pins and outliving them. A saved value that is not a whole number of 0 or more is dropped,
-    // and the tool gets a colour number again.
+    let { pins, colours } = savedState() ?? seededState()
+    // An older save gave each pin an `id`; only these three fields are kept, so the next save drops it.
+    pins = pins.filter(toolOf).map(({ mode, submode, style }) => ({ mode, submode, style }))
     const validColours = Object.fromEntries(Object.entries(colours ?? {}).filter(([, n]) => Number.isInteger(n) && n >= 0))
 
     const pinIndexOf = (tool) => pins.findIndex((p) => toolKey(p) === toolKey(tool))
@@ -125,13 +88,15 @@
 
     function save () {
       assignColours()
-      localStorage.setItem(storageKey, JSON.stringify({ nextId, pins, colours: validColours }))
+      localStorage.setItem(storageKey, JSON.stringify({ pins, colours: validColours }))
     }
     save()
 
-    // ---- Moving between pins ----------------------------------------------------------------------------------------
+    function commit () {
+      save()
+      render()
+    }
 
-    // With no pins the browser keeps Tab and Enter and Z, X, C and V do nothing, so no row says otherwise.
     window.uiKeys.describe('Tools', () => (pins.length
       ? [
           { keys: STEP_KEYS.join(', '), text: 'Next pinned tool' },
@@ -236,8 +201,6 @@
       }
     }, { passive: false })
 
-    // ---- The Pinned card --------------------------------------------------------------------------------------------
-
     const strip = el('div', { class: 'ui-pins' })
     cards.pins.body.replaceChildren(strip)
     // The strip's rows are told apart by their tops; with no pin, its one row is the empty note.
@@ -249,15 +212,12 @@
       return cards.pins.node.offsetHeight + Math.max(0, 2 - rows) * rowHeight
     }
 
-    // No confirm: "Puzzle defaults" or a saved preset brings pins back.
     const unpinAll = iconButton(UNPIN_ALL_ICON, 'Unpin all', () => window.pinBoard.replace([]))
     unpinAll.node.classList.add('ui-unpin-all')
     cards.pins.head.append(unpinAll.node)
 
-    // The chip being dragged, for the drop to move.
     let dragged = null
 
-    // Moves `pin` to just before or after `target`, which Z, X, C and V and the Tab cycle then follow.
     function movePin (pin, target, before) {
       if (pin === target) {
         return
@@ -266,8 +226,7 @@
       pins = pins.filter((p) => p !== pin)
       pins.splice(pins.indexOf(target) + (before ? 0 : 1), 0, pin)
       cursor = pins.indexOf(cursorPin)
-      save()
-      render()
+      commit()
     }
 
     function chip (pin, slot, current) {
@@ -285,8 +244,7 @@
       main.addEventListener('click', choose)
       unpin.addEventListener('click', () => {
         pins = pins.filter((p) => p !== pin)
-        save()
-        render()
+        commit()
         unpin.blur()
       })
       const node = el('div', { class: `ui-chip${current ? ' is-current' : ''}`, style: `--ui-pin-colour:${pinColour(pin)}`, draggable: 'true' }, [main, unpin])
@@ -321,18 +279,14 @@
       return node
     }
 
-    // ---- The pin toggles --------------------------------------------------------------------------------------------
-
-    // Pins or unpins a tool's mode and sub-mode; a new pin keeps the style the tool was used with.
     function togglePin (tool) {
       const index = pinIndexOf(tool)
       if (index >= 0) {
         pins.splice(index, 1)
       } else {
-        pins.push({ id: nextId++, mode: tool.mode, submode: tool.submode, style: tool.style ?? null })
+        pins.push({ mode: tool.mode, submode: tool.submode, style: tool.style ?? null })
       }
-      save()
-      render()
+      commit()
     }
 
     const pinIcon = (filled) => '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" stroke="currentColor" stroke-width="1.5" ' +
@@ -384,8 +338,6 @@
     })
     window.uiKeys.describe('Tools', [{ keys: PIN_SHORTCUT, text: 'With a tool focused in the Mode picker, pin or unpin it' }])
 
-    // ---- The cue: frame, title bar and flash ------------------------------------------------------------------------
-
     const flash = el('div', { class: 'ui-flash', 'aria-hidden': 'true' })
     cards.board.node.append(flash)
 
@@ -415,8 +367,6 @@
       flash.classList.add('is-flashing')
     }
 
-    // ---- Following the engine ---------------------------------------------------------------------------------------
-
     let lastKey = null
     let drawn = ''
 
@@ -431,7 +381,7 @@
       const index = pinIndexOf(current)
       const landed = lastKey !== null && toolKey(current) !== lastKey
       lastKey = toolKey(current)
-      const tool = tools.find((t) => toolKey(t) === lastKey)
+      const tool = findTool(tools, current)
       if (landed && tool) {
         flashTool(tool, index >= 0 ? pinColour(pins[index]) : NEUTRAL_COLOUR)
       }
@@ -471,16 +421,13 @@
     // What the presets read and replace. A pin for a tool the link lacks is left out, like a saved
     // pin the link no longer offers.
     window.pinBoard = {
-      // `toggleButton(toolNow)` is a pin toggle for the tool `toolNow()` names; `isPinned(tool)` tells whether a tool is pinned.
       toggleButton: pinToggle,
       isPinned: (tool) => pinIndexOf(tool) >= 0,
-      // `onChange(listener)` calls `listener` whenever the pins or the current pin change.
       onChange: (listener) => pinListeners.push(listener),
       snapshot: () => pins.map(({ mode, submode, style }) => ({ mode, submode, style })),
       replace (entries) {
-        pins = entries.filter(toolOf).map(({ mode, submode, style }) => ({ id: nextId++, mode, submode, style: style ?? null }))
-        save()
-        render()
+        pins = entries.filter(toolOf).map(({ mode, submode, style }) => ({ mode, submode, style: style ?? null }))
+        commit()
       },
       // The pins the link's Tab set seeds, as on the puzzle's first visit.
       reseed () {

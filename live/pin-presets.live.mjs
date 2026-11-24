@@ -1,5 +1,5 @@
 // Pin presets of `solve.html` (#98, #159): the Pinned card's "Pin presets" combobox loads a built-in set (one per genre, filed by
-// family) or one the solver saved, replacing the puzzle's pins. Typing filters the list; a star files a preset under Favourites;
+// genre group) or one the solver saved, replacing the puzzle's pins. Typing filters the list; a star files a preset under Favourites;
 // a saved set can be deleted, with an undo. Saved sets and stars are kept in localStorage and offered on every puzzle. The UI is
 // found by role and accessible name; the pins are read by walking them with Tab and by `engine.getTool()`.
 import assert from 'node:assert/strict'
@@ -92,7 +92,7 @@ describe('the built-in presets', () => {
   })
   after(async () => { await opened?.context.close() })
 
-  it('cover every common genre, filed by family', async () => {
+  it('cover every common genre, filed by genre group', async () => {
     const { page } = opened
     await openList(page)
     const names = await offered(page)
@@ -159,7 +159,7 @@ describe('typing in the preset field', () => {
   before(async () => { opened = await openSolve(await link(BROAD_TAB_SET)) })
   after(async () => { await opened?.context.close() })
 
-  it('filters the list by name, and by family', async () => {
+  it('filters the list by name, and by genre group', async () => {
     const { page } = opened
     await presetField(page).fill('masyu')
     assert.deepEqual(await offered(page), ['Masyu'])
@@ -271,7 +271,7 @@ describe('favourites', () => {
     assert.equal(await star(page, 'Masyu').getAttribute('aria-pressed'), 'true')
     assert.equal((await groupTitles(page))[1], 'Favourites', 'right after the puzzle\'s own entry')
     assert.deepEqual(await optionsOfGroup(page, 'Favourites'), ['Masyu'])
-    assert.equal((await optionsOfGroup(page, 'Loops and paths')).includes('Masyu'), false, 'moved out of its family')
+    assert.equal((await optionsOfGroup(page, 'Loops and paths')).includes('Masyu'), false, 'moved out of its genre group')
     await page.keyboard.press('Escape')
 
     await page.reload()
@@ -280,7 +280,7 @@ describe('favourites', () => {
     assert.deepEqual(await optionsOfGroup(page, 'Favourites'), ['Masyu'])
     await star(page, 'Masyu').click()
     assert.equal(await hasFavourites(page), false, 'the group goes with its last star')
-    assert.equal((await optionsOfGroup(page, 'Loops and paths')).includes('Masyu'), true, 'back in its family')
+    assert.equal((await optionsOfGroup(page, 'Loops and paths')).includes('Masyu'), true, 'back in its genre group')
     await page.keyboard.press('Escape')
   })
 
@@ -413,6 +413,33 @@ describe('saving a preset', () => {
     assert.equal(await settle(() => chipCount(page), 2), 2)
     assert.deepEqual(await walkPins(page, 2), ['line/1', 'sudoku/2'])
   })
+})
+
+describe('a saved preset value this page did not write', () => {
+  let opened
+  before(async () => { opened = await openSolve(await link(['Line Normal'])) })
+  after(async () => { await opened?.context.close() })
+
+  const DAMAGED = [['no JSON', '{"name":'], ['an entry with no tools', JSON.stringify([{ name: 'Broken' }])]]
+  for (const [what, stored] of DAMAGED) {
+    it(`offers no saved preset and says so in the console: ${what}`, async () => {
+      const { page } = opened
+      const warnings = []
+      const onConsole = (m) => { if (m.type() === 'warning') warnings.push(m.text()) }
+      page.on('console', onConsole)
+      try {
+        await page.evaluate((value) => localStorage.setItem('chinstrap.pinPresets', value), stored)
+        await page.reload()
+        await waitForDesk(page)
+        await openList(page)
+        assert.equal(await presetList(page).getByRole('button', { name: /^Delete preset/ }).count(), 0, 'no saved preset is offered')
+        await page.keyboard.press('Escape')
+        assert.equal(warnings.some((w) => w.includes('chinstrap.pinPresets') && /unreadable|does not hold saved presets/.test(w)), true, `the console names the key: ${warnings}`)
+      } finally {
+        page.off('console', onConsole)
+      }
+    })
+  }
 })
 
 describe('deleting a saved preset', () => {

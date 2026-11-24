@@ -11,19 +11,17 @@
   const CELL_SIZE_RANGE = Object.freeze({ min: 12, max: 240 })
 
   // The translucent grey a selected cell is filled with on this page: it darkens the white board a little and has no hue, so it
-  // never reads like the conflict pink (#242). Penpa+ paints the board white in both themes.
+  // never reads like the conflict pink. Penpa+ paints the board white in both themes.
   // MVP gap: draw_selection fills with `Puzzle.prototype.selection_fill` when it is set (a caneff: line in class_p.js).
   Puzzle.prototype.selection_fill = 'rgba(110, 110, 110, 0.05)'
 
   // Penpa+'s square-cell grids keep this many unused cells (`pu.point` ids) round the board on each side.
   const PENPA_MARGIN_CELLS = 2
-  // The grid types whose cells lie in horizontal rows, one number per row (#350). Chris's list: a type not here (`snub_square`,
+  // The grid types whose cells lie in horizontal rows, one number per row. Chris's list: a type not here (`snub_square`,
   // `cairo_pentagonal`, `iso`, `tetrakis_square`, `rhombitrihexagonal`, `deltoidal_trihexagonal`, ...) keeps map-style bands.
   const ROW_NUMBERED_GRIDS = Object.freeze(['hex', 'tri', 'pyramid', 'truncated_square'])
-  // Two cells whose middles differ in y by no more than this (canvas px) are in one row.
   const ROW_TOLERANCE_PX = 0.5
 
-  // The board's canvas may overshoot its box by this much before it counts as not fitting.
   const FIT_TOLERANCE_PX = 0.5
 
   // What index.html reads back is a puzzle link, the progress store and the `displaysize` cookie. Each is written as Penpa+
@@ -37,7 +35,7 @@
       const real = { size: this.size, canvasx: this.canvasx, canvasy: this.canvasy }
       const size = Math.min(real.size, PENPA_CELL_SIZE_MAX)
       // Scaled through the cell count, `canvasx / size`: index.html reads the canvas size with parseInt, and scaling by
-      // `size / real.size` can land a hair under a whole number (629.99... for 1225 px at 175 px a cell) (#181).
+      // `size / real.size` can land a hair under a whole number (629.99... for 1225 px at 175 px a cell).
       this.size = size
       this.canvasx = real.canvasx / real.size * size
       this.canvasy = real.canvasy / real.size * size
@@ -154,7 +152,7 @@
   }
 
   // ---- Line widths: Penpa+'s `set_line_style` gives most styles a fixed pixel width, right at its normal 38 px a cell and
-  // hair-thin on a zoomed board, so on the board's own context the width grows with the cell past that size (#330). Only the
+  // hair-thin on a zoomed board, so on the board's own context the width grows with the cell past that size. Only the
   // board: the bridge's swatch reads and Penpa+'s panel draw at sizes of their own. The grid and the outer frame grow half
   // as much as the rest, so a zoomed board's solving marks stand out from them (Chris, 2026-11-18).
   const PENPA_NORMAL_CELL_SIZE = 38
@@ -183,7 +181,6 @@
     }
   }
 
-  // A positive finite number, or a TypeError naming the call and the argument.
   function requirePositiveNumber (call, name, value) {
     if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
       throw new TypeError(`engine.${call}: ${name} must be a positive number, got ${String(value)}`)
@@ -242,7 +239,6 @@
         'body.engine-mounted #float-key { display: none !important; }\n'
   document.head.appendChild(chromeStyle)
 
-  // The theme is the UI's own choice, kept in localStorage: 'light' (the default) or 'dark'.
   const THEME_KEY = 'chinstrap-solve-theme-v1'
   const THEMES = { light: THEME_LIGHT, dark: THEME_DARK }
   function savedTheme () {
@@ -276,12 +272,7 @@
   // Resolves when boot() has loaded the link's puzzle in solve mode; rejects with boot()'s error, which main.js already
   // shows, or with reopenInSolveMode's, shown here. An edit link never resolves: the page reloads. A page with no link
   // never resolves either.
-  let resolveBoot
-  let rejectBoot
-  const ready = new Promise((resolve, reject) => {
-    resolveBoot = resolve
-    rejectBoot = reject
-  })
+  const { promise: ready, resolve: resolveBoot, reject: rejectBoot } = Promise.withResolvers()
   const penpaBoot = window.boot
   // A copy of boot()'s own test for a link (general.js): a query with `p=`, else any `#` data. general.js is upstream's, so
   // it is copied rather than edited to export it.
@@ -321,7 +312,7 @@
     return booting
   }
 
-  // ---- The solved state (#198). Penpa+ shows its SweetAlert2 popup (fireworks, its own fonts) on every solve and pauses the
+  // ---- The solved state. Penpa+ shows its SweetAlert2 popup (fireworks, its own fonts) on every solve and pauses the
   // clock, which Pause and Resume then restart. The solve page keeps the popup out, tells the UI once (`solved` event, the
   // first solve only) and holds the clock stopped for good: once latched, `sw_timer.start` does nothing until `restart()`.
   // A puzzle that opens already solved (a reload) is latched at the end of boot, with no event.
@@ -418,10 +409,10 @@
   // The sub-mode of Sudoku each hold key lends: Shift Corner, Ctrl and Cmd Centre.
   const HOLD_SUBMODES = { Shift: '2', Control: '3', Meta: '3' }
 
-  // A grid without the tool a key would lend (hex has no Corner) gets no hold from it: Penpa+ would put itself on a tool
-  // `listTools()` does not list.
-  function lendsListedTool (key) {
-    return toolCatalog().some((t) => t.mode === 'sudoku' && t.submode === HOLD_SUBMODES[key])
+  // The tool a key lends, from `listTools()`; none on a grid without it (hex has no Corner), which then gets no hold from the
+  // key: Penpa+ would put itself on a tool `listTools()` does not list.
+  function heldTool (key) {
+    return toolCatalog().find((t) => t.mode === 'sudoku' && t.submode === HOLD_SUBMODES[key])
   }
 
   // MVP gap: main.js's onKeyUp is the only way to end a hold, so the end is a synthetic key-up straight to it. That key-up
@@ -478,7 +469,7 @@
       }
     }
     if (e.type === 'keydown' && startsHold(e)) {
-      if (!lendsListedTool(e.key)) {
+      if (!heldTool(e.key)) {
         releasedKeys.add(e.key)
         return
       }
@@ -507,8 +498,7 @@
 
   // The Puzzle methods whose calls can change what the UI shows. Hooked on the prototype, so a `pu` that load() replaces
   // stays hooked, and a wrapper on the instance (recorder.js) calls through to the hook.
-  const HOOKED_PUZZLE_METHODS = ['redraw', 'mode_set', 'submode_check', 'stylemode_check', 'subcombimode', 'subsymbolmode',
-    'set_orientation']
+  const HOOKED_PUZZLE_METHODS = ['redraw', ...TOOL_CALLS]
   const changeHandlers = new Set()
   let changeQueued = false
   function queueChange () {
@@ -566,8 +556,8 @@
     return document.querySelector('.swal2-container') !== null ||
             [...document.querySelectorAll('.modal')].some((m) => m.style.display && m.style.display !== 'none')
   }
-  // The nodes `ignoreChangesIn` was given: the UI redraws there on `change`, which would wake the next one every frame
-  // (#322). The board `mount` moves into one goes unwatched with it: what the board shows changes through the hooked
+  // The nodes `ignoreChangesIn` was given: the UI redraws there on `change`, which would wake the next one every frame.
+  // The board `mount` moves into one goes unwatched with it: what the board shows changes through the hooked
   // Puzzle methods above.
   const uiNodes = new Set()
   const isPenpaPageChange = (record) => ![...uiNodes].some((node) => node.contains(record.target))
@@ -626,7 +616,6 @@
   }
   // The modes whose colour styles are pen strokes, so their swatch is the stroke colour of Penpa+'s `set_line_style`.
   const PEN_BOXES = new Set(['line', 'lineE', 'wall'])
-  // The styles that are colours: only these have a swatch.
   const COLOUR_STYLE_NAMES = new Set([...Object.values(SURFACE_STYLE), 'green', 'black', 'grey', 'red', 'blue', 'dark blue'])
 
   // The key that picks each Surface colour, which Penpa+'s `surfaceKeys` (main.js) deals out in a different order from the colours' own
@@ -815,7 +804,6 @@
     return value === undefined || value === '' ? null : String(value)
   }
 
-  // The tool in the catalog for `mode` and `submode`, or a RangeError naming what the call got wrong.
   function requireTool (mode, submode) {
     const ofMode = toolCatalog().filter((t) => t.mode === mode)
     if (!ofMode.length) {
@@ -846,13 +834,10 @@
     document.getElementById(id).click()
   }
 
-  // True while a hold has lent a tool other than the one before it.
   function isHeld () {
     const now = engine.getTool()
     return [...holds.values()].some((before) => before.mode !== now.mode || before.submode !== now.submode)
   }
-
-  // ---- Change size ------------------------------------------------------------------------------------------------
 
   const NOT_SQUARE = 'Only a grid of square cells can change size.'
 
@@ -955,7 +940,6 @@
     })
   }
 
-  // The outermost line ends halfway to the next line's centres, less BOUNDARY_SLACK.
   function isOnOutermostLine (id, side, drawn) {
     const { axis, outward } = SIZE_SIDES[side]
     const lines = axis === 'x' ? drawn.xs : drawn.ys
@@ -965,7 +949,6 @@
     return (pu.point[id][axis] - boundary) * outward > slack
   }
 
-  // Why `changeSize(side, change)` cannot run on a square-cell grid, or null when it can.
   function sizeChangeRefusal (side, change) {
     const { line } = SIZE_SIDES[side]
     const penpaSide = penpaSideOf(side)
@@ -1052,13 +1035,9 @@
     // The tool each key lends while held in Sudoku, as `{ key: 'Shift' | 'Ctrl', tool }` with `tool` from `listTools()`: Shift
     // Corner, Ctrl Centre. A grid without that tool gets no row, as it gets no hold.
     holdTools () {
-      const tools = toolCatalog()
-      return [['Shift', 'Shift'], ['Ctrl', 'Control']].filter(([, key]) => lendsListedTool(key)).map(([label, key]) => ({
-        key: label, tool: tools.find((t) => t.mode === 'sudoku' && t.submode === HOLD_SUBMODES[key])
-      }))
+      return [['Shift', 'Shift'], ['Ctrl', 'Control']].map(([label, key]) => ({ key: label, tool: heldTool(key) })).filter((row) => row.tool)
     },
 
-    // Undoes the solver's last entry; false when there is none.
     undo () {
       boardCanvas()
       if (!engine.getState().canUndo) {
@@ -1068,7 +1047,6 @@
       return true
     },
 
-    // Redoes what `undo()` took back; false when there is nothing to redo.
     redo () {
       boardCanvas()
       if (!engine.getState().canRedo) {
@@ -1091,7 +1069,7 @@
     },
 
     // The clock: whole and fractional `seconds` elapsed, and whether it is `paused`. `covered` is true while the solver's
-    // own pause (the Pause button or F4) has Penpa+'s pause layer up; a solve also pauses the clock, with no layer (#119).
+    // own pause (the Pause button or F4) has Penpa+'s pause layer up; a solve also pauses the clock, with no layer.
     // `solved` is true from the puzzle's first solve (or its opening solved) until `restart()`: the clock then never runs.
     getTimer () {
       boardCanvas()
@@ -1360,13 +1338,11 @@
       uiNodes.add(node)
     },
 
-    // The cell sizes `setCellSize` takes, in pixels per cell: `min` to `max`.
     CELL_SIZE_RANGE,
 
     // Surface's colours as [style, name], in the order of its palette: the values `secondcolor` takes, with their names.
     SURFACE_COLOURS,
 
-    // Zooms the board to `px` pixels per cell, within CELL_SIZE_RANGE.
     setCellSize (px) {
       if (!Number.isInteger(px) || px < CELL_SIZE_RANGE.min || px > CELL_SIZE_RANGE.max) {
         throw new RangeError(`engine.setCellSize: px must be a whole number from ${CELL_SIZE_RANGE.min} to ${CELL_SIZE_RANGE.max}, got ${String(px)}`)
@@ -1471,7 +1447,6 @@
       return rows.map((y) => origin.top + y)
     },
 
-    // Sets the largest cell size whose board fits a `w` x `h` box (CSS px) and returns it; the smallest size when none does.
     fitBoard (w, h) {
       requirePositiveNumber('fitBoard', 'w', w)
       requirePositiveNumber('fitBoard', 'h', h)
@@ -1517,8 +1492,6 @@
       return { unavailable, columns: drawn ? drawn.xs.length : null, rows: drawn ? drawn.ys.length : null, sides }
     },
 
-    // Adds (`change` 1) or removes (-1) a blank row or column on `side` of the board as drawn ('top', 'bottom', 'left' or
-    // 'right'). A change `getSizeChanges` does not allow throws, with its reason, and changes nothing.
     changeSize (side, change) {
       if (!Object.hasOwn(SIZE_SIDES, side)) {
         throw new RangeError(`engine.changeSize: no side ${JSON.stringify(side)}; the sides are ${Object.keys(SIZE_SIDES).join(', ')}`)
