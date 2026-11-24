@@ -102,7 +102,6 @@
     return { group: 'symbols', plainName: tool.name, description: '' }
   }
 
-
   // A symbol in sizes or colours is one entry with them under it (Chris, 2026-11-16). A tool under no subgroup goes to the last one.
   const sizes = (name, prefix, suffixes) => [name, suffixes.map((suffix) => `symbol/${prefix}_${suffix}`)]
   const blackGreyWhite = (name, prefix) => [name, ['B', 'G', 'W'].map((suffix) => `symbol/${prefix}_${suffix}`)]

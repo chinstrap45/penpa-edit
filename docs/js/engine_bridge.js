@@ -832,7 +832,6 @@
     return [...holds.values()].some((before) => before.mode !== now.mode || before.submode !== now.submode)
   }
 
-
   const NOT_SQUARE = 'Only a grid of square cells can change size.'
 
   // A resize moves the puzzle id, so this browser keeps, for each id a resize made, the id the puzzle had before it. Always

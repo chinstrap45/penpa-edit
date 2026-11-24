@@ -56,7 +56,6 @@
     const storageKey = STORAGE_PREFIX + engine.getOriginalPuzzleId()
     const toolOf = (pin) => findTool(tools, pin)
 
-
     const isSavedState = (saved) => Array.isArray(saved?.pins) && saved.pins.every((p) => typeof p.mode === 'string')
     const savedState = () => readStored(storageKey, isSavedState, null, 'pins')
 
@@ -96,7 +95,6 @@
       save()
       render()
     }
-
 
     window.uiKeys.describe('Tools', () => (pins.length
       ? [
@@ -202,7 +200,6 @@
       }
     }, { passive: false })
 
-
     const strip = el('div', { class: 'ui-pins' })
     cards.pins.body.replaceChildren(strip)
     // The strip's rows are told apart by their tops; with no pin, its one row is the empty note.
@@ -281,7 +278,6 @@
       return node
     }
 
-
     function togglePin (tool) {
       const index = pinIndexOf(tool)
       if (index >= 0) {
@@ -341,7 +337,6 @@
     })
     window.uiKeys.describe('Tools', [{ keys: PIN_SHORTCUT, text: 'With a tool focused in the Mode picker, pin or unpin it' }])
 
-
     const flash = el('div', { class: 'ui-flash', 'aria-hidden': 'true' })
     cards.board.node.append(flash)
 
@@ -370,7 +365,6 @@
       flash.getBoundingClientRect() // reading the layout restarts the CSS animation
       flash.classList.add('is-flashing')
     }
-
 
     let lastKey = null
     let drawn = ''

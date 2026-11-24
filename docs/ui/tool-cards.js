@@ -9,7 +9,6 @@
 
   const MOUSE_BODY_SLACK_PX = 2
 
-
   function styleOf (tool, style) {
     return tool.styles.find((s) => s.style === style) ?? null
   }
@@ -49,7 +48,6 @@
     mark.innerHTML = styleSample(entry.name, null, onPill ? readableOnPill(entry.sample) : entry.sample, null)
     return mark
   }
-
 
   function headline (tool, style, held) {
     const name = chipLabel(tool)
@@ -121,7 +119,6 @@
       return heights
     })
   }
-
 
   const STYLE_ICON_PX = 20
 
@@ -341,7 +338,6 @@
       }
     }
   }
-
 
   onDeskReady(({ cards, relayout, fit, fitToTools }) => {
     const tools = engine.listTools()
