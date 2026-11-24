@@ -19,7 +19,7 @@ export const PENPA_ORIGIN = 'https://penpa.test'
 // The mark the solve page's Penpa+ button adds to the link it opens, so index.html does not forward it back to the solve
 // page (#376), and the function that adds it: read from the shipped script, so a test marks a link as the page does.
 const solveForward = vm.runInNewContext(
-  readFileSync(new URL('../docs/js/solve_forward.js', import.meta.url), 'utf8') + ';({ PENPA_MARK, withPenpaMark, penpaLinkParams })', {})
+  readFileSync(new URL('../docs/js/solve_forward.js', import.meta.url), 'utf8') + ';({ PENPA_MARK, withPenpaMark, penpaLinkParams })', { URLSearchParams })
 export const PENPA_MARK = solveForward.PENPA_MARK
 
 // `query` marked when it is a solve link (`m=solve` in its query, else its `#` data), so a test of Penpa+'s own page stays on it.
