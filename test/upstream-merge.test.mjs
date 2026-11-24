@@ -285,17 +285,12 @@ describe('the upstream merge script', () => {
   })
 })
 
-// AGENTS.md § "Our files": a directory ends in "/", and a file in it is probed by a made-up name.
-const OWNED_PATHS = [
-  '.gitattributes', 'AGENTS.md', 'CLAUDE.md', 'CODING_STANDARDS.md', 'GLOSSARY.md', '.agents/', 'research/', 'adr/', 'userscript/', 'live/',
-  'docs/identity.js', 'docs/js/header_text.js', 'docs/js/recorder.js', 'docs/js/tool_calls.js', 'docs/js/engine_bridge.js', 'docs/js/penpa_layer.js', 'docs/js/progress_autosave.js', 'docs/js/chinstrap_button.js', 'docs/js/solve_forward.js', 'docs/solve.html', 'docs/gallery.html', 'docs/gallery.js', 'docs/gallery-puzzles.js', 'docs/ui/',
-  'test/ui-boundary.test.mjs', 'test/recordings.test.mjs', 'test/use-browser.test.mjs',
-  'test/snapshots.test.mjs', 'test/constraints.test.mjs', 'test/header-text.test.mjs', 'test/canonical-state.test.mjs', 'test/ui-fuzz-rules.test.mjs', 'test/ui-fuzz-nightly.test.mjs',
-  'test/userscript.test.mjs', 'test/upstream-merge.test.mjs', 'test/build-solve.test.mjs', 'test/package-scripts.test.mjs', 'test/stub-gh.mjs', 'test/run-live.test.mjs',
-  'test/nightly-seam.test.mjs', 'test/ui-corpus-issue.test.mjs', 'test/lint.test.mjs', 'test/upstream-docs.test.mjs', 'test/redirect-urls.mjs', 'test/run-narrowed.test.mjs', 'test/ci-concurrency.test.mjs', 'test/setup-tests-action.test.mjs', 'test/live-scratch.mjs',
-  '.github/workflows/', '.github/actions/', '.github/scripts/'
-]
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
+// `.gitattributes` is the record of what is ours: each `<pattern> merge=ours` line is one owned path. A directory (`dir/**`)
+// becomes `dir/`, and it is probed by a made-up file name in it.
+const OWNED_PATHS = readFileSync(join(REPO_ROOT, '.gitattributes'), 'utf8').split('\n')
+  .filter((line) => line.endsWith(' merge=ours'))
+  .map((line) => line.slice(0, -' merge=ours'.length).replace(/^\//, '').replace(/\*\*$/, ''))
 
 describe("the repo's .gitattributes", () => {
   for (const path of OWNED_PATHS) {

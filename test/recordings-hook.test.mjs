@@ -13,9 +13,9 @@ const WORKER = '/home/u/src/penpa-edit/.claude/worktrees/implement-40'
 const PRIMARY = '/home/u/src/penpa-edit'
 
 // 'deny' or 'allow', read off the hook's output as Claude Code reads it; `stdin` replaces the call's JSON.
-function decide (tool_name, tool_input, { project = WORKER, cwd = project, stdin } = {}) {
+function decide (toolName, toolInput, { project = WORKER, cwd = project, stdin } = {}) {
   const { status, stdout, stderr } = spawnSync('node', [HOOK], {
-    input: stdin ?? JSON.stringify({ hook_event_name: 'PreToolUse', cwd, tool_name, tool_input }),
+    input: stdin ?? JSON.stringify({ hook_event_name: 'PreToolUse', cwd, tool_name: toolName, tool_input: toolInput }),
     env: { ...process.env, CLAUDE_PROJECT_DIR: project },
     encoding: 'utf8'
   })
