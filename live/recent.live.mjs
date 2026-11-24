@@ -1,15 +1,14 @@
-// The Recent card of `solve.html` (#97): the last five tools the solver used that are not pinned, newest first, as pin chips without a shortcut key or ×,
+// The Recent card of `solve.html`: the last five tools the solver used that are not pinned, newest first, as pin chips without a shortcut key or ×,
 // outside the Tab cycle but in the page's Tab order; a click on one makes it current and gives the keys back to the board. The UI is found by role and
 // accessible name, the tool by `engine.getTool()`; the keys and clicks are real.
 import assert from 'node:assert/strict'
 import { before, after, describe, it } from 'node:test'
 import { pinChips } from './pin-card.mjs'
-import { afterChange, cardBodyButtons, newBoardSolveLink, openSolvePage, setTool, useBrowser, waitForTool } from './page.mjs'
+import { afterChange, cardBodyButtons, newBoardSolveLink, openSolvePage, setTool, useBrowser, waitForTool, recentCard } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// Uses a tool of TOOLS and waits for the change it makes.
 const use = async (page, { tool }) => {
   await setTool(page, tool)
   await waitForTool(page, tool)
@@ -20,7 +19,6 @@ const openSolve = async (tabSet) => openSolvePage(browser(), await newBoardSolve
 
 // Two tools picked inside one frame make one change, so each pick below waits for it with `afterChange`.
 
-const recentCard = (page) => page.getByRole('region', { name: 'Recent' })
 const recentChips = (page) => cardBodyButtons(page, 'Recent', { name: /^(?!Pin |Unpin )/ })
 const recentNames = async (page) => (await recentChips(page).allInnerTexts()).map((text) => text.trim())
 
@@ -113,11 +111,9 @@ describe('the Recent card and the pins', () => {
     for (const entry of TOOLS) {
       await use(page, entry)
     }
-    // The page opened on Surface, so Recent holds Line > Helper (x), Surface, Wall, Number, Sudoku now.
     const names = (list) => list.map((t) => t.name)
     const full = names([TOOLS[6], TOOLS[5], TOOLS[4], TOOLS[3], TOOLS[2]])
     assert.deepEqual(await settle(() => recentNames(page), full), full)
-    // Pinning a Recent chip removes it at once, and the sixth most recent tool takes its place.
     const withoutWall = names([TOOLS[6], TOOLS[5], TOOLS[3], TOOLS[2], TOOLS[1]])
     assert.deepEqual(await recentNamesAfter(page, recentCard(page).getByRole('button', { name: 'Pin Wall' })), withoutWall)
     // A pinned tool that is used stays out, and is still the history's newest when it is unpinned later.
@@ -131,7 +127,6 @@ describe('the Recent card and the pins', () => {
   })
 })
 
-// The key, and the Sudoku sub-mode Penpa+ lends while it is held.
 const HOLDS = [
   { key: 'Shift', lent: '2' },
   { key: 'Control', lent: '3' },

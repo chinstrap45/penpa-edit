@@ -11,6 +11,15 @@ export const openList = async (page) => {
   await presetField(page).click()
   await presetList(page).waitFor()
 }
+// Every preset the list offers, each as its name and the tool keys it pins; Escape closes the list.
+export const readPresets = async (page) => {
+  await openList(page)
+  const presets = await presetList(page).locator('[role=option][data-tools]').evaluateAll((options) =>
+    options.map((o) => ({ name: o.textContent, tools: o.dataset.tools.split(',') })))
+  await page.keyboard.press('Escape')
+  await closed(page)
+  return presets
+}
 export const choosePreset = async (page, name) => {
   await openList(page)
   await presetList(page).getByRole('option', { name, exact: true }).click()
@@ -19,7 +28,6 @@ export const choosePreset = async (page, name) => {
 export const nameField = (page) => pinnedCard(page).getByRole('textbox', { name: 'Preset name' })
 export const saveButton = (page) => pinnedCard(page).getByRole('button', { name: 'Save pins…', exact: true })
 
-// Saves the pins as `name` through the save icon's inline form.
 export const savePreset = async (page, name) => {
   await saveButton(page).click()
   await nameField(page).fill(name)
@@ -33,7 +41,6 @@ export const toolKeyOf = ({ mode, submode }) => `${mode}/${submode ?? ''}`
 // The Tab set the pin tests open a new board with, so the Pinned card starts with one pin each.
 export const PIN_TAB_SET = ['Line Normal', 'Sudoku Corner', 'Surface']
 
-// Runs `body(page)` on a solve page opened on a new board with PIN_TAB_SET, and closes it after.
 export const withPinnedPage = (browser, body) => async () => {
   const opened = await openSolvePage(browser(), await newBoardSolveLink(browser(), PIN_TAB_SET))
   try {

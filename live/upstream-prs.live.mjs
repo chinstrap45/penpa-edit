@@ -1,4 +1,3 @@
-// The behaviour taken from upstream PRs 216 (delete a circle), 231 (sudoku import) and 229 (long links, load URL).
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { openPenpa, useBrowser, waitForSettingsLoaded } from './page.mjs'
@@ -25,7 +24,6 @@ describe('number mode, circle submode (PR 216)', () => {
 })
 
 describe('sudoku import (PR 231)', () => {
-  // Fills the import dialog and runs it; returns the clue count, where each clue sits and whether each error shows.
   const runImport = (page, text, { nonSquare }) => page.evaluate(({ text, nonSquare }) => {
     const el = (id) => document.getElementById(id)
     el('sudokuIgnoreSpaces').checked = true
@@ -33,7 +31,7 @@ describe('sudoku import (PR 231)', () => {
     pu.pu_q.number = {}
     el('iostring').value = text
     pu.load_clues()
-    // #37: "row,col:char" of each clue, read from the dialog's start cell
+    // "row,col:char" of each clue, counted from the import dialog's start cell
     const r0 = parseInt(el('nb_space1').value, 10)
     const c0 = parseInt(el('nb_space3').value, 10)
     return {
@@ -112,8 +110,8 @@ describe('long links and Load URL (PR 229)', () => {
 
   it('keeps the warning setting off after a restart', async () => {
     const first = await openPenpa(browser(), '', { served: true })
-    // #171: this test once read `true` after the restart on a busy machine. Most likely the cookie had not reached the
-    // browser's store when `context.cookies()` read it (not reproduced), so wait for the settings load and then the store.
+    // This test once read `true` after the restart on a busy machine. Most likely the cookie had not reached the browser's
+    // store when `context.cookies()` read it (not reproduced), so wait for the settings load and then the store.
     await waitForSettingsLoaded(first.page)
     await first.page.evaluate(() => { UserSettings.warn_long_links = false })
     const savedOff = async () => (await first.context.cookies()).some((c) => c.name === 'warn_long_links' && c.value === 'false')
@@ -138,7 +136,7 @@ describe('long links and Load URL (PR 229)', () => {
     await context.close()
   })
 
-  // Loads one number's link through Load URL, written `shape` ways, and returns the clue count it arrives with.
+  // Loads one number's link, built by `makeUrl`, through Load URL; returns a reader of the clue count it arrives with.
   const loadedClues = async (page, makeUrl) => {
     await page.evaluate(() => {
       pu.mode.qa = 'pu_q'

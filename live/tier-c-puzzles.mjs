@@ -3,26 +3,20 @@
 // history, read back from its recording. Not a check itself, so `live/**/*.live.mjs` skips it.
 import { canonicalState, readEngineState } from './canonical-state.mjs'
 import { random } from './fuzz.mjs'
-import { openPenpa } from './page.mjs'
+import { withPage } from './page.mjs'
 import { dragSteps, engineDriver, pressSteps, typedSteps } from './replay.mjs'
 import { settle } from './settle.mjs'
 
-// The puzzles, by the names their recordings and tests carry.
 export const TIER_C_PUZZLES = ['sudoku-9x9', 'sudoku-6x6', 'killer', 'starbattle', 'slitherlink', 'or-shading']
 
-// Upstream's puzz.link imports (`test/public/puzz_link_parser.js`) the puzzles start from.
 export const IMPORTS = {
   'sudoku-9x9': 'https://puzz.link/p?sudoku/9/9/15i96l17i7g65i42k1g5368h2i7g2p3h5g48g2g9k3h7i6',
   'sudoku-6x6': 'https://puzz.link/p?sudoku/6/6/g3h2g5j6h1l4h6j3g5g6h',
-  // Two stars in each row, column and region.
   starbattle: 'https://puzz.link/p?starbattle/10/10/2/5g252c2qkgbakk98igse7g88cp3730so000u',
   slitherlink: 'https://puzz.link/p?slither/5/5/gch1222ch331bg222'
 }
 const STARS = 2
 
-// ---- Sudoku ----
-
-// The rows and columns of a box of an n×n sudoku.
 function boxShape (n) {
   if (n === 6) return [2, 3]
   const side = Math.sqrt(n)
@@ -30,7 +24,6 @@ function boxShape (n) {
   return [side, side]
 }
 
-// The cells of the n×n sudoku, row by row, each unit (row, column, box) as a list of indices.
 function sudokuUnits (n) {
   const [bh, bw] = boxShape(n)
   const units = []
@@ -44,14 +37,12 @@ function sudokuUnits (n) {
   return units
 }
 
-// Whether `grid` (n×n digits, row by row) is a completed sudoku that keeps the givens of `givens` (0 for an empty cell).
 function isSudokuSolution (grid, givens, n) {
   if (grid.length !== n * n || givens.some((g, i) => g && g !== grid[i])) return false
   const all = [...Array(n).keys()].map((d) => d + 1).join()
   return sudokuUnits(n).every((unit) => unit.map((i) => grid[i]).sort((a, b) => a - b).join() === all)
 }
 
-// The first completion of `givens` a depth-first search finds, checked valid.
 function solveSudoku (givens, n) {
   const units = sudokuUnits(n)
   const unitsOf = givens.map((_, i) => units.filter((u) => u.includes(i)))
@@ -72,8 +63,6 @@ function solveSudoku (givens, n) {
   return grid
 }
 
-// The cages of a killer on the n×n sudoku `grid`, each a run of 2 to 4 cells (or 1, where no free cell is beside it), side by side in order and with no digit
-// twice, drawn by `rand`: every cell is in one cage.
 function killerCages (grid, n, rand) {
   const cage = Array(grid.length).fill(-1)
   const cages = []
@@ -101,8 +90,6 @@ function killerCages (grid, n, rand) {
   return cages
 }
 
-// ---- Star battle ----
-
 // Whether `stars` (cell indices of an n×n board, row by row) puts `k` stars in each row, column and region of
 // `regions` (a region id per cell), none two touching, even at a corner.
 function isStarbattleSolution (stars, regions, n, k) {
@@ -118,14 +105,12 @@ function isStarbattleSolution (stars, regions, n, k) {
     exactly(count((s) => regions[s]), new Set(regions).size)
 }
 
-// The first placement a row-by-row depth-first search finds, checked valid.
 function solveStarbattle (regions, n, k) {
   const lastRow = new Map()
   regions.forEach((r, i) => lastRow.set(r, Math.floor(i / n)))
   const colCount = Array(n).fill(0)
   const regionCount = new Map()
   const stars = []
-  // Every way to choose `k` columns of a row, no two side by side.
   const choices = []
   const choose = (from, picked) => {
     if (picked.length === k) return choices.push([...picked])
@@ -200,8 +185,6 @@ function slitherlinkEdges (rows, cols) {
   return edges
 }
 
-// Whether the edges of `on` (indices of `slitherlinkEdges(rows, cols)`) are one loop that has each clue of `clues` (a
-// number or null per cell) as its count of edges around that cell.
 function isSlitherlinkSolution (on, clues, rows, cols) {
   const edges = slitherlinkEdges(rows, cols)
   const degree = new Map()
@@ -212,7 +195,6 @@ function isSlitherlinkSolution (on, clues, rows, cols) {
   }
   if (!on.length || [...degree.values()].some((d) => d !== 2)) return false
   if (clues.some((clue, c) => clue !== null && clue !== around[c])) return false
-  // Every corner the loop passes is reached from the first one along the loop's edges.
   const seen = new Set([edges[on[0]].ends[0]])
   for (let grew = true; grew;) {
     grew = false
@@ -227,7 +209,6 @@ function isSlitherlinkSolution (on, clues, rows, cols) {
   return seen.size === degree.size
 }
 
-// The first loop a depth-first search over the edges finds, checked valid, as indices of `slitherlinkEdges`.
 function solveSlitherlink (clues, rows, cols) {
   const edges = slitherlinkEdges(rows, cols)
   const state = Array(edges.length).fill(null)
@@ -237,7 +218,6 @@ function solveSlitherlink (clues, rows, cols) {
     for (const v of e.ends) edgesAt.set(v, [...edgesAt.get(v) ?? [], i])
     for (const c of e.cells) edgesOf[c].push(i)
   })
-  // Whether a loop can still pass every corner and clue edge `i` touches.
   const fits = (i) => edges[i].ends.every((v) => {
     const states = edgesAt.get(v).map((j) => state[j])
     const on = states.filter((x) => x === true).length
@@ -289,8 +269,6 @@ function slitherlinkInPage () {
 
 // ---- Reading a board ----
 
-// Runs in the page: the board's cells row by row, each as its index in `pu.point` and the given digit in it, or 0 for
-// none. A given that is not a digit is refused, since the sudoku solver would read it as an empty cell.
 function cellsInPage () {
   const cells = pu.centerlist.map((num) => ({ num, x: pu.point[num].x, y: pu.point[num].y }))
   cells.sort((a, b) => a.y - b.y || a.x - b.x)
@@ -301,24 +279,20 @@ function cellsInPage () {
   })
 }
 
-// Runs in the page: the mode the page is in, as a mode step names it.
 export function openingModeInPage () {
   const edit = pu.mode[pu.mode.qa].edit_mode
   const [submode, style] = pu.mode[pu.mode.qa][edit]
   return { mode: edit, submode, style }
 }
 
-// Runs in the page: the board units of each of `nums` in `pu.point`, as a step builder's `board.points` reads them.
 export function pointsInPage (nums) {
   return Object.fromEntries(nums.map((n) => [n, { x: pu.point[n].x, y: pu.point[n].y }]))
 }
 
-// Resolves once the page's board has loaded, which is after `pu` exists.
 export function boardLoaded (page) {
   return settle(() => page.evaluate(readEngineState).then(canonicalState))
 }
 
-// A star battle's cells (indices in `pu.point`, row by row), its side and each cell's region.
 async function starbattleBoard (page) {
   const cells = (await page.evaluate(cellsInPage)).map((c) => c.num)
   return { cells, n: Math.sqrt(cells.length), regions: await page.evaluate(regionsInPage, cells) }
@@ -340,10 +314,6 @@ async function slitherlinkBoard (page) {
   return { rows, cols, clues, edges, corners: cornerNums }
 }
 
-// ---- Building a puzzle ----
-
-// Runs in the page: writes each `[prop, key, value]` of `writes` into the author's answer, ticks only the answer-check
-// boxes named, and returns the solve link's `#` part.
 export function answerLinkInPage ({ writes, boxes }) {
   for (const box of [...document.getElementsByClassName('solcheck'), ...document.getElementsByClassName('solcheck_or')]) box.checked = false
   for (const id of boxes) document.getElementById(id).checked = true
@@ -352,16 +322,12 @@ export function answerLinkInPage ({ writes, boxes }) {
   return url.slice(url.indexOf('#'))
 }
 
-// The puzzles whose kept recording is a solve of only some of their cells, and how many it leaves open: the rest are
-// given. The engine replay in full mode round-trips a duplicate link at every checkpoint, so a recording's cost grows faster than
-// its length, and a full 9x9 or killer solve went past the seam's 60-second test limit on CI (#34, controller's
-// ruling). The answer-aimed fuzz still solves these puzzles whole.
+// The puzzles whose kept recording solves only some cells, the rest given: full mode round-trips at every checkpoint, so
+// cost grows faster than length, and a full 9x9 or killer solve passed the seam's 60-second test limit on CI. The
+// answer-aimed fuzz still solves them whole.
 export const KEPT_OPEN_CELLS = { 'sudoku-9x9': 20, killer: 20 }
-// The open cells are drawn from this seed, so the kept puzzle is the same on every build.
 const OPEN_SEED = 1
 
-// `answer` (a sudoku's entries still to make) with all but `open` of them, drawn by OPEN_SEED, written into the
-// puzzle as givens on `page`; all of it when `open` is not given.
 async function givenAllBut (page, answer, open) {
   if (!open) return answer
   const rand = random(OPEN_SEED)
@@ -375,13 +341,9 @@ async function givenAllBut (page, answer, open) {
 // The author's answer digit in a cell, as Penpa+'s edit mode writes it: the digit, colour 2, size 1.
 const authorDigit = (digit) => [String(digit), 2, '1']
 
-// What the author's answer and a solver's entries hold: a star, and a line on an edge.
 const STAR = [2, 'star', 2]
 const LINE = 3
 
-// Each puzzle's builder: given a page with nothing loaded, and for a sudoku a count of open cells (KEPT_OPEN_CELLS), it
-// builds the board and returns the solve link's `#` part, the answer as the generator enters it, and what else the
-// generator needs.
 const BUILDERS = {
   'sudoku-9x9': (page, open) => buildSudoku(page, IMPORTS['sudoku-9x9'], open),
   'sudoku-6x6': (page, open) => buildSudoku(page, IMPORTS['sudoku-6x6'], open),
@@ -391,18 +353,16 @@ const BUILDERS = {
   'or-shading': buildOrShading
 }
 
-// The OR puzzle's board side and the cells of its answer, as indices of the board's cells row by row.
 const OR_SIZE = 5
 const OR_CELLS = [1, 2, 7, 10, 13, 14, 17, 21, 23]
 
-// Runs in the page: a new square board of `size` by `size`.
 function newBoardInPage (size) {
   document.getElementById('nb_size1').value = size
   document.getElementById('nb_size2').value = size
   create_newboard()
 }
 
-// An answer in two OR categories (C1's kind, #13), both filled: the author shades OR_CELLS and puts a black square in
+// An answer in two OR categories, both filled: the author shades OR_CELLS and puts a black square in
 // each, so a solver who does either solves.
 async function buildOrShading (page) {
   await page.evaluate(newBoardInPage, OR_SIZE)
@@ -422,12 +382,8 @@ async function buildSlitherlink (page) {
   return { source, kind: 'edges', answer, edges, nums: [...corners, ...edges.map((e) => e.mid)] }
 }
 
-// The killer's cages are drawn from this seed, so the puzzle is the same on every build.
 const KILLER_SEED = 1
 
-// A killer on the 9x9 sudoku's solution: its givens taken away, a dashed cage drawn around each cage's cells in Cage
-// mode and the cage's sum written in its first cell's corner in Number mode's 1/4, both through the engine's own calls
-// in the question layer.
 async function buildKiller (page, open) {
   await page.evaluate((u) => import_url(u), IMPORTS['sudoku-9x9'])
   const cells = await page.evaluate(cellsInPage)
@@ -477,7 +433,6 @@ async function buildSudoku (page, url, open) {
   return { source, kind: 'digits', digits: n, answer, nums: answer.map((c) => c.num) }
 }
 
-// The mode a link opens in and the board units of each of `nums`, read from a fresh page of the link.
 async function solvePage (browser, source, nums) {
   return withPage(browser, source, async (page) => {
     await boardLoaded(page)
@@ -485,19 +440,11 @@ async function solvePage (browser, source, nums) {
   })
 }
 
-// Builds the puzzle named `name` (one of TIER_C_PUZZLES) and returns it: `name`, `source` (its solve link's `#` part),
-// `kind` (how its answer is entered), `mode` (the mode the link opens in), `answer` (the entries the generator makes),
-// `points` (the board units of every point the generator presses), and the kind's own fields. `open`, for a sudoku,
-// leaves only that many of its answer's cells open and gives the rest.
 export async function buildPuzzle (browser, name, { open } = {}) {
   const { nums, ...puzzle } = await withPage(browser, '', (page) => BUILDERS[name](page, open))
   return { name, ...puzzle, ...await solvePage(browser, puzzle.source, nums) }
 }
 
-// ---- A solver's history ----
-
-// The genres a solve history is checked in, each by the property its answer is in: the solve's last board, read as
-// that genre's answer, must be a valid solution of the board before it becomes the recording's answer.
 const HISTORY_GENRES = {
   symbol: { kind: 'stars', box: 'sol_star', isAnswer: (value) => value[1] === 'star' && value[0] >= 1 && value[0] <= 3 },
   lineE: { kind: 'edges', box: 'sol_loopedge', isAnswer: (value, key) => key.includes(',') && value === LINE }
@@ -526,8 +473,6 @@ export async function historyPuzzle (page, last) {
   return { kind, box, writes, answer: on.map((i) => edges[i]), edges, nums: [...corners, ...edges.map((e) => e.mid)] }
 }
 
-// The puzzle of a converted history's recording, for the answer-aimed fuzz: its link, and its answer read from the
-// recording's final board.
 export async function puzzleFromRecording (browser, id, recording) {
   const { source } = recording.header
   const last = Object.entries(recording.final.pu_a).flatMap(([prop, values]) =>
@@ -537,13 +482,4 @@ export async function puzzleFromRecording (browser, id, recording) {
     return historyPuzzle(page, last)
   })
   return { name: id, source, ...puzzle, ...await solvePage(browser, source, nums) }
-}
-
-export async function withPage (browser, query, act) {
-  const { context, page } = await openPenpa(browser, query)
-  try {
-    return await act(page)
-  } finally {
-    await context.close()
-  }
 }

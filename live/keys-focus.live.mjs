@@ -1,10 +1,10 @@
-// Where the keyboard goes on `solve.html` (#197): Tab steps pins only from the board, a dialog keeps Tab and every key to itself,
+// Where the keyboard goes on `solve.html`: Tab steps pins only from the board, a dialog keeps Tab and every key to itself,
 // a mouse click on a bar or card-head button hands focus back to the board, and Escape in the pin-name field clears it.
 // Real key presses and clicks; focus is read as the page's `document.activeElement` (a Web Awesome control is its host element),
 // the board by what Penpa+ would save.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
-import { board, currentTool, newBoardSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, useBrowser } from './page.mjs'
+import { board, currentTool, newBoardSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, useBrowser, openSettings } from './page.mjs'
 import { clickCell } from './replay.mjs'
 import { settle } from './settle.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
@@ -13,18 +13,15 @@ const browser = useBrowser()
 
 const CELL = 12
 const PINS = ['Line Normal', 'Sudoku Corner']
-// More Tab presses than the Settings dialog has controls, so every press past the last one tries to leave it.
 const TABS_PAST_THE_DIALOG = 60
 // Longer than the zero-delay timeouts the key rules queue.
 const AFTER_TIMEOUT_MS = 150
 const MAX_SHIFT_TABS = 6
-// The kinds of control the Settings dialog holds.
 const DIALOG_CONTROL = 'wa-button, wa-select, wa-switch'
 const FIRST_PIN_TOOL = { mode: 'line', submode: '1' }
 
 const openSolve = async (link) => openSolvePage(browser(), link ?? await newBoardSolveLink(browser(), PINS))
 
-// Runs in the page. The control with focus: its tag and its accessible text.
 const focusInPage = () => ({ host: document.activeElement?.tagName, label: document.activeElement?.textContent?.trim() ?? '' })
 const afterTimeouts = (page) => page.evaluate((ms) => new Promise((resolve) => setTimeout(resolve, ms)), AFTER_TIMEOUT_MS)
 const focus = (page) => page.evaluate(focusInPage)
@@ -80,7 +77,6 @@ describe('the keyboard on the solve page', () => {
     const { page } = opened
     await page.getByRole('button', { name: 'Pause' }).focus()
     await page.keyboard.press('Enter')
-    // The paused board shows the click has happened; a hand-back would run as a timeout after it.
     await settle(() => page.evaluate(() => engine.getTimer().covered), true)
     // A "nothing happened" check, so a wait: a hand-back would run as a timeout queued by the click.
     await afterTimeouts(page)
@@ -108,8 +104,7 @@ describe('with Settings open', () => {
     // A Sudoku, whose first Settings control is the Sudoku one the wrap test starts from.
     opened = await openSolve(await solveLinkOfImport(browser(), IMPORTS['sudoku-9x9']))
     await clickCell(opened.page, CELL)
-    await opened.page.getByRole('button', { name: 'Settings' }).click()
-    await opened.page.getByRole('dialog', { name: 'Settings' }).waitFor()
+    await openSettings(opened.page)
   })
   after(async () => { await opened?.context.close() })
 
@@ -117,11 +112,12 @@ describe('with Settings open', () => {
     const { page } = opened
     const before = await boardAndTool(page)
     for (let i = 0; i < TABS_PAST_THE_DIALOG; i++) await page.keyboard.press('Tab')
-    // Each Tab queued a timeout that returns focus to the dialog. One still queued would refocus the dialog after the next test blurs it (#323).
+    // Each Tab queued a timeout that returns focus to the dialog; one still queued would refocus it after the next test blurs it.
     // The 150 ms timer always runs after those zero-delay ones, whatever the box's load: the wait is an ordering barrier, not a duration.
     await afterTimeouts(page)
     assert.equal(await settle(() => focusIsInDialog(page), true), true, 'focus is still in the dialog')
     await page.keyboard.press('5')
+    // X picks the second pin: the tool changes if the key leaks.
     await page.keyboard.press('x')
     assert.equal(await boardAndTool(page), before)
   })
@@ -132,7 +128,6 @@ describe('with Settings open', () => {
     await blurFocus(page)
     assert.equal(await pageBodyHasFocus(page), true, 'the body has focus')
     const before = await boardAndTool(page)
-    // X picks the second pin: the tool changes if the key leaks.
     await page.keyboard.press('5')
     await page.keyboard.press('x')
     assert.equal(await boardAndTool(page), before)
@@ -143,7 +138,6 @@ describe('with Settings open', () => {
     const first = page.locator('wa-dialog[open] wa-select').first()
     const firstLabel = await first.getAttribute('label')
     await first.focus()
-    // Shift+Tab until focus is on a control of the settings groups other than the first (the dialog's own close button may stop it first).
     const focusAfterWrap = () => page.evaluate(({ selector, first }) => {
       const dialog = document.querySelector('wa-dialog[open]')
       const controls = [...dialog.querySelectorAll(`.ui-settings-group :is(${selector})`)].filter((control) => !control.disabled)
@@ -165,8 +159,7 @@ describe('with Settings open on a puzzle that hides its first Sudoku control', (
   let opened
   before(async () => {
     opened = await openSolve(await solveLinkOfImport(browser(), NURIKABE_IMPORT))
-    await opened.page.getByRole('button', { name: 'Settings' }).click()
-    await opened.page.getByRole('dialog', { name: 'Settings' }).waitFor()
+    await openSettings(opened.page)
   })
   after(async () => { await opened?.context.close() })
 

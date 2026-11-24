@@ -14,7 +14,7 @@ import { appendFileSync, writeFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { expectedDiff } from '../../live/expected-diff.mjs'
-import { EXPECTED_SUFFIX, RECORDINGS, STEPS_SUFFIX } from '../../live/replay.mjs'
+import { EXPECTED_SUFFIX, RECORDINGS, STEPS_SUFFIX } from '../../live/recordings.mjs'
 
 const HEADING = /^## Expected changes\s*$/
 const RECORDINGS_DIR = relative(fileURLToPath(new URL('../../', import.meta.url)), fileURLToPath(RECORDINGS)) + '/'

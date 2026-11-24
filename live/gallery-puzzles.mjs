@@ -1,14 +1,8 @@
-// The puzzles the review page (`docs/gallery.html`, #256) lists, and where each one's link comes from. A puzzle with a recording takes its link from that
-// recording's `header.source`; the rest are built on a new board. Not a check itself, so `live/**/*.live.mjs` skips it.
 import { readFileSync } from 'node:fs'
 import { LONG_RULES_PUZZLE, linkFromNewBoard, newBoardSolveLinkInPage, puzzleSolveLinkInPage } from './page.mjs'
 
-// The long rules four times over, with clues outside the board: the long rules and outside clues the page is reviewed with.
 const LONG_RULES_REVIEWED = { ...LONG_RULES_PUZZLE, rules: Array(4).fill(LONG_RULES_PUZZLE.rules).join('\n\n'), outsideClues: [1, 2, 3, 4, 5, 6, 7, 8] }
 
-// Each puzzle: its id (the review page's address names it), the name, genre and grid shape the list shows, and where its
-// link comes from: a recording under `live/recordings/`, whose header also gives the engine's `gridtype` the page must open
-// it with, or `build` and a `gridtype`, the function that makes the link on a new board.
 const SPEC = [
   { id: 'sudoku-9x9', name: 'Sudoku 9x9', genre: 'Sudoku', shape: '9x9', recording: 'solve/sudoku-9x9' },
   { id: 'sudoku-6x6', name: 'Sudoku 6x6', genre: 'Sudoku', shape: '6x6', recording: 'solve/sudoku-6x6' },
@@ -25,7 +19,6 @@ const SPEC = [
 
 const recordedHeader = (recording) => JSON.parse(readFileSync(new URL(`./recordings/${recording}.steps.json`, import.meta.url), 'utf8')).header
 
-// The entries the review page lists: `SPEC` with each one's solve link, the `#` part, filled in.
 export async function galleryEntries (browser) {
   return Promise.all(SPEC.map(async ({ recording, build, ...entry }) => {
     if (!recording) return { ...entry, link: await build(browser) }

@@ -13,25 +13,19 @@ const browser = useBrowser()
 
 // `readEngineState` is defined in `docs/js/recorder.js`, which upstream's page lacks.
 const RECORDER = fileURLToPath(new URL('../docs/js/recorder.js', import.meta.url))
-// Indices in `pu.centerlist` of the cells the solver fills and the author shades.
 const OTHER_CELL = 2
 const SHADED_CELL = 3
 const TYPED_DIGIT = '3'
-// The header fields (#21), with the characters the header escapes in a link (comma, `&`, `=`, a line break) but no HTML,
-// which only the fork reads back as typed (`header_text.js`): upstream's reader would turn it into elements.
+// The header escapes comma, &, = and a line break in a link; no HTML, since only the fork reads it back as typed and upstream's reader would turn it into elements.
 const HEADER = { saveinfotitle: 'Title, 1 = 2', saveinfoauthor: 'Setter, A=B 5%', saveinfosource: 'https://example.test/?a=1&b=2', saveinforules: 'Rule 1\nline2, x=y' }
-// A global only the fork's page defines (`docs/js/header_text.js`).
 const FORK_ONLY_GLOBAL = 'header_text_to_html'
 
-// Runs in the page, on the board `buildNumberBoardInPage` made: adds a shaded cell and the header fields. Returns the
-// cell numbers and entries of the board.
 function decorateBoardInPage ({ cells, header }) {
   pu.pu_q.surface[pu.centerlist[cells.shaded]] = 1
   for (const [id, value] of Object.entries(header)) document.getElementById(id).value = value
   return { centers: pu.centerlist.slice(0, cells.shaded + 1), given: pu.pu_q.number, answer: pu.pu_a.number }
 }
 
-// Runs in the page: the links the progress store keeps (`progress.js`), which the save dialog does not write.
 async function storedProgressInPage () {
   UserSettings.save_current_puzzle = true
   await PenpaProgress.save()
@@ -39,7 +33,6 @@ async function storedProgressInPage () {
   return stored.slice(stored.indexOf('#'))
 }
 
-// Runs in the page: what the opened link made of the board, besides the canonical state.
 function readBoardInPage ({ headerIds, forkOnlyGlobal }) {
   return {
     given: pu.pu_q.number,
@@ -52,8 +45,6 @@ function readBoardInPage ({ headerIds, forkOnlyGlobal }) {
   }
 }
 
-// Opens `hash` on the page at `pageUrl` (the fork's own when undefined), waits for the given, and returns the board
-// and canonical state.
 async function openAndRead (pageUrl, hash) {
   const opened = await openPenpa(browser(), hash, { url: pageUrl })
   try {

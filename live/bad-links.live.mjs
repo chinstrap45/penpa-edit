@@ -1,4 +1,4 @@
-// Links that broke boot (audit C3, C4; #78): each loads the puzzle, or opens the editor, or shows an error dialog.
+// Links that broke boot (audit C3, C4): each loads the puzzle, or opens the editor, or shows an error dialog.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'
@@ -6,7 +6,6 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// The `#m=edit&p=...` part of the link `maketext()` builds for a puzzle whose Source field holds `source`.
 async function linkWithSource (source) {
   const { context, page } = await openPenpa(browser(), '')
   const hash = await page.evaluate((s) => {
@@ -52,7 +51,6 @@ describe('a bad link', () => {
   })
 })
 
-// The `#m=edit&p=...` part of the link for a blank page whose header line (`gridtype,nx,ny,...`) `edit` has changed.
 async function linkWithHeader (edit) {
   const { context, page } = await openPenpa(browser(), '')
   const hash = await page.evaluate((editSource) => {

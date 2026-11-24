@@ -1,4 +1,4 @@
-// Measuring the safety net (#32): a replay counts the `mouse_*` and `key_*` handlers of `class_p.js` its steps call,
+// Measuring the safety net: a replay counts the `mouse_*` and `key_*` handlers of `class_p.js` its steps call,
 // a plant is refused unless it changes one line of its handler and leaves its file parsing, a hunt tells a catch from a
 // miss and from a harness error, and every plant undoing an audit fix still applies and is caught by a recording made
 // for that finding. The whole measurement, every recording against every plant, is `npm run measure`, run by hand.
@@ -8,7 +8,8 @@ import { describe, it } from 'node:test'
 import { chromium } from 'playwright'
 import { takePageErrors, useBrowser } from './page.mjs'
 import { auditRecordings, hunt, plantIn, PLANTS } from './plants.mjs'
-import { listRecordings, readRecording, replay } from './replay.mjs'
+import { listRecordings, readRecording } from './recordings.mjs'
+import { replay } from './replay.mjs'
 
 const browser = useBrowser()
 

@@ -1,4 +1,4 @@
-// The Mode card's picker as a collapsible tree of `solve.html` (#160): groups, modes and sub-modes (Symbols and marks one level
+// The Mode card's picker as a collapsible tree of `solve.html`: groups, modes and sub-modes (Symbols and marks one level
 // deeper), each branch folding on its own. Driven by role and accessible name, with the mouse and with the keyboard.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
@@ -18,7 +18,6 @@ describe('the Mode card tree', () => {
   const item = (name, level) => tree().getByRole('treeitem', { name, exact: true, ...(level ? { level } : {}) })
   const openTo = (name) => mode().getByRole('button', { name, exact: true }).click()
 
-  // Every treeitem on the page as [name, level, expanded], whether or not a folded branch hides it.
   const outline = () => tree().locator('[role=treeitem]').evaluateAll((rows) => rows.map((row) => ({
     name: [...row.querySelectorAll('.ui-tname, .ui-tpenpa')].map((part) => part.textContent).join(' '),
     level: Number(row.getAttribute('aria-level')),
@@ -386,7 +385,6 @@ describe('Symbols and marks in the tree', () => {
 
   const mode = () => opened.page.getByRole('region', { name: 'Mode' })
   const tree = () => mode().getByRole('tree', { name: 'Tools' })
-  // The names of the treeitems directly under `name`, read from the open outline.
   const childrenOf = (name) => tree().locator('[role=treeitem]').evaluateAll((rows, parent) => {
     const names = rows.map((row) => ({ name: [...row.querySelectorAll('.ui-tname, .ui-tpenpa')].map((part) => part.textContent).join(' '), level: Number(row.getAttribute('aria-level')) }))
     const at = names.findIndex((row) => row.name === parent)

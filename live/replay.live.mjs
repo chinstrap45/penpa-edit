@@ -10,28 +10,22 @@ import { fileURLToPath } from 'node:url'
 import { canonicalState, readEngineState } from './canonical-state.mjs'
 import { jsRequest, useBrowser } from './page.mjs'
 import { REPLAY_CALL, REPLAY_PARTS, assertPartFiles, replayPartIds } from './engine-replay-part.mjs'
-import {
-  ANSWER_CELLS, CELL_ONLY_TOOLS, cellPixel, clickCell, compareDrivers, downloadRecording, listRecordings, makeSurfaceSolveLink,
-  openRecordingPage, readExpected, readRecording, replay, uiDriver
-} from './replay.mjs'
+import { listRecordings, readExpected, readRecording } from './recordings.mjs'
+import { ANSWER_CELLS, CELL_ONLY_TOOLS, cellPixel, clickCell, compareDrivers, downloadRecording, makeSurfaceSolveLink, openRecordingPage, replay, uiDriver } from './replay.mjs'
 import { UI_REPLAY_CALL, UI_REPLAY_PARTS, uiReplayPartIds } from './ui-replay-part.mjs'
 
 const browser = useBrowser()
 
 const CLASS_P = fileURLToPath(new URL('../docs/js/class_p.js', import.meta.url))
 const MAIN = fileURLToPath(new URL('../docs/js/main.js', import.meta.url))
-// The tracer recording.
 const SURFACE_ID = 'paint/surface-shade-undo-redo'
-// The branch of `maketext_duplicate` that keeps the answer's undo stack in a solve-mode duplicate link.
 const KEEP_UNDO = /(maketext_duplicate\(\) \{[\s\S]*?)\/\/ Retain undo in solve mode/
 // The colour argument of the `set_surface` call in `re_surface_twobutton` that a left click on an empty cell runs.
 const SHADE_COLOR = /(re_surface_twobutton\(num\) \{[^}]*\} else \{\s*let cc = this\.get_surface_color\(color\);\s*this\.set_surface\(num, )color(, cc\);)/
-// Indices in `pu.centerlist` of the cells the recorded solve right-clicks, Ctrl-clicks and drags across.
 const RIGHT_CELL = 6
 const CTRL_CELL = 10
 const DRAG_FROM = 0
 const DRAG_TO = 2
-// The board-unit x `coord_point` in `main.js` reads off a pointer event.
 const COORD_X = /(function coord_point\(e, fittype = 'none', eventmode = 'none'\) \{\s*var x = e\.pageX - canvas\.offsetLeft)(;)/
 // The planted offset: one cell of the 4x4 board, so a click lands on the next cell to the right.
 const PIXEL_OFFSET = 38
@@ -39,7 +33,6 @@ const PIXEL_OFFSET = 38
 const KEY_PAUSE_MS = 1000
 const ids = await listRecordings()
 
-// Records `act(page)` on a `?record=1` page and returns the recording and the page's last canonical state.
 async function record (query, act) {
   const { context, page } = await openRecordingPage(browser(), query)
   try {
@@ -79,14 +72,10 @@ describe('the engine driver', () => {
     assert.equal(checkpoints.at(-1).state, state)
   })
 
-  it('checks the board the link loads before the first step', async () => {
+  it('checks the board the link loads before the first step', async (t) => {
     const { context, page } = await openRecordingPage(browser(), query)
-    let loaded
-    try {
-      loaded = await page.evaluate(readEngineState).then(canonicalState)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const loaded = await page.evaluate(readEngineState).then(canonicalState)
     const { checkpoints } = await replay(browser(), { header: { source: query }, steps: [{ kind: 'undo' }] })
     assert.deepEqual(checkpoints[0], { step: 0, state: loaded })
   })
@@ -157,8 +146,6 @@ describe('the engine driver', () => {
     assert.match(report, /^ {2}pu_a\.number\.\d+: absent → \["3",2,"1"/m)
   })
 
-  // The per-recording tests run in `engine-replay-<k>.live.mjs`, one file for each part of the ids (`live/engine-replay-part.mjs`),
-  // so node's test workers share them. Each file takes its part from its own name, so every part has a file that makes the call.
   it('has a replay file for every part of the recordings, each making the replay call, and every recording is in one part', async () => {
     await assertPartFiles('engine-replay', REPLAY_PARTS, REPLAY_CALL, (k) => replayPartIds(ids, k), ids)
   })
@@ -224,7 +211,7 @@ describe('the engine driver', () => {
         id: SURFACE_ID,
         expected: await readExpected(SURFACE_ID),
         served: true,
-        roundTripEvery: 1,
+        fullRoundTrips: true,
         setup: (context) => context.route(jsRequest('class_p.js'), (route) => route.fulfill({
           contentType: 'text/javascript', body: planted
         }))
@@ -279,7 +266,6 @@ describe('the UI driver', () => {
     assert.deepEqual(JSON.parse(list[1]), CELL_ONLY_TOOLS)
   })
 
-  // Number mode's keys: digits, plain and Ctrl arrows, Backspace, Space, Shift+Space, Delete and Ctrl+Space.
   it('replays a recorded number entry through the keyboard to the engine driver\'s states', async () => {
     const { state, recording } = await record(query, async (page) => {
       await page.click('#mo_number_lb')
@@ -336,7 +322,6 @@ describe('the UI driver', () => {
     assert.equal(await compareDrivers(browser(), recording, { id: 'sudoku-delete' }), null)
   })
 
-  // A drag that leaves the canvas ends there, so the cell it comes back over is not shaded.
   it('replays a drag that leaves the canvas to the engine driver\'s states', async () => {
     const { state, recording } = await record(query, async (page) => {
       await page.click('#mo_surface_lb')

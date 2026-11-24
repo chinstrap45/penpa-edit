@@ -3,7 +3,7 @@
 // Read through the cards' bounding boxes, the board canvas's drawn size and the bodies' scroll sizes.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
-import { overlaps } from './desk-layout.mjs'
+import { overlaps, CARDS, TOP_MARGIN_PX } from './desk-layout.mjs'
 import { linkFromNewBoard, listedTools, openSolvePage, resetLayoutInSettings, shareOf, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
 
@@ -11,9 +11,7 @@ const browser = useBrowser()
 
 const FULL_HD = { viewport: { width: 1920, height: 1080 } }
 const SHORT = { viewport: { width: 1920, height: 800 } }
-const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
-// desk.js's margins, and each card's smallest width (its MIN_SIZE); Mouse's is the left column's, which caps the Board card.
-const TOP_MARGIN_PX = 12
+// desk.js's side margin, and each card's smallest width (its MIN_SIZE); Mouse's is the left column's, which caps the Board card.
 const DESK_MARGIN_PX = 14
 const MIN_WIDTH_PX = { Board: 240, Mouse: 260, Rules: 200, Pinned: 240, Mode: 280, Recent: 240 }
 const LEFT_COLUMN_MIN_PX = 260
@@ -21,14 +19,11 @@ const LEFT_COLUMN_MIN_PX = 260
 const FIT_SLACK_PX = 12
 // The same for the Board card's width on a 30-column board, which widens 30 px per cell-size step, with its frame and rounding.
 const WIDE_BOARD_SLACK_PX = 50
-// How far apart the equal gaps may be, for rounding.
 const GAP_SLACK_PX = 2
-// How many tests the loop over every tool splits into.
 const MOUSE_SHARES = 8
 const SHORT_RULES = 'Put a digit from 1 to 9 in every cell.'
 const RULES = Array.from({ length: 6 }, (_, i) => `Paragraph ${i + 1}: put a digit from 1 to 9 in every cell so no row, column or box repeats one, and the clues around the grid hold.`).join('\n\n')
 
-// Runs in the page. A new board of `cols` x `rows` cells with the rules `rules`; returns its solve link's `#` part.
 function solveLinkInPage ({ cols, rows, rules }) {
   document.getElementById('nb_size1').value = cols
   document.getElementById('nb_size2').value = rows
@@ -38,7 +33,6 @@ function solveLinkInPage ({ cols, rows, rules }) {
   return url.slice(url.indexOf('#'))
 }
 
-// Runs in the page. Where every card sits, the desk's size, the drawn board and the Mouse and Rules bodies' scroll.
 function readDeskInPage (names) {
   const rect = (node) => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }
   const section = (name) => document.querySelector(`section[aria-label="${name}"]`)
@@ -161,7 +155,7 @@ describe('Reset layout fits the desk to the puzzle', () => {
     assert.equal(await settle(clear, true), true)
   })
 
-  // Each share of the tools is its own test, so the loop over every tool and style stays inside the seam's per-test timeout (#284).
+  // Each share of the tools is its own test, so the loop over every tool and style stays inside the per-test timeout.
   for (let share = 0; share < MOUSE_SHARES; share++) {
     it(`shows every tool's Mouse rows without a scrollbar after Reset layout (share ${share + 1} of ${MOUSE_SHARES})`, async () => {
       // Rules that fit: long ones take 55% of the column, and Mouse then scrolls for its tallest tools.

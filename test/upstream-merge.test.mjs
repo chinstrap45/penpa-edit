@@ -1,5 +1,4 @@
-// The nightly upstream merge's scripts (`.github/workflows/upstream-merge.yml`), run against scratch git repos and a
-// stub `gh`. The workflow's own wiring (permissions, step order, the push) is proven only by a workflow_dispatch run.
+// The workflow's own wiring (permissions, step order, the push) is proven only by a workflow_dispatch run.
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
@@ -41,7 +40,6 @@ function commit (dir, files, message) {
   return git(dir, 'rev-parse', 'HEAD')
 }
 
-// `theirs` is one commit's files, or a list of them committed in order as "upstream change 1", "upstream change 2", ...
 function scratchRepo ({ base, ours, theirs = [] }) {
   const dir = mkdtempSync(join(tmpdir(), 'upstream-merge-'))
   git(dir, 'init', '-q', '-b', 'master')
@@ -72,7 +70,6 @@ function runMerge (dir) {
   }
 }
 
-// The sha listed on the line `- <sha> <subject>` of `text`, or null.
 const listedSha = (text, subject) => text.match(new RegExp(`^- ([0-9a-f]{7,}) ${subject}$`, 'm'))?.[1] ?? null
 
 const OWNED_BASE = { '.gitattributes': 'ui.js merge=ours\n', 'engine.js': 'engine\n', 'ui.js': 'ui\n' }
@@ -175,7 +172,7 @@ describe('the upstream merge script', () => {
     }
   })
 
-  // After the script ran (#117), a plain merge in the same repo must still text-merge or conflict an owned file both
+  // After the script runs, a plain merge in the same repo must still text-merge or conflict an owned file both
   // sides changed: the driver is passed to the script's own merge and never written to a config.
   const UI_LINES = 'a\nb\nc\nd\ne\nf\ng\n'
   function plainMergesAfter (dir, expectedStatus) {
@@ -189,7 +186,6 @@ describe('the upstream merge script', () => {
     commit(dir, { 'ui.js': 'a\nb\nc\nd\ne\nf\nG\n' }, 'master edits the bottom of ui.js')
     git(dir, 'merge', '-q', '--no-edit', 'worker')
     assert.equal(readFileSync(join(dir, 'ui.js'), 'utf8'), 'A\nb\nc\nd\ne\nf\nG\n')
-    // Overlapping edits conflict instead of keeping our side.
     git(dir, 'checkout', '-q', '-b', 'worker2', base)
     commit(dir, { 'ui.js': 'worker\n' }, 'worker rewrites ui.js')
     git(dir, 'checkout', '-q', 'master')
@@ -293,7 +289,7 @@ describe('the upstream merge script', () => {
 const OWNED_PATHS = [
   '.gitattributes', 'AGENTS.md', 'CLAUDE.md', 'CODING_STANDARDS.md', 'GLOSSARY.md', '.agents/', 'research/', 'adr/', 'userscript/', 'live/',
   'docs/identity.js', 'docs/js/header_text.js', 'docs/js/recorder.js', 'docs/js/tool_calls.js', 'docs/js/engine_bridge.js', 'docs/js/penpa_layer.js', 'docs/js/progress_autosave.js', 'docs/js/chinstrap_button.js', 'docs/js/solve_forward.js', 'docs/solve.html', 'docs/gallery.html', 'docs/gallery.js', 'docs/gallery-puzzles.js', 'docs/ui/',
-  'test/ui-boundary.test.mjs',
+  'test/ui-boundary.test.mjs', 'test/recordings.test.mjs', 'test/use-browser.test.mjs',
   'test/snapshots.test.mjs', 'test/constraints.test.mjs', 'test/header-text.test.mjs', 'test/canonical-state.test.mjs', 'test/ui-fuzz-rules.test.mjs', 'test/ui-fuzz-nightly.test.mjs',
   'test/userscript.test.mjs', 'test/upstream-merge.test.mjs', 'test/build-solve.test.mjs', 'test/package-scripts.test.mjs', 'test/stub-gh.mjs', 'test/run-live.test.mjs',
   'test/nightly-seam.test.mjs', 'test/ui-corpus-issue.test.mjs', 'test/lint.test.mjs', 'test/redirect-urls.mjs', 'test/run-narrowed.test.mjs', 'test/ci-concurrency.test.mjs', 'test/setup-tests-action.test.mjs', 'test/live-scratch.mjs',
@@ -464,7 +460,7 @@ describe('the failing-test extractor', () => {
   })
 })
 
-// Every expected-file change an upstream merge brings goes to Chris (#33), so the nightly pushes no merge that has one.
+// Every expected-file change an upstream merge brings goes to Chris, so the nightly pushes no merge that has one.
 function runExpectedUnchanged (dir) {
   const report = `${dir}-report.md`
   writeFileSync(report, '')

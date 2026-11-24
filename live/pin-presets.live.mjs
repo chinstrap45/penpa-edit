@@ -1,19 +1,17 @@
-// Pin presets of `solve.html` (#98, #159): the Pinned card's "Pin presets" combobox loads a built-in set (one per genre, filed by
+// Pin presets of `solve.html`: the Pinned card's "Pin presets" combobox loads a built-in set (one per genre, filed by
 // genre group) or one the solver saved, replacing the puzzle's pins. Typing filters the list; a star files a preset under Favourites;
 // a saved set can be deleted, with an undo. Saved sets and stars are kept in localStorage and offered on every puzzle. The UI is
 // found by role and accessible name; the pins are read by walking them with Tab and by `engine.getTool()`.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { currentTool, newBoardSolveLink, openPenpa, openSolvePage, useBrowser, waitForDesk } from './page.mjs'
-import { choosePreset, closed, nameField, openList, pinnedCard, presetField, presetList, saveButton, pinChips, savePreset, toolKeyOf } from './pin-card.mjs'
+import { choosePreset, closed, nameField, openList, pinnedCard, presetField, presetList, saveButton, pinChips, savePreset, toolKeyOf, readPresets } from './pin-card.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// A Tab set that names the modes the first built-in presets pin.
 const BROAD_TAB_SET = ['Sudoku Normal', 'Line Normal', 'Wall', 'Number Normal', 'Surface']
 
-// Every tab, so the link lists every tool a square grid has.
 const allTabs = async () => {
   const { page, context } = await openPenpa(browser(), '')
   try {
@@ -32,7 +30,6 @@ const optionsOfGroup = (page, title) => presetList(page).getByRole('group', { na
 const hasFavourites = (page) => groupTitles(page).then((titles) => titles.includes('Favourites'))
 const star = (page, name) => presetList(page).getByRole('button', { name: `Favourite ${name}`, exact: true })
 
-// Presses Tab and returns the tool it switched to.
 async function tabToNextTool (page) {
   const before = toolKeyOf(await currentTool(page))
   await page.keyboard.press('Tab')
@@ -40,7 +37,6 @@ async function tabToNextTool (page) {
   return toolKeyOf(await currentTool(page))
 }
 
-// The tools the pins hold, in order: starts on the first pin and Tabs round once.
 async function walkPins (page, count) {
   const keys = []
   await pinnedCard(page).getByRole('button', { name: /^Z/ }).click()
@@ -51,7 +47,6 @@ async function walkPins (page, count) {
   return keys
 }
 
-// Stores saved presets as an earlier visit would have, then reloads so the page starts from them.
 const seedSavedPresets = async (page, presets) => {
   await page.evaluate((value) => localStorage.setItem('chinstrap.pinPresets', JSON.stringify(value)), presets)
   await page.reload()
@@ -60,7 +55,7 @@ const seedSavedPresets = async (page, presets) => {
 
 const chipCount = (page) => pinChips(page).getByRole('button', { name: /^Unpin / }).count()
 
-// A pick hands the keyboard back to the puzzle (#157): focus is off the Pinned card, the preset's pins are loaded, and Tab lands on
+// A pick hands the keyboard back to the puzzle: focus is off the Pinned card, the preset's pins are loaded, and Tab lands on
 // one of them without the focus returning to the card.
 const focusInPinnedCard = (page) => page.evaluate(() => document.activeElement?.closest('.ui-card-pins') !== null)
 const assertTabCyclesPins = async (page, keys) => {
@@ -107,10 +102,7 @@ describe('the built-in presets', () => {
 
   it('pin no Sudoku clue-drawing tool, and every Sudoku preset pins the three entry modes first', async () => {
     const { page } = opened
-    await openList(page)
-    const presets = await presetList(page).locator('[role=option][data-tools]').evaluateAll((options) =>
-      options.map((o) => ({ name: o.textContent, tools: o.dataset.tools.split(',') })))
-    await page.keyboard.press('Escape')
+    const presets = await readPresets(page)
     const toolsOf = (name) => presets.find((preset) => preset.name === name)?.tools
     assert.deepEqual(toolsOf('Classic sudoku'), ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/'])
     assert.deepEqual(toolsOf('Sudoku with lines and marks'), ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/', 'combi/linex'])
@@ -124,10 +116,7 @@ describe('the built-in presets', () => {
 
   it('each load every tool it names, in order, on a square grid with every tab', async () => {
     const { page } = opened
-    await openList(page)
-    const presets = await presetList(page).locator('[role=option][data-tools]').evaluateAll((options) =>
-      options.map((o) => ({ name: o.textContent, tools: o.dataset.tools.split(',') })))
-    await page.keyboard.press('Escape')
+    const presets = await readPresets(page)
     const listed = await page.evaluate(() => engine.listTools().map((t) => `${t.mode}/${t.submode ?? ''}`))
     for (const { name, tools } of presets) {
       for (const key of tools) {
@@ -229,11 +218,13 @@ describe('typing in the preset field', () => {
 
   it('Puzzle defaults replaces the pins and shows the Undo line', async () => {
     const { page } = opened
-    const seeded = await page.evaluate(() => engine.tabSet().length)
+    const tabSet = await page.evaluate(() => engine.tabSet().map((t) => `${t.mode}/${t.submode ?? ''}`))
+    const seeded = tabSet.length
     assert.equal(seeded > 0, true, 'the link seeds pins')
     await choosePreset(page, 'Classic sudoku')
     await choosePreset(page, 'Puzzle defaults')
     assert.equal(await settle(() => chipCount(page), seeded), seeded)
+    assert.deepEqual(await walkPins(page, seeded), tabSet, 'the link\'s own pins, in its order')
     await pinnedCard(page).locator('.ui-preset-undo').getByText('Loaded “Puzzle defaults”.').waitFor()
   })
 

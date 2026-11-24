@@ -1,19 +1,17 @@
-// WCAG AA colour contrast on `solve.html` (#378), read by axe-core's `color-contrast` rule on the loaded page: with a puzzle
-// loaded, with Settings open, with another dialog open and on the welcome dialog, in each theme. A planted low-contrast colour must fail it, so a
-// pass is a check that can fail.
+// WCAG AA colour contrast on `solve.html`, read by axe-core's `color-contrast` rule on the loaded page: with a puzzle
+// loaded, with Settings open, with another dialog open and on the welcome dialog, in each theme. A planted low-contrast
+// colour must fail it, so a pass is a check that can fail.
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { describe, it } from 'node:test'
-import { animationsDone, contrastHelpersInPage, groundOfInPage, makeNumberSolveLink, opacityOfInPage, openSolvePage, useBrowser } from './page.mjs'
+import { animationsDone, contrastHelpersInPage, groundOfInPage, makeNumberSolveLink, opacityOfInPage, openSolvePage, useBrowser, openSettings } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 const AXE_SOURCE = createRequire(import.meta.url).resolve('axe-core/axe.min.js')
 
-let numberLink
 async function openIn (theme, { welcome = false } = {}) {
-  numberLink ??= await makeNumberSolveLink(browser())
-  const opened = await openSolvePage(browser(), numberLink, { welcome })
+  const opened = await openSolvePage(browser(), await makeNumberSolveLink(browser()), { welcome })
   await opened.page.addScriptTag({ path: AXE_SOURCE })
   await opened.page.addScriptTag({ content: `window.__helpers = ${contrastHelpersInPage}; window.__groundOf = ${groundOfInPage}; window.__opacityOf = ${opacityOfInPage}` })
   // The page's `body` is 0 high with `overflow: hidden`; axe counts the fixed desk inside it as clipped and skips all its text.
@@ -54,16 +52,13 @@ async function violationsInPage ({ aaText, aaLargeText, scope }) {
   return { lines, measured: measured.length }
 }
 
-// The violations on the whole page, or only inside the element `scope` selects.
-// Axe's first run after a dialog has opened can judge only some of its text (4 of 30 nodes in Settings, #408); a run after it
-// judges all, so the first is a warm-up and the second is read.
+// Axe's first run after a dialog opens judges only some of its text; the second judges all, so the first is a warm-up.
 const contrastViolations = async (page, scope) => {
   const run = () => page.evaluate(violationsInPage, { aaText: AA_TEXT, aaLargeText: AA_LARGE_TEXT, scope })
   await run()
   return (await run()).lines
 }
 
-// The welcome dialog on a first visit, its opening animation over.
 const WELCOME_DIALOG = '.ui-welcome'
 async function openWelcomeIn (theme) {
   const opened = await openIn(theme, { welcome: true })
@@ -74,70 +69,61 @@ async function openWelcomeIn (theme) {
 
 for (const theme of ['light', 'dark']) {
   describe(`WCAG AA contrast, ${theme} theme`, () => {
-    it('holds with a puzzle loaded', async () => {
+    it('holds with a puzzle loaded', async (t) => {
       const { context, page } = await openIn(theme)
-      try {
-        assert.deepEqual(await contrastViolations(page), [])
-      } finally { await context.close() }
+      t.after(() => context.close())
+      assert.deepEqual(await contrastViolations(page), [])
     })
 
-    it('holds with Settings open', async () => {
+    it('holds with Settings open', async (t) => {
       const { context, page } = await openIn(theme)
-      try {
-        await page.getByRole('button', { name: 'Settings' }).click()
-        await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-        await animationsDone(page)
-        assert.deepEqual(await contrastViolations(page), [])
-      } finally { await context.close() }
+      t.after(() => context.close())
+      await openSettings(page)
+      await animationsDone(page)
+      assert.deepEqual(await contrastViolations(page), [])
     })
 
-    it('holds with the Change size dialog open', async () => {
+    it('holds with the Change size dialog open', async (t) => {
       const { context, page } = await openIn(theme)
-      try {
-        await page.getByRole('region', { name: 'Board' }).getByRole('button', { name: 'Change size' }).click()
-        await page.getByRole('dialog', { name: 'Change size' }).waitFor()
-        await animationsDone(page)
-        assert.deepEqual(await contrastViolations(page), [])
-      } finally { await context.close() }
+      t.after(() => context.close())
+      await page.getByRole('region', { name: 'Board' }).getByRole('button', { name: 'Change size' }).click()
+      await page.getByRole('dialog', { name: 'Change size' }).waitFor()
+      await animationsDone(page)
+      assert.deepEqual(await contrastViolations(page), [])
     })
 
-    it('holds on the welcome dialog', async () => {
+    it('holds on the welcome dialog', async (t) => {
       const { context, page } = await openWelcomeIn(theme)
-      try {
-        assert.deepEqual(await contrastViolations(page, WELCOME_DIALOG), [])
-      } finally { await context.close() }
+      t.after(() => context.close())
+      assert.deepEqual(await contrastViolations(page, WELCOME_DIALOG), [])
     })
   })
 }
 
 describe('the contrast check', () => {
-  it('fails on a planted low-contrast colour', async () => {
+  it('fails on a planted low-contrast colour', async (t) => {
     const { context, page } = await openIn('light')
-    try {
-      await page.addStyleTag({ content: '.ui-card, .ui-card * { color: #bbb !important; background: #fff !important; }' })
-      const found = await contrastViolations(page)
-      assert.ok(found.length > 0, 'a planted #bbb on white is reported')
-    } finally { await context.close() }
+    t.after(() => context.close())
+    await page.addStyleTag({ content: '.ui-card, .ui-card * { color: #bbb !important; background: #fff !important; }' })
+    const found = await contrastViolations(page)
+    assert.ok(found.length > 0, 'a planted #bbb on white is reported')
   })
 
-  it('fails on a planted low-contrast colour in the Settings dialog, which axe cannot judge itself', async () => {
+  it('fails on a planted low-contrast colour in the Settings dialog, which axe cannot judge itself', async (t) => {
     const { context, page } = await openIn('light')
-    try {
-      await page.getByRole('button', { name: 'Settings' }).click()
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-      await animationsDone(page)
-      await page.addStyleTag({ content: 'wa-dialog[open] legend { color: #ddd !important; }' })
-      const found = await contrastViolations(page)
-      assert.ok(found.some((line) => line.includes('legend')), `a planted #ddd legend is reported: ${JSON.stringify(found)}`)
-    } finally { await context.close() }
+    t.after(() => context.close())
+    await openSettings(page)
+    await animationsDone(page)
+    await page.addStyleTag({ content: 'wa-dialog[open] legend { color: #ddd !important; }' })
+    const found = await contrastViolations(page)
+    assert.ok(found.some((line) => line.includes('legend')), `a planted #ddd legend is reported: ${JSON.stringify(found)}`)
   })
 
-  it('fails on a planted low-contrast colour in the welcome dialog', async () => {
+  it('fails on a planted low-contrast colour in the welcome dialog', async (t) => {
     const { context, page } = await openWelcomeIn('light')
-    try {
-      await page.addStyleTag({ content: '.ui-welcome li { color: #ddd !important; }' })
-      const found = await contrastViolations(page, WELCOME_DIALOG)
-      assert.ok(found.some((line) => line.includes('ui-welcome')), `a planted #ddd welcome line is reported: ${JSON.stringify(found)}`)
-    } finally { await context.close() }
+    t.after(() => context.close())
+    await page.addStyleTag({ content: '.ui-welcome li { color: #ddd !important; }' })
+    const found = await contrastViolations(page, WELCOME_DIALOG)
+    assert.ok(found.some((line) => line.includes('ui-welcome')), `a planted #ddd welcome line is reported: ${JSON.stringify(found)}`)
   })
 })

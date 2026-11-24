@@ -1,5 +1,5 @@
-// The stored answer (`pu.solution`) after resizing the board: it must equal what `pu.make_solution()` gives for the
-// same marks, or a correct solve is never accepted (#14).
+// The stored answer after a resize must equal what `pu.make_solution()` gives for the same marks, or a correct solve is
+// never accepted.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'
@@ -28,8 +28,7 @@ const SYMBOLS = {
   mine: [4, 'sun_moon', 2]
 }
 
-// Marks each answer option reads. Each runs in the page as `marks[name](pu.pu_a, cell, edge)`, with `edge(x, y)` the
-// edge on the right of cell (x, y). Shipped to the page as source, since functions do not cross.
+// Shipped to the page as source, since functions do not cross into page.evaluate.
 const MARKS_SOURCE = `{
   surface: (a, cell) => { a.surface[cell(1, 1)] = 3 },
   surface_exact: (a, cell) => { a.surface[cell(1, 1)] = 3; a.surface[cell(2, 1)] = [3, 4] },
@@ -45,7 +44,6 @@ const MARKS_SOURCE = `{
 const OR_OPTIONS = ['surface', 'surface_exact', 'number', 'loopline_exact', 'loopline', 'loopedge_exact', 'loopedge', 'wall', ...Object.keys(SYMBOLS)]
 const SINGLE_OPTIONS = ['surface', 'number', 'loopline', 'loopedge', 'wall', ...Object.keys(SYMBOLS)]
 
-// Runs in the page, once: defines `newBoard(tag)`, a `GRID_SIZE`-square grid tagged `tag` with every answer option unticked.
 function defineHelpers ({ gridSize }) {
   window.newBoard = (tag) => {
     document.getElementById('nb_size1').value = gridSize
@@ -56,8 +54,6 @@ function defineHelpers ({ gridSize }) {
   }
 }
 
-// Runs in the page. Marks the answer with `names`, ticks each of `boxes`, stores the answer, resizes, and returns the
-// stored and the fresh answer.
 function resizeInPage ({ tag, names, marksSource, boxes, resize: [method, sign] }) {
   newBoard(tag)
   const cell = (x, y) => pu.conflicts.xy_to_index(x, y)
@@ -73,8 +69,6 @@ function resizeInPage ({ tag, names, marksSource, boxes, resize: [method, sign] 
   return { stored: pu.solution, made: pu.multisolution ? made : JSON.stringify(made) }
 }
 
-// Runs in the page. Reads the edge answer, resizes by +1, shades the last two cells of row 3 and the last two of
-// column 3 in different colors, and returns the edge answer. It holds two edges.
 function edgesAfterResizeInPage ({ tag, resize: [method, sign] }) {
   newBoard(tag)
   document.getElementById('sol_loopedge').checked = true

@@ -1,8 +1,8 @@
-// A saved layout opened in a smaller window nudges only the overlaps that window caused (#371): a pair the solver left over
+// A saved layout opened in a smaller window nudges only the overlaps that window caused: a pair the solver left over
 // each other in a desk of the same size stays, every other overlap moves apart, and what moved is kept for a reload.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
-import { overlaps, steady } from './desk-layout.mjs'
+import { overlaps, steady, CARDS } from './desk-layout.mjs'
 import { DESK_SIZE, LONG_RULES_PUZZLE, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, useBrowser, waitForDesk } from './page.mjs'
 
 const browser = useBrowser()
@@ -19,22 +19,18 @@ const overUnsizedRules = (desk) => ({ rules: { x: 14, y: 12, w: 262, vw: desk.wi
 // Over each other, but saved in desks of two sizes: not a pair the solver made in one desk.
 const overAcrossDesks = (desk) => ({ rules: placed(desk, 12, 300), mouse: { ...placed(desk, 100, 300), vw: desk.width + 100 } })
 
-// Runs in the page. Each card's box on the desk, as the desk places it.
 function readCardsInPage (names) {
   return Object.fromEntries(names.map((name) => {
     const node = document.querySelector(`section[aria-label="${name}"]`)
     return [name, { x: node.offsetLeft, y: node.offsetTop, w: node.offsetWidth, h: node.offsetHeight }]
   }))
 }
-const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
 const boxOf = ({ x, y, w, h }) => ({ x, y, w, h })
 
 describe('opening a saved layout in a smaller window (#371)', () => {
   let opened
   afterEach(async () => { await opened?.context.close() })
 
-  // A page on the DESK_SIZE desk whose kept layout has Rules and Mouse as `entriesFor(desk)` says, the rest as the fit kept
-  // them. Returns the page and those entries.
   async function openSaved (entriesFor) {
     opened = await openSolvePage(browser(), await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE), { contextOptions: DESK_SIZE })
     const { page } = opened

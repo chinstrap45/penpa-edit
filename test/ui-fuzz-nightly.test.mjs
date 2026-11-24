@@ -1,5 +1,3 @@
-// The nightly UI fuzz's failure title, its output reader and its night loop (live/ui-fuzz/nightly.mjs, #234), on sample
-// output lines and fake runners: no page, no `gh`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -47,13 +45,13 @@ const FAILED = [
   'replay: npm run fuzz:ui -- --seed 77 --path 3:4@abc'
 ].join('\n')
 
-test('a failure is read as its puzzle, seed, error, steps and replay command', () => {
+test('a failure is read as its puzzle, seed, error, actions and replay command', () => {
   assert.deepEqual(parseFuzzOutput(FAILED), {
     failed: true,
     puzzle: 'Classic',
     seed: 77,
     error: 'rule broken after step 2 (pin key): pin-keys-select-their-pin: pressing Z left no pin current',
-    steps: ['open the Pinned card', 'pin key Z'],
+    actions: ['open the Pinned card', 'pin key Z'],
     replay: 'npm run fuzz:ui -- --seed 77 --path 3:4@abc'
   })
 })
@@ -64,8 +62,6 @@ test('a pass is a verdict only when it ran an action list; no output is none', (
   assert.equal(parseFuzzOutput('browserType.launch: Executable does not exist'), null)
 })
 
-// A fake night: `outputs` are the runs' printed output in order, each a string (its exit read from it), an
-// `{ ok, output }` or an Error the start throws; every filing is kept.
 async function night (outputs) {
   const filed = []
   const seeds = [1, 2, 3, 4, 5]
@@ -127,7 +123,6 @@ test('a filed issue body ends with a Blocked by section', async () => {
   assert.match(filed[0].body, /\n## Blocked by\n\n- None — can start immediately\.$/)
 })
 
-// A fake runner for the filer script: every call is kept, and each answers `ok`.
 const fakeFiler = (ok = true) => {
   const calls = []
   return { calls, run: async (command, args) => { calls.push({ command, args, body: readFileSync(args[2], 'utf8') }); return { ok, output: '' } } }

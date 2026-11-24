@@ -1,4 +1,4 @@
-// The lint (#396): StandardJS over the JavaScript and shellcheck (error severity) over the shell scripts that
+// The lint: StandardJS over the JavaScript and shellcheck (error severity) over the shell scripts that
 // `.gitattributes` marks `merge=ours`, so an upstream merge never meets a style change of ours.
 // StandardJS comes from `node_modules`; shellcheck is the system's, found on PATH (`sudo apt-get install shellcheck`; GitHub's
 // ubuntu runners ship it), never a copy downloaded while the lint runs (Chris, 2026-11-24, #416).
@@ -8,9 +8,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const JS_EXTENSIONS = ['.js', '.mjs']
-export const SHELL_EXTENSIONS = ['.sh']
-// Owned files StandardJS must not read: a vendored bundle and a file `live/generate-gallery.mjs` writes.
+const JS_EXTENSIONS = ['.js', '.mjs']
+const SHELL_EXTENSIONS = ['.sh']
 export const NOT_LINTED = ['docs/ui/vendor/', 'docs/gallery-puzzles.js']
 
 const git = (root, args, input) => {
@@ -85,7 +84,7 @@ const attempt = (run) => {
   }
 }
 
-// Returns the lines to print for a failure; an empty list is a pass. `env` is shellcheck's environment, its PATH where it is looked up.
+// `env` is shellcheck's environment, its PATH where it is looked up.
 export function runLint (root, env = process.env) {
   const scope = attempt(() => lintScope(root))
   if (Array.isArray(scope)) return [`lint scope unreadable: ${scope[0]}`]

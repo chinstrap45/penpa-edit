@@ -1,5 +1,5 @@
-// The tool in use, and a Restart, survive a reload of solve.html whatever the timing of Penpa+'s unload save (#263). Penpa+'s own
-// save as the page unloads is not awaited, so it is switched off here: only the progress autosave can have stored the change.
+// The tool in use, and a Restart, survive a reload of solve.html whatever the timing of Penpa+'s unload save.
+// Penpa+'s own save as the page unloads is not awaited, so it is switched off here: only the progress autosave can have stored the change.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { makeNumberSolveLink, openSolvePage, setTool, typedDigits, useBrowser, waitForDesk, waitForTool } from './page.mjs'
@@ -9,7 +9,6 @@ import { settle } from './settle.mjs'
 const browser = useBrowser()
 
 const NUMBER_TOOL = { mode: 'number', submode: '1' }
-// Index in `pu.centerlist` of a cell clear of the board's edges.
 const FREE_CELL = 12
 
 const setToolTo = (tool) => (page) => setTool(page, tool)
@@ -24,7 +23,6 @@ const TOOL_CHANGES = [
   ['a style of the same tool', { ...NUMBER_TOOL, style: 1 }, (page) => page.evaluate(() => pu.stylemode_check('st_number2'))]
 ]
 
-// Opens solve.html on `link` with the unload save switched off, after `before` was chosen and saved.
 async function openWithUnloadSaveOff (link, before) {
   const opened = await openSolvePage(browser(), link)
   await setTool(opened.page, before)
@@ -45,58 +43,49 @@ async function changeAndWaitForSave (page, change) {
 
 describe('the tool across a reload', () => {
   for (const [what, before, change] of TOOL_CHANGES) {
-    it(`keeps ${what} changed last when the unload save is held back`, async () => {
+    it(`keeps ${what} changed last when the unload save is held back`, async (t) => {
       const link = await makeNumberSolveLink(browser())
       const { context, page } = await openWithUnloadSaveOff(link, before)
-      try {
-        const saved = await page.evaluate(() => engine.getTool())
-        await changeAndWaitForSave(page, () => change(page))
-        const want = await page.evaluate(() => engine.getTool())
-        assert.notDeepEqual(want, saved, 'the tool changed')
+      t.after(() => context.close())
+      const saved = await page.evaluate(() => engine.getTool())
+      await changeAndWaitForSave(page, () => change(page))
+      const want = await page.evaluate(() => engine.getTool())
+      assert.notDeepEqual(want, saved, 'the tool changed')
 
-        await page.reload()
-        await waitForDesk(page)
-        await waitForTool(page, { mode: want.mode, submode: want.submode }, 'the tool is the one chosen last after the reload')
-        assert.equal((await page.evaluate(() => engine.getTool())).style, want.style, 'its style is kept')
-      } finally {
-        await context.close()
-      }
+      await page.reload()
+      await waitForDesk(page)
+      await waitForTool(page, { mode: want.mode, submode: want.submode }, 'the tool is the one chosen last after the reload')
+      assert.equal((await page.evaluate(() => engine.getTool())).style, want.style, 'its style is kept')
     })
   }
 })
 
 describe('the orientation across a reload', () => {
-  it('keeps an orientation changed on its own when the unload save is held back', async () => {
+  it('keeps an orientation changed on its own when the unload save is held back', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openWithUnloadSaveOff(link, NUMBER_TOOL)
-    try {
-      const want = (await page.evaluate(() => engine.listOrientations())).find((direction) => direction !== 'R')
-      await changeAndWaitForSave(page, () => page.evaluate((direction) => engine.setOrientation(direction), want))
+    t.after(() => context.close())
+    const want = (await page.evaluate(() => engine.listOrientations())).find((direction) => direction !== 'R')
+    await changeAndWaitForSave(page, () => page.evaluate((direction) => engine.setOrientation(direction), want))
 
-      await page.reload()
-      await waitForDesk(page)
-      assert.equal(await settle(() => page.evaluate(() => engine.getOrientation()), want), want, 'the orientation is the one chosen last after the reload')
-    } finally {
-      await context.close()
-    }
+    await page.reload()
+    await waitForDesk(page)
+    assert.equal(await settle(() => page.evaluate(() => engine.getOrientation()), want), want, 'the orientation is the one chosen last after the reload')
   })
 })
 
 describe('a Restart across a reload', () => {
-  it('stays restarted when the unload save is held back', async () => {
+  it('stays restarted when the unload save is held back', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openWithUnloadSaveOff(link, NUMBER_TOOL)
-    try {
-      await clickCell(page, FREE_CELL)
-      await page.keyboard.press('7')
-      assert.deepEqual(await settle(() => typedDigits(page), ['7']), ['7'], 'a digit is on the board before the Restart')
-      await changeAndWaitForSave(page, () => page.evaluate(() => engine.restart()))
+    t.after(() => context.close())
+    await clickCell(page, FREE_CELL)
+    await page.keyboard.press('7')
+    assert.deepEqual(await settle(() => typedDigits(page), ['7']), ['7'], 'a digit is on the board before the Restart')
+    await changeAndWaitForSave(page, () => page.evaluate(() => engine.restart()))
 
-      await page.reload()
-      await waitForDesk(page)
-      assert.deepEqual(await settle(() => typedDigits(page), []), [], 'the digit is not back after the reload')
-    } finally {
-      await context.close()
-    }
+    await page.reload()
+    await waitForDesk(page)
+    assert.deepEqual(await settle(() => typedDigits(page), []), [], 'the digit is not back after the reload')
   })
 })

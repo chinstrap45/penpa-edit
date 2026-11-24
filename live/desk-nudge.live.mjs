@@ -1,10 +1,10 @@
-// The desk nudges, never refits (#344): after a window resize, a reload or a card that grows, a card that overlaps another
+// The desk nudges, never refits: after a window resize, a reload or a card that grows, a card that overlaps another
 // or falls outside the window moves back, and a card that needed no move stays. The lists are the failures the nightly
 // UI fuzz found, shrunk, run through the fuzz's own rules (`cards-do-not-overlap`, `cards-inside-window`,
-// `reload-keeps-layout-and-pins`); the last is #369's. The boxes of a hand-made layout are read in `laptop-desk.live.mjs`.
+// `reload-keeps-layout-and-pins`). The boxes of a hand-made layout are read in `laptop-desk.live.mjs`.
 import { describe, it } from 'node:test'
 import { useBrowser } from './page.mjs'
-import { CARDS, HANDLES, MOVES, scriptedList, WINDOW_SIZES } from './ui-fuzz/actions.mjs'
+import { dragAction as drag, interruptedDragAction as interrupted, resizeAction as resize, scriptedList, WINDOW_SIZES } from './ui-fuzz/actions.mjs'
 import { runScript } from './ui-fuzz/engine.mjs'
 import { uiFuzzPuzzles } from './ui-fuzz/puzzles.mjs'
 import { openTarget } from './ui-fuzz/target.mjs'
@@ -13,12 +13,7 @@ const browser = useBrowser()
 const puzzles = await uiFuzzPuzzles()
 const puzzleNamed = (name) => puzzles.find((p) => p.name === name)
 
-// An action's argument as its tables (`live/ui-fuzz/actions.mjs`) index it: a window size, a card, a handle, a move in pixels.
 const windowIndex = (width) => WINDOW_SIZES.findIndex((size) => size.width === width)
-const card = (name) => CARDS.indexOf(name)
-const handle = (name) => HANDLES.indexOf(name)
-const by = (px) => MOVES.indexOf(px)
-const resize = (name, edge, dx, dy) => ['card resize', [card(name), handle(edge), by(dx), by(dy)]]
 
 const LISTS = [
   ['a window resized twice in a row leaves no card over another', 'slitherlink', [['resize', windowIndex(1440)], ['resize', windowIndex(1366)]]],
@@ -29,17 +24,17 @@ const LISTS = [
     ['mode pick', 1]
   ]],
   ['a preset saved under a Mode card the solver moved keeps Recent inside the window', 'sudoku-9x9', [
-    ['interrupted drag', [card('Mouse'), 'resize']],
-    ['card drag', [card('Mode'), by(-240), by(240)]],
+    interrupted('Mouse', 'resize'),
+    drag('Mode', -240, 240),
     ['preset save', 0]
   ]],
   ['a reload after a Board resize and a window resize opens on the Board the window left', 'sudoku-6x6', [
     resize('Board', 'top', -240, -240),
-    ['interrupted drag', [card('Mouse'), 'resize']],
+    interrupted('Mouse', 'resize'),
     ['reload', null]
   ]],
   ['a reload after the Pinned card was dragged leaves Mode where it was', 'slitherlink', [
-    ['card drag', [card('Pinned'), by(-240), by(240)]],
+    drag('Pinned', -240, 240),
     ['reload', null]
   ]]
 ]

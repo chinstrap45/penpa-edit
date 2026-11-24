@@ -1,14 +1,10 @@
-// `pu.redraw` on a live page: a failing answer check must not leave the board blank.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'
 
 const browser = useBrowser()
 
-// Runs in the page. Redraws the board of a 4x4 sudoku tagged `tags` holding a large black `value` in its top two
-// cells, after `breakCheck` makes `pu.check_solution` throw. Returns how many times `pu.draw` ran, the
-// `console.error` messages `redraw` logged (swallowed here, so `useBrowser` does not count them as a failure) and
-// how many canvas pixels are not white and the cells `pu.conflict_cells` flagged as [x, y].
+// `console.error` is swallowed here so `useBrowser` does not fail the test on what redraw logs.
 function redrawInPage ({ tags, value, breakCheck }) {
   document.getElementById('nb_size1').value = 4
   document.getElementById('nb_size2').value = 4

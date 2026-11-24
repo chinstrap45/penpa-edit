@@ -9,20 +9,18 @@
 //     `history` is `<name>`.
 // The header's `tier` is `C`. A solve that fails its answer run, or a recording whose replay is refused, leaves no
 // expected file, any earlier one removed, and fails the command.
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { readFile, rm } from 'node:fs/promises'
 import { chromium } from 'playwright'
-import { RECORDINGS, engineCommit, recordingText, replay, writeExpected } from './replay.mjs'
+import { RECORDINGS, EXPECTED_SUFFIX, writeExpected, writeRecording } from './recordings.mjs'
+import { engineCommit, replay } from './replay.mjs'
 import { answerRun, convertReplayLink, generateSolve, RECORDING_SEED, TIER_C_FAMILY } from './tier-c.mjs'
 import { buildPuzzle, KEPT_OPEN_CELLS, TIER_C_PUZZLES } from './tier-c-puzzles.mjs'
 
-const removeExpected = (id) => rm(new URL(id + '.expected.json', RECORDINGS), { force: true })
+const removeExpected = (id) => rm(new URL(id + EXPECTED_SUFFIX, RECORDINGS), { force: true })
 
-// Writes `recording` as `id` and its expected file, or removes any earlier expected file and returns the replay's
-// report when it is refused.
 async function write (browser, id, recording) {
-  await mkdir(new URL(TIER_C_FAMILY + '/', RECORDINGS), { recursive: true })
-  await writeFile(new URL(id + '.steps.json', RECORDINGS), recordingText(recording))
-  const { checkpoints, report } = await replay(browser, recording, { id, roundTripEvery: 1 })
+  await writeRecording(id, recording)
+  const { checkpoints, report } = await replay(browser, recording, { id, fullRoundTrips: true })
   if (report) {
     await removeExpected(id)
     return report

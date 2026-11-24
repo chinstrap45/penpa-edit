@@ -1,5 +1,5 @@
 // Edit mode: Number's 1/4 sub-mode, pressed on a cell's own index as the engine driver does, leaves a selection that is
-// not a point; Sudoku mode's selection drawing must never see it (#118).
+// not a point; Sudoku mode's selection drawing must never see it.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'

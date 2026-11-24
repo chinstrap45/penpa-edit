@@ -8,7 +8,6 @@ const browser = useBrowser()
 
 const NURIKABE = 'https://puzz.link/p?nurikabe/5/5/1g2g3'
 
-// A malformed link per way it fails: a size, a missing field, a decoder that throws, and truncated clue data per genre.
 const MALFORMED = {
   'size 0x0': 'nurikabe/0/0/',
   'negative size': 'nurikabe/-3/5/',
@@ -30,7 +29,6 @@ const MALFORMED = {
   'nurikabe, number cut off': 'nurikabe/5/5/-'
 }
 
-// Opens the Load URL dialog, fills in `link` and presses its button.
 async function importLink (page, link) {
   await page.evaluate((l) => {
     document.getElementById('modal-load').style.display = 'block'

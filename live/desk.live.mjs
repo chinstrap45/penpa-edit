@@ -5,10 +5,9 @@ import assert from 'node:assert/strict'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { boardAgainstCard, newBoardSolveLink, openSolvePage, resetLayoutInSettings, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
+import { CARDS } from './desk-layout.mjs'
 
 const browser = useBrowser()
-
-const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
 
 // The desk's link carries rules: with none the Rules card stays one line tall, its - and + hidden and its height unkept.
 const SOME_RULES = 'Put a digit from 1 to 9 in every cell.'
@@ -37,7 +36,6 @@ async function handleCentre (page, name, handle = 'bottom-right') {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
 
-// The cards that stick out of the window, by name.
 async function cardsOutside (page) {
   const size = page.viewportSize()
   const outside = []
@@ -159,7 +157,6 @@ describe('the desk', () => {
     assert.deepEqual(await boxOf(page, 'Rules'), { ...start, x: start.x + 50, y: start.y + 40 })
   })
 
-  // The key the desk keeps its layout under: the stored value with a card's entry in it.
   const layoutKey = () => page.evaluate(() => Object.keys(localStorage).find((key) => {
     try {
       return typeof JSON.parse(localStorage.getItem(key))?.rules === 'object'
@@ -189,7 +186,6 @@ describe('the desk', () => {
     assert.equal(warnings.some((w) => w.includes(key) && w.includes('unreadable')), true, `the console says the layout was unreadable: ${warnings}`)
   })
 
-  // The computed font size of a card's body, in pixels.
   const bodyFontSize = (name) => page.evaluate((n) => parseFloat(getComputedStyle(document.querySelector(`section[aria-label="${n}"] .ui-body`)).fontSize), name)
 
   it('steps the Rules text by its own buttons, stops at the ends, keeps the size over a reload and Reset layout restores it', async () => {

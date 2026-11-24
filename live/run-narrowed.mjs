@@ -1,5 +1,5 @@
-// The narrowed seam (#316): the lint (#396), the unit tests, then the live files CI would run for the same change, chosen by
-// `live/run-live.mjs`. A detection that fails runs the full set, and says why there.
+// The narrowed seam: the lint, the unit tests, then the live files CI would run for the same change. A detection that
+// fails runs the full set, and says why there.
 // Usage: node live/run-narrowed.mjs [--changed <ref>] [--list]
 //   --changed <ref>  the change is the working tree against its merge base with <ref>; without it, the full set
 //   --list           prints one suite per line (`npm run lint`, `npm test`, then each live file) instead of running them
@@ -11,7 +11,6 @@ const RUN_LIVE = fileURLToPath(new URL('./run-live.mjs', import.meta.url))
 
 function main () {
   const { values } = parseArgs({ options: { changed: { type: 'string' }, list: { type: 'boolean' } } })
-  // Each step is what a run executes; `--list` names the same steps, so the two cannot drift apart.
   const checkSteps = [
     { name: 'npm run lint', command: 'npm', args: ['run', 'lint'] },
     { name: 'npm test', command: 'npm', args: ['test'] }

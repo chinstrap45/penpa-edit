@@ -1,4 +1,4 @@
-// The UI fuzz's engine (#195), modelled on `sudokupad-scripts/live/fuzz/engine.mjs`: fast-check generates action lists
+// The UI fuzz's engine, modelled on `sudokupad-scripts/live/fuzz/engine.mjs`: fast-check generates action lists
 // (`actions.mjs`), each list runs on a page of its own, the crash signals and the rules (`rules.mjs`) are read after every
 // action and once more after the last, and a failing list is shrunk and reported with the puzzle and path that replay it.
 // It knows no browser: the page comes from `openTarget(puzzle)` (`target.mjs`). Not a check itself.
@@ -11,22 +11,19 @@ const MINUTE_MS = 60000
 
 // After the last action the run reads the page once more after this long: a "nothing happened in N ms" check for an error
 // that lands late (a timer). fast-check never drops a list's last action in a shrink, so a late error read only there
-// would keep one stray step.
+// would keep one stray action.
 const ERRORS_LAND_MS = 200
 const DEFAULT_MINUTES = 2
-const DEFAULT_SHRINK_MINUTES = 10
+const SHRINK_MINUTES = 10
 const UNBOUNDED = 1000000
 
-// The steps a printed list holds, in order. fast-check prints them joined by commas, so no step's label holds one.
-const stepsOf = (shown) => shown.replace(REPLAY_PATH, '').split(',').map((step) => step.trim()).filter((step) => step !== '')
+// The actions a printed list holds, in order. fast-check prints them joined by commas, so no action's label holds one.
+const actionsOf = (shown) => shown.replace(REPLAY_PATH, '').split(',').map((action) => action.trim()).filter((action) => action !== '')
 
-// A failure names `step`, the count of steps run when it was read.
 function failure (message, step) {
   return Object.assign(new Error(message), { step })
 }
 
-// Fails on a crash signal first (each uncaught page error and `console.error` line in the snapshot, `page-state.mjs`),
-// then on a broken rule; `rules` is the rules' context (`rules.mjs`) less `now`.
 function assertClean (snapshot, rules, when, step) {
   const signals = snapshot.errors.map((e) => `page error: ${e}`)
   if (signals.length) throw failure(`${signals.length === 1 ? 'crash signal' : 'crash signals'} ${when}: ${signals.join('; ')}`, step)
@@ -80,13 +77,13 @@ function listsOn (puzzles, named, options) {
 }
 
 // Fuzzes with `seed` over `puzzles` (each list picks one, or `puzzle`, a name, for every list) until `minutes` pass or
-// `runs` lists have run, then shrinks a failure for at most `shrinkMinutes`. `path`, as a failure prints it, replays that
+// `runs` lists have run, then shrinks a failure for at most `SHRINK_MINUTES`. `path`, as a failure prints it, replays that
 // one list with no hunt and no shrink; `maxCommands` and `focus` (the areas whose actions are drawn more often) shape the
 // lists, so a replay needs the ones it was found with. Returns `{ failed: false, seed, runs }` or the failure: `error`,
-// `step` (the count of steps run when it was read), `puzzle` (its name), `sequence` (the steps, in words), `huntSteps`
-// (the steps the list had run when the hunt found it, before the shrink), `seed`, `path`, `maxCommands`, `focus` and
+// `step` (the count of steps run when it was read), `puzzle` (its name), `actions` (the actions, in words), `huntActions`
+// (the actions the list had run when the hunt found it, before the shrink), `seed`, `path`, `maxCommands`, `focus` and
 // `runs`. Rejects when no list ran (the time limit fired before the first): a run that checked nothing is no pass.
-export async function runFuzz ({ openTarget, puzzles, puzzle, seed, runs, minutes = DEFAULT_MINUTES, shrinkMinutes = DEFAULT_SHRINK_MINUTES, path, maxCommands, focus = [] }) {
+export async function runFuzz ({ openTarget, puzzles, puzzle, seed, runs, minutes = DEFAULT_MINUTES, path, maxCommands, focus = [] }) {
   const [fcPath, replayPath] = path == null ? [] : path.split('@')
   const lists = listsOn(puzzles, puzzle, { maxCommands, replayPath, focus })
   const property = fc.asyncProperty(lists, (list) => runScript({ openTarget, puzzle: list.puzzle, actions: list.commands }))
@@ -103,12 +100,11 @@ export async function runFuzz ({ openTarget, puzzles, puzzle, seed, runs, minute
     if (hunt.failed) throw new Error(`the run failed with no list to show: ${hunt.errorInstance?.message ?? hunt.error}`)
     return { failed: false, seed: hunt.seed, runs: hunt.numRuns }
   }
-  const huntSteps = stepsOf(String(hunt.counterexample[0])).length
+  const huntActions = actionsOf(String(hunt.counterexample[0])).length
   let found = hunt
   if (!replaying) {
-    // The same list again, from its index alone, this time shrinking; a failure that does not repeat leaves the hunt's own.
     const shrunk = await fc.check(property, {
-      seed, numRuns: upTo(hunt.counterexamplePath), path: hunt.counterexamplePath.split(':')[0], interruptAfterTimeLimit: shrinkMinutes * MINUTE_MS, verbose: 0
+      seed, numRuns: upTo(hunt.counterexamplePath), path: hunt.counterexamplePath.split(':')[0], interruptAfterTimeLimit: SHRINK_MINUTES * MINUTE_MS, verbose: 0
     })
     if (shrunk.failed && shrunk.counterexample !== null) found = shrunk
   }
@@ -119,8 +115,8 @@ export async function runFuzz ({ openTarget, puzzles, puzzle, seed, runs, minute
     error: String(found.errorInstance?.message ?? found.error),
     step: found.errorInstance?.step,
     puzzle: list.puzzle.name,
-    sequence: stepsOf(shown),
-    huntSteps,
+    actions: actionsOf(shown),
+    huntActions,
     seed: found.seed,
     path: `${found.counterexamplePath}@${REPLAY_PATH.exec(shown)[1]}`,
     maxCommands,

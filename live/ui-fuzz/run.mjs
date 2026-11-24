@@ -1,8 +1,8 @@
-// The UI fuzz from the command line (#195): `npm run fuzz:ui -- [--seed <n>] [--minutes <m>] [--puzzle <name>] [--max-steps
+// The UI fuzz from the command line: `npm run fuzz:ui -- [--seed <n>] [--minutes <m>] [--puzzle <name>] [--max-steps
 // <n>] [--path <printed path>] [--focus <area> ...]`, `--puzzle` running every list on that puzzle, `--max-steps` capping
 // a list's actions (20 by default) and `--focus` drawing that area's actions more often.
 // Random action lists on `solve.html` in headless Chromium, 2 minutes by default; a crash signal or a broken rule fails
-// the run, which is shrunk and printed with its puzzle, its seed, its steps and the command that replays it. Exits 1 on a
+// the run, which is shrunk and printed with its puzzle, its seed, its actions and the command that replays it. Exits 1 on a
 // failure, and on a run with no verdict (bad arguments, or no list ran). Not in `npm test` or `npm run test:live`.
 import { pathToFileURL } from 'node:url'
 import { chromium } from 'playwright'
@@ -23,10 +23,10 @@ export async function fuzzUi (args, { browser, target, print = console.log }) {
     print(`fuzz:ui passed: ${r.runs} action lists over ${puzzle == null ? `${puzzles.length} puzzles` : `the ${puzzle} puzzle`} in ${seconds} s (seed ${r.seed})`)
     return r
   }
-  print(`fuzz:ui FAILED on the ${r.puzzle} puzzle (seed ${r.seed}) after ${seconds} s, shrunk from ${r.huntSteps} ${r.huntSteps === 1 ? 'step' : 'steps'}`)
+  print(`fuzz:ui FAILED on the ${r.puzzle} puzzle (seed ${r.seed}) after ${seconds} s, shrunk from ${r.huntActions} ${r.huntActions === 1 ? 'step' : 'steps'}`)
   print(`error: ${r.error}`)
-  print(`${r.sequence.length} ${r.sequence.length === 1 ? 'step' : 'steps'}:`)
-  r.sequence.forEach((step, i) => print(`  ${i + 1}. ${step}`))
+  print(`${r.actions.length} ${r.actions.length === 1 ? 'step' : 'steps'}:`)
+  r.actions.forEach((action, i) => print(`  ${i + 1}. ${action}`))
   print(`replay: ${replayCommand(r)}`)
   return r
 }

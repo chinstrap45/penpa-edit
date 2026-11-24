@@ -1,20 +1,16 @@
-// The Settings dialog of `solve.html` (#100): `engine.getSettings` / `setSetting` over the fixed list, the dialog's four
-// groups, every change saved at once, conflict detection off for one puzzle only, Clear saved progress, and the keys.
-// The UI is found by role and accessible name, the board by what Penpa+ would save (`readEngineState`, defined by
-// recorder.js); the keys and clicks are real. Settings live in cookies, so every page is served over `https://penpa.test/`.
+// The Settings dialog of `solve.html`: `engine.getSettings` / `setSetting` over the fixed list, the dialog's groups, every change
+// saved at once, conflict detection off for one puzzle only, Clear saved progress, and the keys. The UI is found by role and
+// accessible name, the board by what Penpa+ would save (`readEngineState`, defined by recorder.js). Settings live in cookies, so
+// every page is served over https://penpa.test/.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
-import {
-  AKARI_SOLVE, board, boardCanvasInPage, linkFromNewBoard, makeNumberSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, typedDigits, useBrowser, waitForDesk
-} from './page.mjs'
+import { AKARI_SOLVE, board, boardCanvasInPage, linkFromNewBoard, makeNumberSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, typedDigits, useBrowser, waitForDesk, openSettings, closeSettings, flipSwitch, cellSize } from './page.mjs'
 import { cellPixel, clickCell } from './replay.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
-import { choosePreset, pinChips } from './pin-card.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// Index in `pu.centerlist` of a cell clear of the board's edges.
 const CELL = 12
 
 const SETTING_NAMES = [
@@ -40,23 +36,19 @@ const CONTROLS = [
   { name: 'shortcuts_enabled', group: 'Keys', toggle: 'Z, X, C and V shortcuts', from: true, to: false }
 ]
 
-// Opens `solve.html` on `query` in a context of its own, served so that cookies work, and returns once the desk is built.
 const openSolve = (query = AKARI_SOLVE, options = {}) => openSolvePage(browser(), query, { served: true, ...options })
 
-// A page that asks "leave this page?" (the reload protection setting) is left as a visitor who says yes leaves it.
 function acceptLeaving (page) {
   page.removeAllListeners('dialog')
   page.on('dialog', (d) => d.accept())
 }
 
-// Reloads the page as a visitor would.
 async function reload (page) {
   acceptLeaving(page)
   await page.reload()
   await waitForDesk(page)
 }
 
-// Goes to `query` on the same page and context, which keep their cookies and storage.
 async function openLink (page, query) {
   const solvePage = page.url().split('#')[0]
   acceptLeaving(page)
@@ -65,7 +57,6 @@ async function openLink (page, query) {
   await waitForDesk(page)
 }
 
-// A puzzle other than AKARI_SOLVE: a setting that is global holds there too, and is not just part of the first puzzle's saved progress.
 let otherPuzzle
 const otherLink = async () => (otherPuzzle ??= await makeNumberSolveLink(browser()))
 
@@ -83,23 +74,6 @@ const pageGroup = (dialog) => dialog.getByRole('group', { name: 'Page' })
 const pinsGroup = (dialog) => dialog.getByRole('group', { name: 'Pins' })
 const settings = (page) => page.evaluate(() => engine.getSettings())
 
-async function openDialog (page) {
-  await page.getByRole('button', { name: 'Settings' }).click()
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-  // The settings are the open dialog's own children, outside the shadow DOM's inner `dialog` that holds the role.
-  return page.locator('wa-dialog[open]')
-}
-
-const closeDialog = async (page) => {
-  await page.keyboard.press('Escape')
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
-}
-
-// Web Awesome's switch hides its input under the visible track, so Playwright's check for a covered target never passes on the
-// input. The click goes to the switch element holding it, which waits for the dialog's opening animation to settle first.
-const flipSwitch = (page, name) => page.locator('wa-switch').filter({ has: page.getByRole('switch', { name }) }).click()
-
-// Changes one control as a visitor would. A select is looked for in `group`, the control's group of the dialog.
 async function useControl (page, group, control) {
   if (control.toggle) {
     await flipSwitch(page, control.toggle)
@@ -109,7 +83,6 @@ async function useControl (page, group, control) {
   }
 }
 
-// Types `digit` into the cell at `index` in Number mode, as a visitor does, and waits until it is on the board.
 async function typeDigit (page, index, digit) {
   await setTool(page, { mode: 'number', submode: '1' })
   await clickCell(page, index)
@@ -121,96 +94,80 @@ async function typeDigit (page, index, digit) {
 // the same store waits for it.
 const savePenpa = (page) => page.evaluate(() => PenpaProgress.save())
 
-// The progress Penpa+ holds for the open puzzle, or null for none.
 const storedProgress = (page) => page.evaluate(() => localforage.getItem(PenpaProgress.getHash(pu.url)))
 
 describe('engine.getSettings and engine.setSetting', () => {
-  it('lists the fixed settings and the theme, and no other', async () => {
+  it('lists the fixed settings and the theme, and no other', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      assert.deepEqual(Object.keys(await settings(page)).sort(), [...SETTING_NAMES, 'theme'].sort(), 'the fixed list, and the theme the top bar reads')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.deepEqual(Object.keys(await settings(page)).sort(), [...SETTING_NAMES, 'theme'].sort(), 'the fixed list, and the theme the top bar reads')
   })
 
-  it('throws on an unknown name and on a value the setting does not take, and changes nothing', async () => {
+  it('throws on an unknown name and on a value the setting does not take, and changes nothing', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      const before = await settings(page)
-      const failure = (name, value) => page.evaluate(([n, v]) => {
-        try {
-          engine.setSetting(n, v)
-          return null
-        } catch (e) {
-          return `${e.name}: ${e.message}`
-        }
-      }, [name, value])
-      assert.match(await failure('no_such_setting', true), /^RangeError: .*no_such_setting/)
-      assert.match(await failure('color_theme', 2), /^RangeError/, 'a Penpa+ setting outside the list is unknown')
-      assert.match(await failure('outline_text', 1), /^TypeError: .*outline_text/)
-      assert.match(await failure('sudoku_centre_size', 9), /^RangeError: .*sudoku_centre_size/)
-      assert.match(await failure('sudoku_centre_size', '2'), /^RangeError/)
-      assert.deepEqual(await settings(page), before)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const before = await settings(page)
+    const failure = (name, value) => page.evaluate(([n, v]) => {
+      try {
+        engine.setSetting(n, v)
+        return null
+      } catch (e) {
+        return `${e.name}: ${e.message}`
+      }
+    }, [name, value])
+    assert.match(await failure('no_such_setting', true), /^RangeError: .*no_such_setting/)
+    assert.match(await failure('color_theme', 2), /^RangeError/, 'a Penpa+ setting outside the list is unknown')
+    assert.match(await failure('outline_text', 1), /^TypeError: .*outline_text/)
+    assert.match(await failure('sudoku_centre_size', 9), /^RangeError: .*sudoku_centre_size/)
+    assert.match(await failure('sudoku_centre_size', '2'), /^RangeError/)
+    assert.deepEqual(await settings(page), before)
   })
 
   for (const control of CONTROLS) {
-    it(`sets ${control.name} and saves it at once`, async () => {
+    it(`sets ${control.name} and saves it at once`, async (t) => {
       const { context, page } = await openSolve()
-      try {
-        assert.equal((await settings(page))[control.name], control.from, 'a fresh browser holds the default')
-        await page.evaluate(([n, v]) => engine.setSetting(n, v), [control.name, control.to])
-        assert.equal((await settings(page))[control.name], control.to)
-        await reload(page)
-        assert.equal((await settings(page))[control.name], control.to, 'the value is back after a reload')
-        await openLink(page, await otherLink())
-        assert.equal((await settings(page))[control.name], control.to, 'the value holds on another puzzle')
-      } finally {
-        await context.close()
-      }
+      t.after(() => context.close())
+      assert.equal((await settings(page))[control.name], control.from, 'a fresh browser holds the default')
+      await page.evaluate(([n, v]) => engine.setSetting(n, v), [control.name, control.to])
+      assert.equal((await settings(page))[control.name], control.to)
+      await reload(page)
+      assert.equal((await settings(page))[control.name], control.to, 'the value is back after a reload')
+      await openLink(page, await otherLink())
+      assert.equal((await settings(page))[control.name], control.to, 'the value holds on another puzzle')
     })
   }
 })
 
 describe('the Settings dialog', () => {
-  it('shows the four groups of Penpa+ settings and the page\'s own', async () => {
+  it('shows the four groups of Penpa+ settings and the page\'s own', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      const dialog = await openDialog(page)
-      for (const group of ['Board look', 'Checking', 'Progress', 'Keys', 'Page', 'Pins']) {
-        assert.equal(await dialog.getByRole('group', { name: group }).isVisible(), true, `${group} is a group`)
-      }
-    } finally {
-      await context.close()
+    t.after(() => context.close())
+    const dialog = await openSettings(page)
+    for (const group of ['Board look', 'Checking', 'Progress', 'Keys', 'Page', 'Pins']) {
+      assert.equal(await dialog.getByRole('group', { name: group }).isVisible(), true, `${group} is a group`)
     }
   })
 
   for (const control of CONTROLS) {
-    it(`changes ${control.name} from ${control.group}, and shows it again after a reload`, async () => {
+    it(`changes ${control.name} from ${control.group}, and shows it again after a reload`, async (t) => {
       const { context, page } = await openSolve(control.on ? await importLink(control.on) : AKARI_SOLVE)
-      try {
-        const dialog = await openDialog(page)
-        const group = dialog.getByRole('group', { name: control.group })
-        await useControl(page, group, control)
-        assert.equal(await settle(async () => (await settings(page))[control.name], control.to), control.to)
-        await closeDialog(page)
-        await reload(page)
-        assert.equal((await settings(page))[control.name], control.to, 'the value is back after a reload')
-        const again = await openDialog(page)
-        if (control.toggle) {
-          assert.equal(await again.getByRole('switch', { name: control.toggle }).isChecked(), control.to)
-        } else {
-          assert.equal(await again.getByRole('combobox', { name: control.select }).inputValue(), control.choose)
-        }
-        await closeDialog(page)
-        await openLink(page, await otherLink())
-        assert.equal((await settings(page))[control.name], control.to, 'the value holds on another puzzle')
-      } finally {
-        await context.close()
+      t.after(() => context.close())
+      const dialog = await openSettings(page)
+      const group = dialog.getByRole('group', { name: control.group })
+      await useControl(page, group, control)
+      assert.equal(await settle(async () => (await settings(page))[control.name], control.to), control.to)
+      await closeSettings(page)
+      await reload(page)
+      assert.equal((await settings(page))[control.name], control.to, 'the value is back after a reload')
+      const again = await openSettings(page)
+      if (control.toggle) {
+        assert.equal(await again.getByRole('switch', { name: control.toggle }).isChecked(), control.to)
+      } else {
+        assert.equal(await again.getByRole('combobox', { name: control.select }).inputValue(), control.choose)
       }
+      await closeSettings(page)
+      await openLink(page, await otherLink())
+      assert.equal((await settings(page))[control.name], control.to, 'the value holds on another puzzle')
     })
   }
 })
@@ -220,7 +177,7 @@ describe('the Settings dialog shows what the open puzzle uses', () => {
   const shown = async (query) => {
     const { context, page } = await openSolve(query)
     try {
-      const dialog = await openDialog(page)
+      const dialog = await openSettings(page)
       const names = []
       for (const name of GENRE_CONTROLS) {
         if (await dialog.getByRole('combobox', { name }).count() > 0) names.push(name)
@@ -249,7 +206,6 @@ describe('the Settings dialog shows what the open puzzle uses', () => {
 })
 
 describe('the Settings dialog is readable', () => {
-  // The Penpa+ words, and the one help line under each.
   const HELP = {
     'Surface second colour': ['combobox', 'The colour Surface uses for its second shading style.'],
     'Custom colours': ['switch', 'Adds your own colours to the colour pickers.'],
@@ -257,333 +213,283 @@ describe('the Settings dialog is readable', () => {
     'Save a copy to the browser history on every save': ['switch', 'Keeps the puzzle in the browser\'s history list each time it is saved.']
   }
 
-  it('gives each of the four Penpa+ words a help line under its control', async () => {
+  it('gives each of the four Penpa+ words a help line under its control', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      const dialog = await openDialog(page)
-      for (const [label, [role, help]] of Object.entries(HELP)) {
-        const row = dialog.locator('.ui-setting').filter({ has: page.getByRole(role, { name: label }) })
-        assert.equal(await row.locator('.ui-help').textContent(), help, label)
-      }
-    } finally {
-      await context.close()
+    t.after(() => context.close())
+    const dialog = await openSettings(page)
+    for (const [label, [role, help]] of Object.entries(HELP)) {
+      const row = dialog.locator('.ui-setting').filter({ has: page.getByRole(role, { name: label }) })
+      assert.equal(await row.locator('.ui-help').textContent(), help, label)
     }
   })
 
-  it('logs no Web Awesome deprecation warning while loading the page and opening the Settings dialog', async () => {
+  it('logs no Web Awesome deprecation warning while loading the page and opening the Settings dialog', async (t) => {
     const warnings = []
     const { context, page } = await openSolve(AKARI_SOLVE, { setup: (ctx) => ctx.on('page', (p) => p.on('console', (m) => { if (/deprecated/i.test(m.text())) warnings.push(m.text()) })) })
-    try {
-      await openDialog(page)
-      assert.deepEqual(warnings, [])
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await openSettings(page)
+    assert.deepEqual(warnings, [])
   })
 
-  it('closes the dialog on Reset layout, so the result is seen', async () => {
+  it('closes the dialog on Reset layout, so the result is seen', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      const dialog = await openDialog(page)
-      await pageGroup(dialog).getByRole('button', { name: 'Reset layout' }).click()
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const dialog = await openSettings(page)
+    await pageGroup(dialog).getByRole('button', { name: 'Reset layout' }).click()
+    await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
   })
 })
 
 describe('conflict detection off for this puzzle only', () => {
-  it('is off again on reopening puzzle A and on for puzzle B', async () => {
+  it('is off again on reopening puzzle A and on for puzzle B', async (t) => {
     const linkB = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(AKARI_SOLVE)
-    try {
-      const dialog = await openDialog(page)
-      await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
-      await page.getByRole('option', { name: 'Off for this puzzle' }).click()
-      assert.equal(await settle(async () => (await settings(page)).conflict_detection, 2), 2)
-      assert.equal(await dialog.getByText('This puzzle only').isVisible(), true, 'the setting is tagged')
-      await closeDialog(page)
+    t.after(() => context.close())
+    const dialog = await openSettings(page)
+    await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
+    await page.getByRole('option', { name: 'Off for this puzzle' }).click()
+    assert.equal(await settle(async () => (await settings(page)).conflict_detection, 2), 2)
+    assert.equal(await dialog.getByText('This puzzle only').isVisible(), true, 'the setting is tagged')
+    await closeSettings(page)
 
-      await reload(page)
-      assert.equal((await settings(page)).conflict_detection, 2, 'A: off again after a reload')
-      assert.equal(await (await openDialog(page)).getByText('This puzzle only').isVisible(), true, 'A: tagged again')
-      await closeDialog(page)
+    await reload(page)
+    assert.equal((await settings(page)).conflict_detection, 2, 'A: off again after a reload')
+    assert.equal(await (await openSettings(page)).getByText('This puzzle only').isVisible(), true, 'A: tagged again')
+    await closeSettings(page)
 
-      await openLink(page, linkB)
-      assert.equal((await settings(page)).conflict_detection, 1, 'B: on')
-      assert.equal(await (await openDialog(page)).getByText('This puzzle only').isVisible(), false, 'B: not tagged')
-      await closeDialog(page)
+    await openLink(page, linkB)
+    assert.equal((await settings(page)).conflict_detection, 1, 'B: on')
+    assert.equal(await (await openSettings(page)).getByText('This puzzle only').isVisible(), false, 'B: not tagged')
+    await closeSettings(page)
 
-      await openLink(page, AKARI_SOLVE)
-      assert.equal((await settings(page)).conflict_detection, 2, 'A: off when opened again later')
-    } finally {
-      await context.close()
-    }
+    await openLink(page, AKARI_SOLVE)
+    assert.equal((await settings(page)).conflict_detection, 2, 'A: off when opened again later')
   })
 
   // Penpa+'s history copy rewrites the link's `#` part on every save, with the solver's progress in it; the setting is the
   // puzzle's, so it holds across it.
-  it('is off again after a reload of a link the history copy rewrote', async () => {
+  it('is off again after a reload of a link the history copy rewrote', async (t) => {
     const { context, page } = await openSolve(AKARI_SOLVE)
-    try {
-      const dialog = await openDialog(page)
-      await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
-      await page.getByRole('option', { name: 'Off for this puzzle' }).click()
-      assert.equal(await settle(async () => (await settings(page)).conflict_detection, 2), 2)
-      await closeDialog(page)
-      await page.evaluate(() => engine.setSetting('auto_save_history', true))
-      const before = await page.evaluate(() => location.hash)
-      await savePenpa(page)
-      assert.notEqual(await page.evaluate(() => location.hash), before, 'the save rewrote the link')
-      await reload(page)
-      assert.equal((await settings(page)).conflict_detection, 2, 'off again after the reload')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const dialog = await openSettings(page)
+    await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
+    await page.getByRole('option', { name: 'Off for this puzzle' }).click()
+    assert.equal(await settle(async () => (await settings(page)).conflict_detection, 2), 2)
+    await closeSettings(page)
+    await page.evaluate(() => engine.setSetting('auto_save_history', true))
+    const before = await page.evaluate(() => location.hash)
+    await savePenpa(page)
+    assert.notEqual(await page.evaluate(() => location.hash), before, 'the save rewrote the link')
+    await reload(page)
+    assert.equal((await settings(page)).conflict_detection, 2, 'off again after the reload')
   })
 
-  it('is on again once the visitor turns it back on', async () => {
+  it('is on again once the visitor turns it back on', async (t) => {
     const { context, page } = await openSolve(AKARI_SOLVE)
-    try {
-      const dialog = await openDialog(page)
-      await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
-      await page.getByRole('option', { name: 'Off for this puzzle' }).click()
-      // A click on the select while its list is still closing toggles it shut again.
-      await page.getByRole('option', { name: 'On', exact: true }).waitFor({ state: 'hidden' })
-      await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
-      await page.getByRole('option', { name: 'On', exact: true }).click()
-      assert.equal(await settle(async () => (await settings(page)).conflict_detection, 1), 1)
-      await closeDialog(page)
-      await reload(page)
-      assert.equal((await settings(page)).conflict_detection, 1)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const dialog = await openSettings(page)
+    await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
+    await page.getByRole('option', { name: 'Off for this puzzle' }).click()
+    // A click on the select while its list is still closing toggles it shut again.
+    await page.getByRole('option', { name: 'On', exact: true }).waitFor({ state: 'hidden' })
+    await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
+    await page.getByRole('option', { name: 'On', exact: true }).click()
+    assert.equal(await settle(async () => (await settings(page)).conflict_detection, 1), 1)
+    await closeSettings(page)
+    await reload(page)
+    assert.equal((await settings(page)).conflict_detection, 1)
   })
 })
 
 describe('Clear saved progress', () => {
-  it('removes the puzzle\'s saved progress, and the progress was there before', async () => {
+  it('removes the puzzle\'s saved progress, and the progress was there before', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(link)
-    try {
-      await setTool(page, { mode: 'number', submode: '1' })
-      await clickCell(page, CELL)
-      await page.keyboard.press('7')
-      assert.deepEqual(await settle(() => typedDigits(page), ['7']), ['7'], 'the digit is on the board')
+    t.after(() => context.close())
+    await setTool(page, { mode: 'number', submode: '1' })
+    await clickCell(page, CELL)
+    await page.keyboard.press('7')
+    assert.deepEqual(await settle(() => typedDigits(page), ['7']), ['7'], 'the digit is on the board')
 
-      // Penpa+ saves on unload, and a reload can cut that write short: save now and wait until it is stored.
-      await page.evaluate(() => PenpaProgress.save())
-      const stored = () => page.evaluate(async () => Boolean(await localforage.getItem(PenpaProgress.getHash(pu.url))))
-      assert.equal(await settle(stored, true), true, 'the progress is stored before the reload')
-      await reload(page)
-      assert.deepEqual(await settle(() => typedDigits(page), ['7']), ['7'], 'the digit came back from the saved progress')
+    // Penpa+ saves on unload, and a reload can cut that write short: save now and wait until it is stored.
+    await page.evaluate(() => PenpaProgress.save())
+    const stored = () => page.evaluate(async () => Boolean(await localforage.getItem(PenpaProgress.getHash(pu.url))))
+    assert.equal(await settle(stored, true), true, 'the progress is stored before the reload')
+    await reload(page)
+    assert.deepEqual(await settle(() => typedDigits(page), ['7']), ['7'], 'the digit came back from the saved progress')
 
-      const dialog = await openDialog(page)
-      await dialog.getByRole('button', { name: CLEAR_BUTTON, exact: true }).click()
-      await page.getByRole('button', { name: CONFIRM_CLEAR, exact: true }).click()
-      await closeDialog(page)
-      await reload(page)
-      assert.deepEqual(await settle(() => typedDigits(page), []), [], 'the saved progress is gone')
-    } finally {
-      await context.close()
-    }
+    const dialog = await openSettings(page)
+    await dialog.getByRole('button', { name: CLEAR_BUTTON, exact: true }).click()
+    await page.getByRole('button', { name: CONFIRM_CLEAR, exact: true }).click()
+    await closeSettings(page)
+    await reload(page)
+    assert.deepEqual(await settle(() => typedDigits(page), []), [], 'the saved progress is gone')
   })
 
-  it('asks first: Cancel leaves the saved progress, and the question says it is this puzzle only', async () => {
+  it('asks first: Cancel leaves the saved progress, and the question says it is this puzzle only', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(link)
-    try {
-      await typeDigit(page, CELL, '7')
-      await savePenpa(page)
-      assert.notEqual(await storedProgress(page), null, 'the progress is stored')
-      const dialog = await openDialog(page)
-      await dialog.getByRole('button', { name: CLEAR_BUTTON, exact: true }).click()
-      assert.match(await page.locator('wa-dialog[label="Clear this puzzle\'s saved progress?"]').textContent(), /this puzzle only/)
-      const cancel = page.getByRole('button', { name: 'Cancel' })
-      await cancel.click()
-      await cancel.waitFor({ state: 'hidden' })
-      assert.notEqual(await storedProgress(page), null, 'Cancel leaves the saved progress')
-      assert.equal(await page.getByRole('switch', { name: 'Save progress in this browser' }).isChecked(), true, 'saving is still on')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await typeDigit(page, CELL, '7')
+    await savePenpa(page)
+    assert.notEqual(await storedProgress(page), null, 'the progress is stored')
+    const dialog = await openSettings(page)
+    await dialog.getByRole('button', { name: CLEAR_BUTTON, exact: true }).click()
+    assert.match(await page.locator('wa-dialog[label="Clear this puzzle\'s saved progress?"]').textContent(), /this puzzle only/)
+    const cancel = page.getByRole('button', { name: 'Cancel' })
+    await cancel.click()
+    await cancel.waitFor({ state: 'hidden' })
+    assert.notEqual(await storedProgress(page), null, 'Cancel leaves the saved progress')
+    assert.equal(await page.getByRole('switch', { name: 'Save progress in this browser' }).isChecked(), true, 'saving is still on')
   })
 
-  it('leaves the global Save progress switch as it was and notes that this puzzle was cleared', async () => {
+  it('leaves the global Save progress switch as it was and notes that this puzzle was cleared', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(link)
-    try {
-      await typeDigit(page, CELL, '7')
-      await savePenpa(page)
-      const dialog = await openDialog(page)
-      await dialog.getByRole('button', { name: CLEAR_BUTTON, exact: true }).click()
-      await page.getByRole('button', { name: CONFIRM_CLEAR, exact: true }).click()
-      await dialog.getByRole('status').filter({ hasText: /^This puzzle's saved progress was cleared\./ }).waitFor()
-      assert.equal(await storedProgress(page), null, 'the progress is gone')
-      assert.equal(await page.getByRole('switch', { name: 'Save progress in this browser' }).isChecked(), true, 'the global switch still shows saving on')
-      assert.equal((await settings(page)).local_storage, true, 'the setting is still on')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await typeDigit(page, CELL, '7')
+    await savePenpa(page)
+    const dialog = await openSettings(page)
+    await dialog.getByRole('button', { name: CLEAR_BUTTON, exact: true }).click()
+    await page.getByRole('button', { name: CONFIRM_CLEAR, exact: true }).click()
+    await dialog.getByRole('status').filter({ hasText: /^This puzzle's saved progress was cleared\./ }).waitFor()
+    assert.equal(await storedProgress(page), null, 'the progress is gone')
+    assert.equal(await page.getByRole('switch', { name: 'Save progress in this browser' }).isChecked(), true, 'the global switch still shows saving on')
+    assert.equal((await settings(page)).local_storage, true, 'the setting is still on')
   })
 })
 
 describe('engine.clearSavedProgress', () => {
-  it('resolves only once the progress is gone from storage', async () => {
+  it('resolves only once the progress is gone from storage', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(link)
-    try {
-      await typeDigit(page, CELL, '7')
-      await savePenpa(page)
-      assert.notEqual(await storedProgress(page), null, 'the progress is stored')
-      const left = await page.evaluate(async () => {
-        // Slow storage: every removal starts a task later, so one nobody waits for is still pending when the call returns.
-        const remove = localforage.removeItem.bind(localforage)
-        localforage.removeItem = (key) => new Promise((resolve) => setTimeout(resolve)).then(() => remove(key))
-        const hash = PenpaProgress.getHash(pu.url)
-        await engine.clearSavedProgress()
-        return localforage.getItem(hash)
-      })
-      assert.equal(left, null)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await typeDigit(page, CELL, '7')
+    await savePenpa(page)
+    assert.notEqual(await storedProgress(page), null, 'the progress is stored')
+    const left = await page.evaluate(async () => {
+      // Slow storage: every removal starts a task later, so one nobody waits for is still pending when the call returns.
+      const remove = localforage.removeItem.bind(localforage)
+      localforage.removeItem = (key) => new Promise((resolve) => setTimeout(resolve)).then(() => remove(key))
+      const hash = PenpaProgress.getHash(pu.url)
+      await engine.clearSavedProgress()
+      return localforage.getItem(hash)
+    })
+    assert.equal(left, null)
   })
 })
 
 describe('the Progress settings', () => {
-  it('save progress in this browser: off, a save stores nothing and the digit is not back after a reload', async () => {
+  it('save progress in this browser: off, a save stores nothing and the digit is not back after a reload', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(link)
-    try {
-      await openDialog(page)
-      await flipSwitch(page, 'Save progress in this browser')
-      assert.equal(await settle(async () => (await settings(page)).local_storage, false), false)
-      await closeDialog(page)
-      // Choosing the tool in `openSolve` was saved while the setting was still on; the store holds that and no digit.
-      const before = await storedProgress(page)
-      assert.notEqual(before, null, 'the tool chosen while the setting was on was saved')
-      await typeDigit(page, CELL, '7')
-      await savePenpa(page)
-      assert.equal(await storedProgress(page), before, 'nothing more is stored')
-      await reload(page)
-      assert.deepEqual(await typedDigits(page), [], 'the digit is not back')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await openSettings(page)
+    await flipSwitch(page, 'Save progress in this browser')
+    assert.equal(await settle(async () => (await settings(page)).local_storage, false), false)
+    await closeSettings(page)
+    // Choosing the tool in `openSolve` was saved while the setting was still on; the store holds that and no digit.
+    const before = await storedProgress(page)
+    assert.notEqual(before, null, 'the tool chosen while the setting was on was saved')
+    await typeDigit(page, CELL, '7')
+    await savePenpa(page)
+    assert.equal(await storedProgress(page), before, 'nothing more is stored')
+    await reload(page)
+    assert.deepEqual(await typedDigits(page), [], 'the digit is not back')
   })
 
-  it('save a copy to the browser history: a save adds a history entry only while it is on', async () => {
+  it('save a copy to the browser history: a save adds a history entry only while it is on', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(link)
-    try {
-      const where = () => page.evaluate(() => ({ hash: location.hash, entries: history.length }))
-      await typeDigit(page, CELL, '7')
-      const start = await where()
-      await savePenpa(page)
-      assert.deepEqual(await where(), start, 'off: the address and the history are as they were')
+    t.after(() => context.close())
+    const where = () => page.evaluate(() => ({ hash: location.hash, entries: history.length }))
+    await typeDigit(page, CELL, '7')
+    const start = await where()
+    await savePenpa(page)
+    assert.deepEqual(await where(), start, 'off: the address and the history are as they were')
 
-      await openDialog(page)
-      await flipSwitch(page, 'Save a copy to the browser history on every save')
-      assert.equal(await settle(async () => (await settings(page)).auto_save_history, true), true)
-      await closeDialog(page)
-      await savePenpa(page)
-      const after = await where()
-      assert.equal(after.entries, start.entries + 1, 'on: the save added a history entry')
-      assert.notEqual(after.hash, start.hash, 'on: the address carries the copy')
-      assert.match(after.hash, /[#&]l=solvedup(&|$)/, 'on: the copy is a solving copy')
-    } finally {
-      await context.close()
-    }
+    await openSettings(page)
+    await flipSwitch(page, 'Save a copy to the browser history on every save')
+    assert.equal(await settle(async () => (await settings(page)).auto_save_history, true), true)
+    await closeSettings(page)
+    await savePenpa(page)
+    const after = await where()
+    assert.equal(after.entries, start.entries + 1, 'on: the save added a history entry')
+    assert.notEqual(after.hash, start.hash, 'on: the address carries the copy')
+    assert.match(after.hash, /[#&]l=solvedup(&|$)/, 'on: the copy is a solving copy')
   })
 
-  it('ask before leaving the page: a reload asks only while it is on', async () => {
+  it('ask before leaving the page: a reload asks only while it is on', async (t) => {
     const { context, page } = await openSolve(AKARI_SOLVE)
-    try {
-      const asked = []
-      const reloadCounting = async () => {
-        page.removeAllListeners('dialog')
-        page.on('dialog', (d) => { asked.push(d.type()); d.accept() })
-        // Chromium asks only on a page the visitor has used.
-        await clickCell(page, CELL)
-        await page.reload()
-        await waitForDesk(page)
-      }
-      await reloadCounting()
-      assert.deepEqual(asked, [], 'off: no question')
-
-      await openDialog(page)
-      await flipSwitch(page, 'Ask before leaving the page')
-      assert.equal(await settle(async () => (await settings(page)).reload_button, true), true)
-      await closeDialog(page)
-      await reloadCounting()
-      assert.deepEqual(asked, ['beforeunload'], 'on: the page asked once')
-    } finally {
-      await context.close()
+    t.after(() => context.close())
+    const asked = []
+    const reloadCounting = async () => {
+      page.removeAllListeners('dialog')
+      page.on('dialog', (d) => { asked.push(d.type()); d.accept() })
+      // Chromium asks only on a page the visitor has used.
+      await clickCell(page, CELL)
+      await page.reload()
+      await waitForDesk(page)
     }
+    await reloadCounting()
+    assert.deepEqual(asked, [], 'off: no question')
+
+    await openSettings(page)
+    await flipSwitch(page, 'Ask before leaving the page')
+    assert.equal(await settle(async () => (await settings(page)).reload_button, true), true)
+    await closeSettings(page)
+    await reloadCounting()
+    assert.deepEqual(asked, ['beforeunload'], 'on: the page asked once')
   })
 })
 
 describe('the keys', () => {
-  it('never reach the board from the dialog, and Escape returns focus to the board', async () => {
+  it('never reach the board from the dialog, and Escape returns focus to the board', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(link)
-    try {
-      await setTool(page, { mode: 'number', submode: '1' })
-      await clickCell(page, CELL)
-      const before = await board(page)
-      assert.equal(before.selection.length, 1, 'a cell is selected, so a digit would be entered')
+    t.after(() => context.close())
+    await setTool(page, { mode: 'number', submode: '1' })
+    await clickCell(page, CELL)
+    const before = await board(page)
+    assert.equal(before.selection.length, 1, 'a cell is selected, so a digit would be entered')
 
-      const dialog = await openDialog(page)
-      await dialog.getByRole('combobox', { name: 'Conflict detection' }).focus()
-      await page.keyboard.press('7')
-      await dialog.getByRole('switch', { name: 'Outline on text' }).focus()
-      await page.keyboard.press('7')
-      await page.keyboard.press('Backspace')
-      assert.deepEqual(await board(page), before, 'the board is as it was')
+    const dialog = await openSettings(page)
+    await dialog.getByRole('combobox', { name: 'Conflict detection' }).focus()
+    await page.keyboard.press('7')
+    await dialog.getByRole('switch', { name: 'Outline on text' }).focus()
+    await page.keyboard.press('7')
+    await page.keyboard.press('Backspace')
+    assert.deepEqual(await board(page), before, 'the board is as it was')
 
-      await closeDialog(page)
-      await page.keyboard.press('5')
-      assert.deepEqual(await settle(() => typedDigits(page), ['5']), ['5'], 'a digit after Escape reaches the board')
-    } finally {
-      await context.close()
-    }
+    await closeSettings(page)
+    await page.keyboard.press('5')
+    assert.deepEqual(await settle(() => typedDigits(page), ['5']), ['5'], 'a digit after Escape reaches the board')
   })
 
-  it('make Z jump to the first pin with the shortcuts setting on, and do nothing with it off', async () => {
+  it('make Z jump to the first pin with the shortcuts setting on, and do nothing with it off', async (t) => {
     const { context, page } = await openSolve(AKARI_SOLVE)
-    try {
-      // The tool Z jumps to, and a tool of another mode to start from.
-      const [firstPin] = await page.evaluate(() => engine.tabSet())
-      const { mode, submode } = (await page.evaluate(() => engine.listTools())).find((t) => t.mode !== firstPin.mode)
-      const start = { mode, submode }
-      const modeNow = () => page.evaluate(() => engine.getTool().mode)
+    t.after(() => context.close())
+    const [firstPin] = await page.evaluate(() => engine.tabSet())
+    const { mode, submode } = (await page.evaluate(() => engine.listTools())).find((t) => t.mode !== firstPin.mode)
+    const start = { mode, submode }
+    const modeNow = () => page.evaluate(() => engine.getTool().mode)
 
-      await openDialog(page)
-      await flipSwitch(page, 'Z, X, C and V shortcuts')
-      await closeDialog(page)
-      await setTool(page, start)
-      await page.keyboard.press('z')
-      assert.equal(await modeNow(), start.mode, 'Z does nothing with shortcuts off')
+    await openSettings(page)
+    await flipSwitch(page, 'Z, X, C and V shortcuts')
+    await closeSettings(page)
+    await setTool(page, start)
+    await page.keyboard.press('z')
+    assert.equal(await modeNow(), start.mode, 'Z does nothing with shortcuts off')
 
-      await openDialog(page)
-      await flipSwitch(page, 'Z, X, C and V shortcuts')
-      await closeDialog(page)
-      await page.keyboard.press('z')
-      assert.equal(await settle(modeNow, firstPin.mode), firstPin.mode, 'Z jumps to the first pin with shortcuts on')
-    } finally {
-      await context.close()
-    }
+    await openSettings(page)
+    await flipSwitch(page, 'Z, X, C and V shortcuts')
+    await closeSettings(page)
+    await page.keyboard.press('z')
+    assert.equal(await settle(modeNow, firstPin.mode), firstPin.mode, 'Z jumps to the first pin with shortcuts on')
   })
 })
 
-// Runs in the page. A 4x4 board's solve link `#` part, built for one setting's effect to show:
-// - `sudoku`: a classic sudoku, conflict checked, with two given 1s in its top row, a given 2 in its bottom right cell and
-//   an author's answer, which Penpa+ needs before it checks for conflicts;
-// - `colour`: a given shaded cell in a custom colour of its own;
-// - `lineAnswer`: an author's answer of a green line between the two top-left cells, checked as a loop line.
+// The sudoku board holds an author's answer because Penpa+ checks for conflicts only on a puzzle that has one.
 function settingBoardInPage ({ sudoku, colour, lineAnswer }) {
   document.getElementById('nb_size1').value = 4
   document.getElementById('nb_size2').value = 4
@@ -618,7 +524,6 @@ const settingLink = (kind) => {
   return settingLinks.get(kind)
 }
 
-// The drawn board, as an image's data URL.
 async function boardPicture (page) {
   const canvas = await page.evaluateHandle(boardCanvasInPage)
   try {
@@ -630,8 +535,7 @@ async function boardPicture (page) {
 
 const setSetting = (page, name, value) => page.evaluate(([n, v]) => engine.setSetting(n, v), [name, value])
 
-// Sets `name` to `to` and back to `from`: the board must look different at `to` and as it was at `from`. The bridge's
-// setters draw before they return, so no wait is needed.
+// The bridge's setters draw before they return, so no wait is needed.
 async function assertRedrawn (page, name, from, to) {
   await setSetting(page, name, from)
   const before = await boardPicture(page)
@@ -641,7 +545,6 @@ async function assertRedrawn (page, name, from, to) {
   assert.equal(await boardPicture(page), before, `${name} ${JSON.stringify(from)} draws it as before`)
 }
 
-// The symbols the solver has placed, by Penpa+'s point number.
 const placedSymbols = (page) => page.evaluate(() => readEngineState().pu_a.symbol)
 
 describe('each Board look and Checking setting, on a board where it applies', () => {
@@ -705,10 +608,9 @@ describe('each Board look and Checking setting, on a board where it applies', ()
     it('starbattle_dots decides whether a right click near a corner puts a dot there', async () => {
       const { page } = opened
       await setTool(page, { mode: 'combi', submode: 'star' })
-      // A right click near the bottom-right corner of a cell, inside the cell.
       const nearCorner = async () => {
         const centre = await cellPixel(page, 6)
-        const size = await page.evaluate(() => engine.getState().cellSize)
+        const size = await cellSize(page)
         return { x: centre.x + size * 0.42, y: centre.y + size * 0.42 }
       }
       const rightClickNearCorner = async () => {
@@ -730,117 +632,84 @@ describe('each Board look and Checking setting, on a board where it applies', ()
     })
   })
 
-  it('custom_colors_on draws a given\'s own colour only while it is on', async () => {
+  it('custom_colors_on draws a given\'s own colour only while it is on', async (t) => {
     const { context, page } = await openSolve(await settingLink('colour'))
-    try {
-      assert.equal((await settings(page)).custom_colors_on, true, 'a link with colours of its own turns it on')
-      await assertRedrawn(page, 'custom_colors_on', true, false)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.equal((await settings(page)).custom_colors_on, true, 'a link with colours of its own turns it on')
+    await assertRedrawn(page, 'custom_colors_on', true, false)
   })
 
   for (const on of [false, true]) {
-    it(`ignore_line_style ${on ? 'on' : 'off'}: a red line ${on ? 'matches' : 'does not match'} the author's green line`, async () => {
+    it(`ignore_line_style ${on ? 'on' : 'off'}: a red line ${on ? 'matches' : 'does not match'} the author's green line`, async (t) => {
       const { context, page } = await openSolve(await settingLink('lineAnswer'))
-      try {
-        await setSetting(page, 'ignore_line_style', on)
-        await setTool(page, { mode: 'line', submode: '1', style: 8 })
-        const [from, to] = [await cellPixel(page, 0), await cellPixel(page, 1)]
-        await page.mouse.move(from.x, from.y)
-        await page.mouse.down()
-        await page.mouse.move(to.x, to.y, { steps: 5 })
-        await page.mouse.up()
-        await settle(async () => Object.keys((await board(page)).entered.line ?? {}).length, 1)
-        const solved = () => page.evaluate(() => engine.getState().solved)
-        assert.equal(await settle(solved, on), on)
-      } finally {
-        await context.close()
-      }
+      t.after(() => context.close())
+      await setSetting(page, 'ignore_line_style', on)
+      await setTool(page, { mode: 'line', submode: '1', style: 8 })
+      const [from, to] = [await cellPixel(page, 0), await cellPixel(page, 1)]
+      await page.mouse.move(from.x, from.y)
+      await page.mouse.down()
+      await page.mouse.move(to.x, to.y, { steps: 5 })
+      await page.mouse.up()
+      await settle(async () => Object.keys((await board(page)).entered.line ?? {}).length, 1)
+      const solved = () => page.evaluate(() => engine.getState().solved)
+      assert.equal(await settle(solved, on), on)
     })
   }
 })
 
 describe('the desk\'s own settings in the dialog', () => {
-  // The pins, by their unpin buttons' names.
-  const pinNames = (page) => pinChips(page).getByRole('button', { name: /^Unpin / })
-    .evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-label')))
-
-  it('switches the theme, and keeps it for the next visit', async () => {
+  it('switches the theme, and keeps it for the next visit', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      const dialog = await openDialog(page)
-      await pageGroup(dialog).getByRole('combobox', { name: 'Theme' }).click()
-      await page.getByRole('option', { name: 'Dark' }).click()
-      assert.equal(await settle(async () => (await settings(page)).theme, 'dark'), 'dark')
-      await closeDialog(page)
-      await reload(page)
-      assert.equal((await settings(page)).theme, 'dark', 'dark after a reload')
-      assert.equal(await pageGroup(await openDialog(page)).getByRole('combobox', { name: 'Theme' }).inputValue(), 'Dark')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const dialog = await openSettings(page)
+    await pageGroup(dialog).getByRole('combobox', { name: 'Theme' }).click()
+    await page.getByRole('option', { name: 'Dark' }).click()
+    assert.equal(await settle(async () => (await settings(page)).theme, 'dark'), 'dark')
+    await closeSettings(page)
+    await reload(page)
+    assert.equal((await settings(page)).theme, 'dark', 'dark after a reload')
+    assert.equal(await pageGroup(await openSettings(page)).getByRole('combobox', { name: 'Theme' }).inputValue(), 'Dark')
   })
 
-  it('resets the layout', async () => {
+  it('resets the layout', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      const rules = page.getByRole('region', { name: 'Rules' })
-      const start = await rules.boundingBox()
-      const head = await rules.getByRole('heading', { name: 'Rules' }).boundingBox()
-      await page.mouse.move(head.x + head.width / 2, head.y + head.height / 2)
-      await page.mouse.down()
-      await page.mouse.move(head.x + head.width / 2 + 120, head.y + head.height / 2 + 70, { steps: 5 })
-      await page.mouse.up()
-      assert.notDeepEqual(await rules.boundingBox(), start, 'the card moved')
-      const dialog = await openDialog(page)
-      await pageGroup(dialog).getByRole('button', { name: 'Reset layout' }).click()
-      assert.deepEqual(await settle(() => rules.boundingBox(), start), start)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const rules = page.getByRole('region', { name: 'Rules' })
+    const start = await rules.boundingBox()
+    const head = await rules.getByRole('heading', { name: 'Rules' }).boundingBox()
+    await page.mouse.move(head.x + head.width / 2, head.y + head.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(head.x + head.width / 2 + 120, head.y + head.height / 2 + 70, { steps: 5 })
+    await page.mouse.up()
+    assert.notDeepEqual(await rules.boundingBox(), start, 'the card moved')
+    const dialog = await openSettings(page)
+    await pageGroup(dialog).getByRole('button', { name: 'Reset layout' }).click()
+    assert.deepEqual(await settle(() => rules.boundingBox(), start), start)
   })
 
-  it('the Puzzle defaults preset resets the pins to the link\'s Tab set', async () => {
+  it('deletes a saved preset, which the Pinned card then no longer offers', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      assert.equal(await settle(async () => (await pinNames(page)).length > 1, true), true, 'the Tab set seeds two pins or more')
-      const seeded = await pinNames(page)
-      await page.getByRole('button', { name: seeded[0] }).click()
-      assert.deepEqual(await settle(() => pinNames(page), seeded.slice(1)), seeded.slice(1), 'a pin is gone')
-      await choosePreset(page, 'Puzzle defaults')
-      assert.deepEqual(await settle(() => pinNames(page), seeded), seeded)
-    } finally {
-      await context.close()
+    t.after(() => context.close())
+    const pinned = page.getByRole('region', { name: 'Pinned' })
+    await pinned.getByRole('button', { name: 'Save pins…' }).click()
+    await pinned.getByRole('textbox', { name: 'Preset name' }).fill('Mine')
+    await pinned.getByRole('button', { name: 'Save', exact: true }).click()
+    const offered = async () => {
+      await pinned.getByRole('combobox', { name: 'Pin presets' }).click()
+      const names = await page.getByRole('option').allInnerTexts()
+      await page.keyboard.press('Escape')
+      await page.getByRole('option').first().waitFor({ state: 'hidden' })
+      return names.includes('Mine')
     }
-  })
+    assert.equal(await offered(), true, 'the saved preset is offered')
 
-  it('deletes a saved preset, which the Pinned card then no longer offers', async () => {
-    const { context, page } = await openSolve()
-    try {
-      const pinned = page.getByRole('region', { name: 'Pinned' })
-      await pinned.getByRole('button', { name: 'Save pins…' }).click()
-      await pinned.getByRole('textbox', { name: 'Preset name' }).fill('Mine')
-      await pinned.getByRole('button', { name: 'Save', exact: true }).click()
-      const offered = async () => {
-        await pinned.getByRole('combobox', { name: 'Pin presets' }).click()
-        const names = await page.getByRole('option').allInnerTexts()
-        await page.keyboard.press('Escape')
-        await page.getByRole('option').first().waitFor({ state: 'hidden' })
-        return names.includes('Mine')
-      }
-      assert.equal(await offered(), true, 'the saved preset is offered')
-
-      const dialog = await openDialog(page)
-      const deleteButton = pinsGroup(dialog).getByRole('button', { name: 'Delete preset' })
-      assert.equal(await deleteButton.isDisabled(), true, 'nothing to delete until one is chosen')
-      await pinsGroup(dialog).getByRole('combobox', { name: 'Your presets' }).click()
-      await page.getByRole('option', { name: 'Mine' }).click()
-      await deleteButton.click()
-      await closeDialog(page)
-      assert.equal(await offered(), false, 'the deleted preset is no longer offered')
-    } finally {
-      await context.close()
-    }
+    const dialog = await openSettings(page)
+    const deleteButton = pinsGroup(dialog).getByRole('button', { name: 'Delete preset' })
+    assert.equal(await deleteButton.isDisabled(), true, 'nothing to delete until one is chosen')
+    await pinsGroup(dialog).getByRole('combobox', { name: 'Your presets' }).click()
+    await page.getByRole('option', { name: 'Mine' }).click()
+    await deleteButton.click()
+    await closeSettings(page)
+    assert.equal(await offered(), false, 'the deleted preset is no longer offered')
   })
 })

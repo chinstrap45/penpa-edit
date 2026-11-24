@@ -1,4 +1,4 @@
-// The Mode card's tool tree and the Pinned card's preset list of `solve.html` (#187) open as a floating layer: inside the window
+// The Mode card's tool tree and the Pinned card's preset list of `solve.html` open as a floating layer: inside the window
 // and below the top bar, over the other cards, scrolling to their last row, and the card they live in keeps its size. Driven by
 // role and accessible name, in laptop-sized windows.
 import assert from 'node:assert/strict'
@@ -11,7 +11,6 @@ const browser = useBrowser()
 const WIDTH = 1366
 // A laptop's height, and a window short enough that no list fits below its field.
 const HEIGHTS = [768, 500]
-// A point on the desk that is on no card.
 const EMPTY_DESK = { x: 5, y: 400 }
 
 // Every tab, so the Mode tree has every tool to list.
@@ -29,9 +28,16 @@ const rectOf = (locator) => locator.evaluate((node) => {
   return { x, y, width, height }
 })
 
+// `overflow` makes the list taller than its box: the Mode tree opens with its groups shut, which fits.
 const CASES = [
-  { card: 'Mode', field: 'Tool', list: (card) => card.getByRole('tree', { name: 'Tools' }) },
-  { card: 'Pinned', field: 'Pin presets', list: (card) => card.getByRole('listbox', { name: 'Presets' }) }
+  {
+    card: 'Mode',
+    field: 'Tool',
+    list: (card) => card.getByRole('tree', { name: 'Tools' }),
+    row: 'treeitem',
+    overflow: (card) => card.getByRole('button', { name: 'Everything', exact: true }).click()
+  },
+  { card: 'Pinned', field: 'Pin presets', list: (card) => card.getByRole('listbox', { name: 'Presets' }), row: 'option' }
 ]
 
 for (const height of HEIGHTS) {
@@ -46,12 +52,12 @@ for (const height of HEIGHTS) {
     const page = () => opened.page
     const barBottom = () => rectOf(page().locator('.ui-bar')).then(({ y, height: barHeight }) => y + barHeight)
 
-    for (const { card: cardName, field: fieldName, list: listOf } of CASES) {
+    for (const { card: cardName, field: fieldName, list: listOf, row, overflow } of CASES) {
       describe(`the ${cardName} card's list`, () => {
         const card = () => page().getByRole('region', { name: cardName })
-        // The default layout stacks the Recent card over the lower half of the Pinned card, where its preset field is, so it is
-        // focused rather than clicked: the keyboard opens the same list. Focus does not scroll, because a short window leaves the
-        // Pinned card taller than the desk, and the browser would scroll the desk (#181's layout) and move the card.
+        // The default layout stacks the Recent card over the Pinned card's preset field, so it is focused rather than clicked.
+        // preventScroll, because a short window leaves the Pinned card taller than the desk and the browser would scroll the
+        // desk and move the card.
         const focusField = () => card().getByRole('combobox', { name: fieldName }).evaluate((node) => node.focus({ preventScroll: true }))
         const list = () => listOf(card()).locator('xpath=ancestor-or-self::*[contains(@class,"ui-list")][1]')
 
@@ -74,9 +80,19 @@ for (const height of HEIGHTS) {
         })
 
         it('scrolls to its last row', async () => {
-          await list().evaluate((node) => { node.scrollTop = node.scrollHeight })
-          const reached = await settle(() => list().evaluate((node) => node.scrollHeight - node.scrollTop - node.clientHeight < 1), true)
-          assert.equal(reached, true, 'the list scrolls until its content ends')
+          await overflow?.(card())
+          const overflows = await settle(() => list().evaluate((node) => node.scrollHeight > node.clientHeight), true)
+          assert.equal(overflows, true, 'the list is taller than its box (the premise)')
+          const at = await rectOf(list())
+          await page().mouse.move(at.x + at.width / 2, at.y + at.height / 2)
+          await page().mouse.wheel(0, 100000)
+          const last = listOf(card()).getByRole(row).last()
+          const reached = await settle(async () => {
+            const box = await rectOf(list())
+            const { y, height: rowHeight } = await rectOf(last)
+            return y >= box.y && y + rowHeight <= box.y + box.height + 1
+          }, true)
+          assert.equal(reached, true, 'the wheel brings the last row into the list\'s visible box')
         })
 
         it('closes on Escape and on a click outside', async () => {

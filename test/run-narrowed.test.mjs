@@ -1,48 +1,42 @@
-// The narrowed seam command (`live/run-narrowed.mjs`, #316): the lint, the unit tests, then the live files CI would run for the
-// same change. `--list` names what it would run.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { ENGINE, ENV, PINS, scratchRepo, tree, UI } from './live-scratch.mjs'
+import { ENGINE, ENV, listedBy, PINS, scratchRepo, tree, UI } from './live-scratch.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const RUN = join(ROOT, 'live/run-narrowed.mjs')
 const run = (dir, args, env = ENV) => spawnSync(process.execPath, [RUN, ...args], { cwd: dir, env, encoding: 'utf8' })
-const listed = (dir, ...args) => {
-  const out = run(dir, ['--list', ...args])
-  assert.equal(out.status, 0, out.stderr)
-  return { suites: out.stdout.split('\n').filter(Boolean), said: out.stderr }
-}
+const listed = (dir, ...args) => listedBy(RUN, dir, ...args)
 
 describe('node live/run-narrowed.mjs --list', () => {
   it('names the lint, the unit tests and the live files CI would run for a change under docs/ui/', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/ui/pins.js'), '// two\n')
-    const { suites, said } = listed(dir, '--changed', 'master')
-    assert.deepEqual(suites, ['npm run lint', 'npm test', PINS])
+    const { lines, said } = listed(dir, '--changed', 'master')
+    assert.deepEqual(lines, ['npm run lint', 'npm test', PINS])
     assert.match(said, /all on the skip list/)
   })
 
   it('adds the engine side for an edit to a script the page loads', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/js/class_p.js'), '// two\n')
-    assert.deepEqual(listed(dir, '--changed', 'master').suites, ['npm run lint', 'npm test', ENGINE, PINS, UI])
+    assert.deepEqual(listed(dir, '--changed', 'master').lines, ['npm run lint', 'npm test', ENGINE, PINS, UI])
   })
 
   it('runs the full set with no --changed, and says so', () => {
-    const { suites, said } = listed(scratchRepo().dir)
-    assert.deepEqual(suites, ['npm run lint', 'npm test', ENGINE, PINS, UI])
+    const { lines, said } = listed(scratchRepo().dir)
+    assert.deepEqual(lines, ['npm run lint', 'npm test', ENGINE, PINS, UI])
     assert.match(said, /the full set/)
   })
 
   it('runs the full set when the ref cannot be read, and says why', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/ui/pins.js'), '// two\n')
-    const { suites, said } = listed(dir, '--changed', 'no-such-ref')
-    assert.deepEqual(suites, ['npm run lint', 'npm test', ENGINE, PINS, UI])
+    const { lines, said } = listed(dir, '--changed', 'no-such-ref')
+    assert.deepEqual(lines, ['npm run lint', 'npm test', ENGINE, PINS, UI])
     assert.match(said, /change detection failed .*: the full set/)
   })
 
@@ -56,8 +50,6 @@ describe('node live/run-narrowed.mjs --list', () => {
   })
 })
 
-// A scratch repo whose live files record that they ran, and a fake `npm` first on the PATH that records its arguments
-// and exits with $FAKE_NPM_STATUS.
 function runnableRepo () {
   const { dir, git } = scratchRepo()
   for (const file of [ENGINE, UI, PINS]) writeFileSync(join(dir, file), `import { appendFileSync } from 'node:fs'\nappendFileSync(process.env.RAN_LOG, '${file}\\n')\n`)

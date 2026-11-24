@@ -13,10 +13,8 @@ const UI_EXTENSIONS = /\.(js|css|html)$/
 // Web Awesome's bundle is not ours to check.
 const VENDOR_DIR = 'vendor'
 
-// Penpa+'s own names a UI file must not use, as whole words.
 const INTERNAL_NAMES = ['pu', 'UserSettings', 'sw_timer', 'Swal']
 
-// The element ids Penpa+'s page marks up.
 function legacyIds (indexHtml) {
   return new Set([...indexHtml.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]))
 }
@@ -68,7 +66,6 @@ const STREAM_FIT_PARTS = [
 
 const streamFitLines = (text) => text.split('\n').flatMap((lineText, i) => (STREAM_FIT_PARTS.some((part) => part.pattern.test(lineText)) ? [i + 1] : []))
 
-// The files the shipped page runs: the solve UI, the engine bridge and the solve page.
 const shippedFiles = () => [...uiFiles(UI_DIR), join(ROOT, 'docs/js/engine_bridge.js'), join(ROOT, 'docs/solve.html')]
 
 describe('the shipped page', () => {
@@ -140,5 +137,68 @@ describe('window.uiKit', () => {
     assert.notEqual(readers.length, 0, 'some UI file reads uiKit')
     const late = readers.filter((file) => !(order.indexOf(file) > kitAt))
     assert.deepEqual(late, [])
+  })
+})
+
+// The live files that open `solve.html` and still read Penpa+'s `pu.`. The solve UI is rebuilt against the engine API,
+// so a new live file that opens the solve page must not reach into the engine's internals. This list may only shrink: take a
+// file off it when it stops reading `pu.`, never put one on.
+const SOLVE_LIVE_FILES_READING_PU = [
+  'live/big-board.live.mjs',
+  'live/board-coordinates.live.mjs',
+  'live/board-zoom.live.mjs',
+  'live/change-size.live.mjs',
+  'live/chip-click.live.mjs',
+  'live/conflicts.live.mjs',
+  'live/gallery.live.mjs',
+  'live/holds.live.mjs',
+  'live/index-autosave.live.mjs',
+  'live/keys.live.mjs',
+  'live/line-width.live.mjs',
+  'live/mouse-card.live.mjs',
+  'live/open-in-penpa.live.mjs',
+  'live/redirect.live.mjs',
+  'live/reset-layout.live.mjs',
+  'live/settings-dialog.live.mjs',
+  'live/shape-click.live.mjs',
+  'live/shortcut-sheet.live.mjs',
+  'live/solve-forward.live.mjs',
+  'live/solve-page.live.mjs',
+  'live/solved-state.live.mjs',
+  'live/text-outline.live.mjs',
+  'live/tool-reload.live.mjs',
+  'live/tools.live.mjs',
+  'live/top-bar.live.mjs'
+]
+
+// `openSolvePage` and `withPinnedPage` are the helpers that open it.
+const OPENS_SOLVE_PAGE = /solve: true|solve\.html|\bopenSolvePage\(|\bwithPinnedPage\(/
+const READS_PU = /\bpu\./
+
+// The live files that open the solve page and read `pu.` in code (a comment line does not count).
+function solveFilesReadingPu (files) {
+  return files.filter(({ text }) => OPENS_SOLVE_PAGE.test(text) &&
+    READS_PU.test(text.split('\n').filter((line) => !/^\s*\/\//.test(line)).join('\n'))).map(({ name }) => name).sort()
+}
+
+const liveFiles = () => readdirSync(join(ROOT, 'live')).filter((name) => name.endsWith('.live.mjs'))
+  .map((name) => ({ name: `live/${name}`, text: readFileSync(join(ROOT, 'live', name), 'utf8') }))
+
+describe('the live files that open solve.html', () => {
+  it('read pu. only in the files listed, and the list names no file that stopped', () => {
+    const found = solveFilesReadingPu(liveFiles())
+    assert.deepEqual(found.filter((file) => !SOLVE_LIVE_FILES_READING_PU.includes(file)), [], 'a new file reads pu. (use the engine API)')
+    assert.deepEqual(SOLVE_LIVE_FILES_READING_PU.filter((file) => !found.includes(file)), [], 'a listed file no longer reads pu.: remove it from the list')
+  })
+
+  it('finds a new solve-page file that reads pu., and passes one that only mentions it in a comment', () => {
+    const opens = 'await openPenpa(browser, query, { solve: true })\n'
+    const files = [
+      { name: 'live/new.live.mjs', text: `${opens}const n = await page.evaluate(() => pu.size)\n` },
+      { name: 'live/quiet.live.mjs', text: `${opens}// the engine's pu.size is read through the API\n` },
+      { name: 'live/helper.live.mjs', text: 'const opened = await openSolvePage(browser(), link)\nawait opened.page.evaluate(() => pu.redraw())\n' },
+      { name: 'live/engine.live.mjs', text: 'await openPenpa(browser, query)\npu.size\n' }
+    ]
+    assert.deepEqual(solveFilesReadingPu(files), ['live/helper.live.mjs', 'live/new.live.mjs'])
   })
 })

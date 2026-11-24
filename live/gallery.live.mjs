@@ -12,14 +12,12 @@ const browser = useBrowser()
 const GALLERY_FILE = new URL('../docs/gallery-puzzles.js', import.meta.url)
 const GALLERY_URL = new URL('../docs/gallery.html', import.meta.url).href
 
-// The puzzles the ticket lists, by id, in the order the list shows them.
 const IDS = ['sudoku-9x9', 'sudoku-6x6', 'killer', 'starbattle', 'slitherlink', 'or-shading', 'long-rules', 'rectangle', 'hex', 'triangle', 'no-rules']
 const SIZES = { '1366x768': { width: 1366, height: 768 }, '1920x1080': { width: 1920, height: 1080 } }
 // Longer than a board takes to draw on a loaded box.
 const BOARD_MS = 15000
 const WINDOW = { viewport: { width: 1600, height: 900 } }
 
-// The entries the page lists, read from the file it loads.
 const listed = () => {
   const source = readFileSync(GALLERY_FILE, 'utf8')
   // eslint-disable-next-line no-new-func -- reads the list from the page's own script text
@@ -32,7 +30,6 @@ const open = (query = '') => openPenpa(browser(), query, {
   ready: () => document.querySelectorAll('#puzzle-list [data-id]').length > 0
 })
 
-// The solve page the iframe holds, once its board is up; a board that does not come up fails naming `id`.
 async function boardFrame (page, id) {
   const frame = await (await page.locator('#stage iframe').elementHandle()).contentFrame()
   try {
@@ -44,7 +41,6 @@ async function boardFrame (page, id) {
   return frame
 }
 
-// The puzzle a solve page holds: its size and everything the setter put on it.
 const puzzleOf = (frame) => frame.evaluate(() => ({ nx: pu.nx, ny: pu.ny, setter: JSON.stringify(pu.pu_q) }))
 
 // The puzzle `entry`'s link opens on `solve.html` by itself, outside the review page, so a puzzle of the same grid type
@@ -75,8 +71,6 @@ describe('the review page', () => {
     assert.deepEqual([params.get('puzzle'), params.get('size')], [IDS[0], 'fill'])
   })
 
-  // The page's own open puzzle must be `entry`: selected in the list and loading its board, not a puzzle of the same grid
-  // type opened in its place.
   async function assertOpensEntry (page, entry) {
     assert.equal(await selectedId(page), entry.id)
     const frame = await boardFrame(page, entry.id)
@@ -104,7 +98,7 @@ describe('the review page', () => {
     await assertOpensEntry(page, entryOf(IDS[0]))
   })
 
-  // One test per puzzle, so each gets its own `--test-timeout` and a failure names its puzzle (#284).
+  // One test per puzzle, so each gets its own `--test-timeout` and a failure names its puzzle.
   for (const [i, id] of IDS.entries()) {
     if (i === 0) continue
     const before = IDS[i - 1]

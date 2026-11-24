@@ -1,5 +1,4 @@
-// The npm test scripts cap node's test concurrency (#76): without the flag node
-// runs one file per core, and a Chromium per live file hangs the shared box.
+// Without the cap node runs one file per core, and a Chromium per live file hangs the shared box.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -16,7 +15,6 @@ test('npm test caps concurrency at 4, once, before the file glob', () => {
   assert.ok(glob > words.indexOf(caps(words)[0]), 'the cap comes before the quoted file glob')
 })
 
-// `live/run-live.mjs` puts its flags before the files it passes node.
 for (const name of ['test:live', 'test:live:changed']) {
   test(`npm run ${name} runs the live files through live/run-live.mjs, which caps concurrency at 4, once`, () => {
     assert.match(scripts[name], /^node live\/run-live\.mjs\b/)

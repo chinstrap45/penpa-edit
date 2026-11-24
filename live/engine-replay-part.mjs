@@ -4,7 +4,8 @@ import assert from 'node:assert/strict'
 import { readdir, readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'
 import { useBrowser } from './page.mjs'
-import { listRecordings, readExpected, readRecording, replay } from './replay.mjs'
+import { listRecordings, readExpected, readRecording } from './recordings.mjs'
+import { replay } from './replay.mjs'
 
 export const REPLAY_PARTS = 3
 
@@ -13,8 +14,6 @@ export function replayPartIds (ids, part, parts = REPLAY_PARTS) {
   return ids.filter((id, i) => i % parts === part)
 }
 
-// Asserts the part files `<stem>-<k>.live.mjs` of a split run: one for each of `parts`, each making `call`, and the ids
-// `idsOf(k)` they replay together being `ids`, each once.
 export async function assertPartFiles (stem, parts, call, idsOf, ids) {
   const dir = new URL('./', import.meta.url)
   const files = (await readdir(dir)).filter((f) => new RegExp(`^${stem}-\\d+\\.live\\.mjs$`).test(f)).sort()
@@ -29,7 +28,6 @@ export async function assertPartFiles (stem, parts, call, idsOf, ids) {
 // file cannot replay another file's part.
 export const REPLAY_CALL = 'await replayPart(import.meta.url)'
 
-// Registers the replay tests of the part named by `fileUrl`.
 export async function replayPart (fileUrl) {
   const part = Number(/engine-replay-(\d+)\.live\.mjs$/.exec(fileUrl)[1])
   const browser = useBrowser()

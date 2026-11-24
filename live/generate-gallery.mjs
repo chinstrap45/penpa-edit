@@ -1,4 +1,3 @@
-// Writes `docs/gallery-puzzles.js`, the list the review page loads (`live/gallery-puzzles.mjs` holds the puzzles).
 import { writeFile } from 'node:fs/promises'
 import { chromium } from 'playwright'
 import { galleryEntries, renderGalleryFile } from './gallery-puzzles.mjs'

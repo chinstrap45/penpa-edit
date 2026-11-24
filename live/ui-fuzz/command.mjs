@@ -1,4 +1,4 @@
-// The UI fuzz's command line (#195): `npm run fuzz:ui -- [--seed <n>] [--minutes <m>] [--puzzle <name>] [--max-steps <n>]
+// The UI fuzz's command line: `npm run fuzz:ui -- [--seed <n>] [--minutes <m>] [--puzzle <name>] [--max-steps <n>]
 // [--path <printed path>] [--focus <area> ...]`, read, and the replay command a failure prints. Not a check itself.
 import { parseArgs } from 'node:util'
 import { AREAS } from './actions.mjs'
@@ -22,10 +22,8 @@ export function parseFuzzArgs (args) {
   return { seed: numberOption(values, 'seed', { integer: true }), minutes: numberOption(values, 'minutes'), puzzle: values.puzzle, maxCommands: numberOption(values, 'max-steps', { integer: true }), path: values.path, focus }
 }
 
-// The command that runs a failure's list again on its puzzle, by name, with the list length (when not the default) and
-// the focus it was found with, both of which shape the lists. A path holds
-// digits, `:`, `@` and fast-check's replay letters, and a puzzle name or an area lowercase letters, digits and `-`, none
-// of which a shell reads.
+// A path holds digits, `:`, `@` and fast-check's replay letters, and a puzzle name or an area lowercase letters, digits
+// and `-`, none of which a shell reads, so none is quoted.
 export const replayCommand = ({ seed, puzzle, maxCommands, path, focus = [] }) => [
   `npm run fuzz:ui -- --seed ${seed} --puzzle ${puzzle}`, ...(maxCommands == null ? [] : [`--max-steps ${maxCommands}`]), `--path ${path}`,
   ...focus.map((area) => `--focus ${area}`)

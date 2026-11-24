@@ -5,21 +5,20 @@
 // and refuses a history it cannot convert or whose last board is not solved.
 import assert from 'node:assert/strict'
 import { before, describe, it } from 'node:test'
-import { openPenpa, useBrowser } from './page.mjs'
-import { engineDriver, listRecordings, readRecording, replay } from './replay.mjs'
+import { openPenpa, useBrowser, withPage } from './page.mjs'
+import { listRecordings, readRecording } from './recordings.mjs'
+import { engineDriver, replay } from './replay.mjs'
 import { settle } from './settle.mjs'
 import { answerRun, convertReplayLink, generateSolve, RECORDING_SEED, TIER_C_FAMILY, TIER_C_SEEDS } from './tier-c.mjs'
-import { boardLoaded, buildPuzzle, puzzleFromRecording, TIER_C_PUZZLES, withPage } from './tier-c-puzzles.mjs'
+import { boardLoaded, buildPuzzle, puzzleFromRecording, TIER_C_PUZZLES } from './tier-c-puzzles.mjs'
 
 const browser = useBrowser()
 
-// The kept recordings of solvers' converted histories.
 const historyIds = []
 for (const id of await listRecordings()) {
   if (id.startsWith(TIER_C_FAMILY + '/') && (await readRecording(id)).header.history) historyIds.push(id)
 }
 
-// Opens `puzzle`'s solve link and makes `steps` on it through the engine driver; the caller closes the context.
 async function solvedPage (puzzle, steps, options) {
   const opened = await openPenpa(browser(), puzzle.source, options)
   await boardLoaded(opened.page)
@@ -28,7 +27,6 @@ async function solvedPage (puzzle, steps, options) {
   return opened
 }
 
-// Runs in the page: the solve history part (`r`) of the page's Replay link.
 function replayHistoryInPage () {
   return pu.maketext_replay().split('&r=')[1]
 }
@@ -42,7 +40,6 @@ function replayLinkOf (puzzle, changes) {
   })
 }
 
-// Every seed of the answer-aimed fuzz solves `puzzle`.
 async function fuzzSolves (puzzle) {
   for (const seed of TIER_C_SEEDS) {
     const { failure } = await answerRun(browser(), puzzle, generateSolve(puzzle, seed))
@@ -70,6 +67,8 @@ describe('tier C', () => {
       }
     }
 
+    // With no kept history recording the family below runs nothing, which `node:test` reports as passing; a todo says so.
+    if (historyIds.length === 0) it.todo(`solves the puzzle of each kept history recording under ${TIER_C_FAMILY}/ with every seed (none is kept)`)
     for (const id of historyIds) {
       it(`solves the puzzle of ${id} with every seed`, async () => {
         await fuzzSolves(await puzzleFromRecording(browser(), id, await readRecording(id)))
@@ -122,8 +121,8 @@ describe('tier C', () => {
     })
   })
 
-  // The ticket's open question: a solver's Replay link of a puzzle reopened from saved progress (`PenpaProgress.save`,
-  // which stores the solve-mode duplicate link) still holds the whole solve history, not only the board.
+  // A Replay link of a puzzle reopened from saved progress (`PenpaProgress.save`, which stores the solve-mode duplicate link)
+  // must still hold the whole solve history, not only the board.
   describe('saved progress of a solved puzzle, reloaded', () => {
     let saved, reloaded, solvedAfter
     before(async () => {
@@ -153,9 +152,8 @@ describe('tier C', () => {
     })
   })
 
-  it('reads unsolved once a solved sudoku has a conflict', async () => {
+  it('reads unsolved once a solved sudoku has a conflict', async (t) => {
     const puzzle = puzzles['sudoku-9x9']
-    // A digit of another cell of its row, typed into a solved cell.
     const [cell] = puzzle.answer
     const other = puzzle.answer.find((c) => c.row === cell.row && c.digit !== cell.digit)
     const { x, y } = puzzle.points[cell.num]
@@ -165,11 +163,8 @@ describe('tier C', () => {
       { kind: 'key', call: 'key_number', args: [String(other.digit)] }
     ]
     const { context, page } = await solvedPage(puzzle, [...generateSolve(puzzle, RECORDING_SEED), ...conflict])
-    try {
-      assert.notDeepEqual(await page.evaluate(() => pu.conflict_cells), [], 'the digit makes a conflict (the premise)')
-      assert.equal(await page.evaluate(() => pu.sol_flag), 0)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.notDeepEqual(await page.evaluate(() => pu.conflict_cells), [], 'the digit makes a conflict (the premise)')
+    assert.equal(await page.evaluate(() => pu.sol_flag), 0)
   })
 })

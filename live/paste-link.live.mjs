@@ -9,10 +9,9 @@ const browser = useBrowser()
 
 const UPSTREAM = 'https://swaroopg92.github.io/penpa-edit/'
 const FORK = 'https://chinstrap45.github.io/penpa-edit/'
-// The fork's address before the move to chinstrap45: a link shared then still opens (spec #373).
+// The fork's address before the move to chinstrap45: a link shared then must still open.
 const OLD_FORK = 'https://caneff.github.io/penpa-edit/'
 
-// Opens bare solve.html: the paste box shows, no desk is built.
 async function openBare () {
   const { context, page } = await openPenpa(browser(), '', { solve: true })
   const box = page.getByRole('textbox', { name: 'Penpa+ link' })
@@ -26,13 +25,12 @@ const pasteAndOpen = async ({ box, open }, link) => {
 }
 
 describe('solve.html with no puzzle data', () => {
-  it('shows a paste box and no error', async () => {
+  it('shows a paste box and no error', async (t) => {
     const bare = await openBare()
-    try {
-      assert.equal(await bare.error.isVisible(), false)
-      assert.equal(await bare.page.getByRole('region', { name: 'Board' }).count(), 0, 'no desk is built')
-      assert.equal(await bare.page.getByText('New Grid / Update').isVisible(), false, 'Penpa+\'s own page is hidden')
-    } finally { await bare.context.close() }
+    t.after(() => bare.context.close())
+    assert.equal(await bare.error.isVisible(), false)
+    assert.equal(await bare.page.getByRole('region', { name: 'Board' }).count(), 0, 'no desk is built')
+    assert.equal(await bare.page.getByText('New Grid / Update').isVisible(), false, 'Penpa+\'s own page is hidden')
   })
 
   const ANSWER = '&a=VcIxDQAACANBLz8zsSDmU/82OpOcskfGJwU='
@@ -48,27 +46,25 @@ describe('solve.html with no puzzle data', () => {
     ['upstream host, a query whose parameter only ends in p=, and the puzzle in the #', `${UPSTREAM}?sp=1${AKARI_SOLVE}`, AKARI_SOLVE],
     ['upstream host, puzzle in both: the query wins', `${UPSTREAM}?${AKARI_SOLVE.slice(1)}#m=edit&p=other`, AKARI_SOLVE]
   ]) {
-    it(`opens a pasted link from the ${host}, with the board loaded and no error`, async () => {
+    it(`opens a pasted link from the ${host}, with the board loaded and no error`, async (t) => {
       const bare = await openBare()
-      try {
-        await pasteAndOpen(bare, link)
-        await bare.page.getByRole('region', { name: 'Board' }).waitFor()
-        await bare.page.evaluate(() => engine.ready)
-        assert.equal(await bare.page.evaluate(() => location.hash), hash)
-        assert.equal(await settle(() => bare.page.evaluate(() => engine.getInfo().title !== undefined), true), true)
-        assert.equal(await bare.page.getByRole('textbox', { name: 'Penpa+ link' }).count(), 0, 'the box is gone')
-      } finally { await bare.context.close() }
+      t.after(() => bare.context.close())
+      await pasteAndOpen(bare, link)
+      await bare.page.getByRole('region', { name: 'Board' }).waitFor()
+      await bare.page.evaluate(() => engine.ready)
+      assert.equal(await bare.page.evaluate(() => location.hash), hash)
+      assert.equal(await settle(() => bare.page.evaluate(() => engine.getInfo().title !== undefined), true), true)
+      assert.equal(await bare.page.getByRole('textbox', { name: 'Penpa+ link' }).count(), 0, 'the box is gone')
     })
   }
 
-  it('names both places a puzzle can be in the error', async () => {
+  it('names both places a puzzle can be in the error', async (t) => {
     const bare = await openBare()
-    try {
-      await pasteAndOpen(bare, 'hello')
-      const text = await bare.error.textContent()
-      assert.match(text, /\?m=solve&p=/)
-      assert.match(text, /#m=solve&p=/)
-    } finally { await bare.context.close() }
+    t.after(() => bare.context.close())
+    await pasteAndOpen(bare, 'hello')
+    const text = await bare.error.textContent()
+    assert.match(text, /\?m=solve&p=/)
+    assert.match(text, /#m=solve&p=/)
   })
 
   for (const [why, link] of [
@@ -80,20 +76,18 @@ describe('solve.html with no puzzle data', () => {
     ['a link that is not a Penpa+ link', `https://example.com/page${AKARI_SOLVE}`],
     ['text that is not a link', 'hello']
   ]) {
-    it(`shows an error and opens nothing for ${why}`, async () => {
+    it(`shows an error and opens nothing for ${why}`, async (t) => {
       const bare = await openBare()
-      try {
-        await pasteAndOpen(bare, link)
-        assert.equal(await bare.error.isVisible(), true)
-        assert.equal(await bare.page.evaluate(() => location.hash), '')
-        assert.equal(await bare.page.getByRole('region', { name: 'Board' }).count(), 0)
-      } finally { await bare.context.close() }
+      t.after(() => bare.context.close())
+      await pasteAndOpen(bare, link)
+      assert.equal(await bare.error.isVisible(), true)
+      assert.equal(await bare.page.evaluate(() => location.hash), '')
+      assert.equal(await bare.page.getByRole('region', { name: 'Board' }).count(), 0)
     })
   }
 })
 
 describe('the paste page\'s look (#193)', () => {
-  // Runs in the page: the paste page's own nodes by tag, with whether Web Awesome has upgraded them and the card's colours.
   const lookInPage = () => {
     const card = document.querySelector('.ui-paste')
     const parse = (css) => css.match(/[\d.]+/g).map(Number)
@@ -109,30 +103,27 @@ describe('the paste page\'s look (#193)', () => {
     }
   }
 
-  it('uses the desk\'s Web Awesome input and button, named and with one line of help and an example link', async () => {
+  it('uses the desk\'s Web Awesome input and button, named and with one line of help and an example link', async (t) => {
     const bare = await openBare()
-    try {
-      const look = await bare.page.evaluate(lookInPage)
-      assert.equal(look.inputTag, 'WA-INPUT')
-      assert.equal(look.buttonTag, 'WA-BUTTON')
-      assert.equal(look.upgraded, true)
-      assert.equal(await bare.page.getByRole('heading', { name: 'ChinStrap solve page' }).count(), 1)
-      assert.match(look.pageText, /https:\/\/chinstrap45\.github\.io\/penpa-edit\/\S*[?#]\S*p=/, 'an example link')
-    } finally { await bare.context.close() }
+    t.after(() => bare.context.close())
+    const look = await bare.page.evaluate(lookInPage)
+    assert.equal(look.inputTag, 'WA-INPUT')
+    assert.equal(look.buttonTag, 'WA-BUTTON')
+    assert.equal(look.upgraded, true)
+    assert.equal(await bare.page.getByRole('heading', { name: 'ChinStrap solve page' }).count(), 1)
+    assert.match(look.pageText, /https:\/\/chinstrap45\.github\.io\/penpa-edit\/\S*[?#]\S*p=/, 'an example link')
   })
 
-  it('puts the focus in the box on load, and Enter in it opens the link', async () => {
+  it('puts the focus in the box on load, and Enter in it opens the link', async (t) => {
     const bare = await openBare()
-    try {
-      assert.equal(await bare.page.evaluate(() => document.activeElement.id), 'paste-link-input')
-      await bare.page.keyboard.type(`${UPSTREAM}${AKARI_SOLVE}`)
-      await bare.page.keyboard.press('Enter')
-      await bare.page.getByRole('region', { name: 'Board' }).waitFor()
-      assert.equal(await bare.page.evaluate(() => location.hash), AKARI_SOLVE)
-    } finally { await bare.context.close() }
+    t.after(() => bare.context.close())
+    assert.equal(await bare.page.evaluate(() => document.activeElement.id), 'paste-link-input')
+    await bare.page.keyboard.type(`${UPSTREAM}${AKARI_SOLVE}`)
+    await bare.page.keyboard.press('Enter')
+    await bare.page.getByRole('region', { name: 'Board' }).waitFor()
+    assert.equal(await bare.page.evaluate(() => location.hash), AKARI_SOLVE)
   })
 
-  // Runs in the page: the error's background against what the theme's danger token paints.
   const errorColoursInPage = () => {
     const probe = document.createElement('div')
     probe.style.background = 'var(--wa-color-danger-fill-quiet)'
@@ -143,47 +134,44 @@ describe('the paste page\'s look (#193)', () => {
   }
 
   for (const theme of ['light', 'dark']) {
-    it(`shows the error below the box, in the ${theme} theme's danger colours`, async () => {
+    it(`shows the error below the box, in the ${theme} theme's danger colours`, async (t) => {
       const bare = await openBare()
-      try {
-        await bare.page.evaluate(([key, t]) => localStorage.setItem(key, t), [THEME_KEY, theme])
-        await bare.page.reload()
-        await bare.box.fill('hello')
-        await bare.open.click()
-        await bare.error.waitFor()
-        const { actual, expected } = await bare.page.evaluate(errorColoursInPage)
-        assert.equal(actual, expected)
-        const [boxBottom, errorTop] = await bare.page.evaluate(() => [
-          document.querySelector('#paste-link-input').getBoundingClientRect().bottom,
-          document.querySelector('[role=alert]').getBoundingClientRect().top])
-        assert.equal(errorTop >= boxBottom, true, `the error (top ${errorTop}) is below the box (bottom ${boxBottom})`)
-      } finally { await bare.context.close() }
+      t.after(() => bare.context.close())
+      await bare.page.evaluate(([key, t]) => localStorage.setItem(key, t), [THEME_KEY, theme])
+      await bare.page.reload()
+      await bare.box.fill('hello')
+      await bare.open.click()
+      await bare.error.waitFor()
+      const { actual, expected } = await bare.page.evaluate(errorColoursInPage)
+      assert.equal(actual, expected)
+      const [boxBottom, errorTop] = await bare.page.evaluate(() => [
+        document.querySelector('#paste-link-input').getBoundingClientRect().bottom,
+        document.querySelector('[role=alert]').getBoundingClientRect().top])
+      assert.equal(errorTop >= boxBottom, true, `the error (top ${errorTop}) is below the box (bottom ${boxBottom})`)
     })
   }
 
   for (const [theme, dark] of [['light', false], ['dark', true]]) {
-    it(`follows the saved ${theme} theme: page, card and text`, async () => {
+    it(`follows the saved ${theme} theme: page, card and text`, async (t) => {
       const bare = await openBare()
-      try {
-        await bare.page.evaluate(([key, t]) => localStorage.setItem(key, t), [THEME_KEY, theme])
-        await bare.page.reload()
-        await bare.page.getByRole('textbox', { name: 'Penpa+ link' }).waitFor()
-        const look = await bare.page.evaluate(lookInPage)
-        assert.equal(look.htmlDark, dark)
-        const mean = ([r, g, b]) => (r + g + b) / 3
-        assert.equal(mean(look.cardBackground) < 100, dark, `card background ${look.cardBackground}`)
-        assert.equal(mean(look.pageBackground) < 100, dark, `page background ${look.pageBackground}`)
-        assert.equal(mean(look.cardText) > 150, dark, `card text ${look.cardText}`)
-      } finally { await bare.context.close() }
+      t.after(() => bare.context.close())
+      await bare.page.evaluate(([key, t]) => localStorage.setItem(key, t), [THEME_KEY, theme])
+      await bare.page.reload()
+      await bare.page.getByRole('textbox', { name: 'Penpa+ link' }).waitFor()
+      const look = await bare.page.evaluate(lookInPage)
+      assert.equal(look.htmlDark, dark)
+      const mean = ([r, g, b]) => (r + g + b) / 3
+      assert.equal(mean(look.cardBackground) < 100, dark, `card background ${look.cardBackground}`)
+      assert.equal(mean(look.pageBackground) < 100, dark, `page background ${look.pageBackground}`)
+      assert.equal(mean(look.cardText) > 150, dark, `card text ${look.cardText}`)
     })
   }
 })
 
 describe('solve.html with a puzzle in its link', () => {
-  it('shows no paste box', async () => {
+  it('shows no paste box', async (t) => {
     const { context, page } = await openSolvePage(browser(), AKARI_SOLVE)
-    try {
-      assert.equal(await page.getByRole('textbox', { name: 'Penpa+ link' }).count(), 0)
-    } finally { await context.close() }
+    t.after(() => context.close())
+    assert.equal(await page.getByRole('textbox', { name: 'Penpa+ link' }).count(), 0)
   })
 })

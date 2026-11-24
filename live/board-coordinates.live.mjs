@@ -1,10 +1,10 @@
-// The board coordinates of solve.html's Settings (#249, #250): off by default, kept across a reload, outside the canvas (so never over an
-// outside clue), following zoom and Fit. A square-cell grid gets row and column numbers 1..N aligned to the cell centres (#249); a hex, tri,
-// pyramid or truncated-square grid gets one number per row of cells (#350); every other shape gets reference bands, letters A, B, C... across the top and numbers 1, 2, 3... down the left, equal bands over the grid's bounding
-// box (#250). Label positions are read against the cells Penpa+ draws.
+// The board coordinates of solve.html's Settings: off by default, kept across a reload, outside the canvas (so never over an
+// outside clue), following zoom and Fit. A square-cell grid gets row and column numbers 1..N aligned to the cell centres; a hex, tri,
+// pyramid or truncated-square grid gets one number per row of cells; every other shape gets reference bands, letters A, B, C... across the top and numbers 1, 2, 3... down the left, equal bands over the grid's bounding
+// box. Label positions are read against the cells Penpa+ draws.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { boardCanvasInPage, linkFromNewBoard, solveLinkOfImport, openSolvePage, useBrowser, waitForDesk } from './page.mjs'
+import { boardCanvasInPage, linkFromNewBoard, solveLinkOfImport, openSolvePage, useBrowser, waitForDesk, openSettings, flipSettingsSwitch, closeSettings, cellSize } from './page.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
 import { settle } from './settle.mjs'
 import { FRAMED_GRID_LINK } from './framed-grid-link.mjs'
@@ -16,7 +16,6 @@ const SLACK_PX = 1.5
 // The drawn box includes the grid's outer line, which is a few px thick.
 const DRAWN_SLACK_PX = 4
 
-// Runs in the page: a new board of `columns` x `rows` cells with `space` outside-clue rows or columns on the top and the left.
 function newBoardInPage ({ columns, rows, space = 0, gridtype = 'square' }) {
   document.getElementById('gridtype').value = gridtype
   UserSettings.gridtype = gridtype
@@ -30,8 +29,6 @@ function newBoardInPage ({ columns, rows, space = 0, gridtype = 'square' }) {
 }
 const boardLink = (options) => linkFromNewBoard(browser(), newBoardInPage, options)
 
-// Runs in the page, given the board canvas: each cell's rectangle as drawn (viewport px) by its row and column, whatever order Penpa+ keeps
-// its cell list in, and the canvas's own.
 function cellRectsInPage (canvas) {
   const origin = canvas.getBoundingClientRect()
   const cells = {}
@@ -48,7 +45,6 @@ const readCells = async (page) => {
   try { return await page.evaluate(cellRectsInPage, canvas) } finally { await canvas.dispose() }
 }
 
-// Runs in the page: every shown label's text, axis and box.
 function labelsInPage () {
   return [...document.querySelectorAll('.ui-grid-coordinate')].map((node) => {
     const r = node.getBoundingClientRect()
@@ -56,16 +52,6 @@ function labelsInPage () {
   })
 }
 
-const turnOn = async (page) => {
-  await page.getByRole('button', { name: 'Settings' }).click()
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-  await page.locator('wa-switch').filter({ has: page.getByRole('switch', { name: SWITCH }) }).click()
-  await page.keyboard.press('Escape')
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
-}
-
-// Checks the labels of `page` against the grid: 1..columns across the top, 1..rows down the left, each on its cell's centre line, and
-// none inside the canvas.
 async function assertAligned (page, columns, rows) {
   const { canvas, cells } = await readCells(page)
   const labels = await page.evaluate(labelsInPage)
@@ -73,7 +59,6 @@ async function assertAligned (page, columns, rows) {
   const left = labels.filter((l) => l.axis === 'row' && l.side === 'start')
   assert.deepEqual(top.map((l) => l.text), Array.from({ length: columns }, (_, i) => String(i + 1)), 'columns are numbered 1..N')
   assert.deepEqual(left.map((l) => l.text), Array.from({ length: rows }, (_, i) => String(i + 1)), 'rows are numbered 1..N')
-  // Every cell of the grid, by position: the cells' own keys sort in row-major order.
   const keys = Object.keys(cells).sort((a, b) => { const [ar, ac] = a.split(',').map(Number); const [br, bc] = b.split(',').map(Number); return ar - br || ac - bc })
   const firstRow = Number(keys[0].split(',')[0])
   const firstColumn = Math.min(...keys.map((k) => Number(k.split(',')[1])))
@@ -109,7 +94,6 @@ function drawnBoxInPage (canvas) {
   }
 }
 
-// A, B, ... Z, AA, AB, ...: the names of the first `n` column bands.
 const bandNames = (n) => {
   const names = []
   for (let i = 0; i < n; i++) {
@@ -120,8 +104,6 @@ const bandNames = (n) => {
   return names
 }
 
-// Checks the bands of `page`: `columns` column bands named A, B, C... across the top and `rows` row bands numbered 1, 2, 3... down the left,
-// each label at the middle of an equal band, the bands together the box the board is drawn in, and every label outside the canvas.
 async function assertBands (page, columns, rows) {
   const handle = await page.evaluateHandle(boardCanvasInPage)
   let read
@@ -140,11 +122,9 @@ async function assertBands (page, columns, rows) {
 }
 
 const switchChecked = async (page) => {
-  await page.getByRole('button', { name: 'Settings' }).click()
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor()
+  await openSettings(page)
   const checked = await page.getByRole('switch', { name: SWITCH }).isChecked()
-  await page.keyboard.press('Escape')
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
+  await closeSettings(page)
   return checked
 }
 
@@ -158,13 +138,12 @@ describe('board coordinates on a square-cell grid', () => {
 
   it('show 1-9 on a sudoku at Fit and after zooming in twice, and the setting survives a reload', async () => {
     const { context, page } = await openSolvePage(browser(), await solveLinkOfImport(browser(), IMPORTS['sudoku-9x9']), { served: true })
-    const cellWithout = await page.evaluate(() => engine.getState().cellSize)
-    await turnOn(page)
-    assert.ok(await page.evaluate(() => engine.getState().cellSize) < cellWithout, 'Fit gives the numbers their room, so the cells get smaller')
+    const cellWithout = await cellSize(page)
+    await flipSettingsSwitch(page, SWITCH)
+    assert.ok(await cellSize(page) < cellWithout, 'Fit gives the numbers their room, so the cells get smaller')
     const body = await page.evaluate(() => { const b = document.querySelector('section[aria-label="Board"] .ui-body'); return { w: b.scrollWidth - b.clientWidth, h: b.scrollHeight - b.clientHeight } })
     assert.deepEqual(body, { w: 0, h: 0 }, 'the Board card does not scroll at Fit')
     await assertAligned(page, 9, 9)
-    // The fit leaves room for the numbers: at Fit every label is inside the Board card.
     const card = await page.evaluate(() => document.querySelector('section[aria-label="Board"]').getBoundingClientRect().toJSON())
     for (const l of await page.evaluate(labelsInPage)) {
       assert.ok(l.left >= card.left && l.right <= card.right && l.top >= card.top && l.bottom <= card.bottom, `label ${l.axis} ${l.text} is inside the Board card`)
@@ -184,7 +163,7 @@ describe('board coordinates on a square-cell grid', () => {
 
   it('draw at 19 px and keep clear of the board by the gutter, not by Penpa+\'s canvas margin', async () => {
     const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 9, rows: 9 }), { served: true })
-    await turnOn(page)
+    await flipSettingsSwitch(page, SWITCH)
     const sizes = await page.evaluate(() => [...document.querySelectorAll('.ui-grid-coordinate')].map((n) => getComputedStyle(n).fontSize))
     assert.deepEqual(sizes, Array(36).fill(`${LABEL_PX}px`), 'every label is 19 px at text scale 1')
     const { canvas } = await readCells(page)
@@ -197,14 +176,14 @@ describe('board coordinates on a square-cell grid', () => {
 
   it('number a rectangular grid by its own rows and columns', async () => {
     const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 6, rows: 8 }), { served: true })
-    await turnOn(page)
+    await flipSettingsSwitch(page, SWITCH)
     await assertAligned(page, 6, 8)
     await context.close()
   })
 
   it('keep clear of an outside-clue band', async () => {
     const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 7, rows: 7, space: 1 }), { served: true })
-    await turnOn(page)
+    await flipSettingsSwitch(page, SWITCH)
     // The band takes one column and one row of the grid's size.
     await assertAligned(page, 6, 6)
     await context.close()
@@ -214,7 +193,7 @@ describe('board coordinates on a square-cell grid', () => {
     const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 6, rows: 6 }), { served: true })
     // Box mode takes a cell out with splice and puts it back at the end, and the link keeps that order.
     await page.evaluate(() => pu.centerlist.push(pu.centerlist.shift()))
-    await turnOn(page)
+    await flipSettingsSwitch(page, SWITCH)
     await assertAligned(page, 6, 6)
     await context.close()
   })
@@ -222,15 +201,14 @@ describe('board coordinates on a square-cell grid', () => {
   it('keep a row and a column of the grid when Box mode took a cell out', async () => {
     const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 6, rows: 6 }), { served: true })
     await page.evaluate(() => pu.centerlist.splice(14, 1))
-    await turnOn(page)
+    await flipSettingsSwitch(page, SWITCH)
     await assertAligned(page, 6, 6)
     await context.close()
   })
 })
 
-// Column band counts for a 6 x 6 board of each shape, and a 20-side hexagon grid wide enough to run past Z. A band is about 1.5 cells wide, so these
-// are the grid's width over 1.5 cells, rounded. `rows` is the number of rows of cells for a grid type numbered by row (#350), else the number of
-// row bands.
+// Band counts for a 6 x 6 board of each shape, and a 20-side hexagon wide enough to run past Z. A band is about 1.5 cells wide, so columns is the
+// width over 1.5 cells, rounded; rows counts rows of cells on a grid numbered by row, else row bands.
 const SHAPES = [
   { gridtype: 'hex', size: 6, columns: 8, rows: 11, byRow: true },
   { gridtype: 'tri', size: 6, columns: 6, rows: 6, byRow: true },
@@ -245,7 +223,6 @@ const SHAPES = [
   { gridtype: 'deltoidal_trihexagonal', size: 6, columns: 10, rows: 11 }
 ]
 
-// Runs in the page: the y (viewport px) of the middle of every cell's drawn box, the distinct ones within `tolerance`, top to bottom.
 function cellRowsInPage ({ canvas, tolerance }) {
   const origin = canvas.getBoundingClientRect()
   const ys = pu.centerlist.map((id) => {
@@ -255,7 +232,6 @@ function cellRowsInPage ({ canvas, tolerance }) {
   return ys.filter((y, i) => i === 0 || y - ys[i - 1] > tolerance)
 }
 
-// Checks the labels of a grid numbered by row: letters across as bands, and the numbers 1..N down the left, one on each row of cells' centre line, repeated on the far sides.
 async function assertRowNumbers (page, columns, rows) {
   const handle = await page.evaluateHandle(boardCanvasInPage)
   let cellRows
@@ -268,7 +244,6 @@ async function assertRowNumbers (page, columns, rows) {
   assert.deepEqual(labels.filter((l) => l.axis === 'column' && l.side === 'start').map((l) => l.text), bandNames(columns), 'columns are lettered')
   assert.equal(left.some((l) => l.band), false, 'row numbers are exact, so not drawn as bands')
   assert.equal(labels.filter((l) => l.axis === 'column' && l.side === 'start').every((l) => l.band), true, 'column letters are bands')
-  // "Number the grid only" is on, so both axes repeat on the right and the bottom.
   const far = (axis) => labels.filter((l) => l.axis === axis && l.side === 'end').map((l) => l.text)
   assert.deepEqual(far('row'), left.map((l) => l.text), 'the row numbers repeat on the right')
   assert.deepEqual(far('column'), bandNames(columns), 'the column letters repeat at the bottom')
@@ -281,7 +256,7 @@ describe('board coordinates on a grid that is not square', () => {
       const { context, page } = await openSolvePage(browser(), await boardLink({ columns: size, rows: size, gridtype }), { served: true })
       assert.deepEqual(await page.evaluate(labelsInPage), [], 'off by default')
       const check = byRow ? () => assertRowNumbers(page, columns, rows) : () => assertBands(page, columns, rows)
-      await turnOn(page)
+      await flipSettingsSwitch(page, SWITCH)
       await check()
       await page.getByRole('button', { name: 'Zoom in' }).click()
       await page.getByRole('button', { name: 'Zoom in' }).click()
@@ -296,22 +271,13 @@ describe('board coordinates on a grid that is not square', () => {
     const square = await boardLink({ columns: 6, rows: 6 })
     const hex = await boardLink({ columns: 6, rows: 6, gridtype: 'hex' })
     const { context, page } = await openSolvePage(browser(), square, { served: true })
-    await turnOn(page)
+    await flipSettingsSwitch(page, SWITCH)
     assert.equal((await page.evaluate(labelsInPage)).length, 24)
     const here = page.url().split('#')[0]
     await page.goto('about:blank')
     await page.goto(here + hex)
     await waitForDesk(page)
     await assertRowNumbers(page, 8, 11)
-    await context.close()
-  })
-
-  it('offer the switch on a grid that is not square', async () => {
-    const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 6, rows: 6, gridtype: 'hex' }), { served: true })
-    await page.getByRole('button', { name: 'Settings' }).click()
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-    assert.equal(await page.evaluate(() => pu.gridtype), 'hex', 'the board is a hexagon grid')
-    assert.equal(await page.getByRole('switch', { name: SWITCH }).count(), 1)
     await context.close()
   })
 })
@@ -334,7 +300,6 @@ const GUTTER_PX = 30
 const LABEL_PX = 19
 const MIN_CLEARANCE_PX = 5
 
-// Zooms in (at most 8 steps) and checks the board then scrolls both ways.
 async function zoomIn (page) {
   const button = page.getByRole('button', { name: 'Zoom in' })
   for (let i = 0; i < 8 && await button.isEnabled(); i++) await button.click()
@@ -359,15 +324,12 @@ const scrollThird = (page) => page.evaluate((read) => new Promise((resolve) => {
   body.scrollTop = (body.scrollHeight - body.clientHeight) / 3
 }), stickOffsetsInPage.toString())
 
-// Each label's centre along its own axis, from the canvas's top left.
 async function alongBoard (page) {
   const { canvas } = await readCells(page)
   const labels = (await page.evaluate(labelsInPage)).filter((l) => l.side === 'start')
   return labels.map((l) => (l.axis === 'column' ? l.cx - canvas.left : l.cy - canvas.top))
 }
 
-// After a scroll, the labels still follow their cells along the board (`before` is each label's offset from the canvas, read unscrolled), and
-// every label beyond the gutter is inside the card's visible area, a column's at the card's top edge and a row's at its left edge.
 async function assertSticky (page, before) {
   const view = await page.evaluate(bodyViewInPage)
   const labels = (await page.evaluate(labelsInPage)).filter((l) => l.side === 'start')
@@ -394,9 +356,8 @@ describe('board coordinates when the board is zoomed past its card and scrolled'
   ]) {
     it(`stay in view at the card's top and left edges on ${name}`, async () => {
       const { context, page } = await openSolvePage(browser(), await boardLink(options), { served: true })
-      await turnOn(page)
+      await flipSettingsSwitch(page, SWITCH)
       await zoomIn(page)
-      // Unscrolled, nothing slides: the labels sit where they do at Fit.
       assert.deepEqual(await page.evaluate(stickOffsetsInPage), { x: '0px', y: '0px' }, 'no slide before the board scrolls')
       if (!options.gridtype) await assertAligned(page, columns, rows)
       const home = await alongBoard(page)
@@ -416,7 +377,7 @@ describe('"Number the grid only" on a grid inside a thick frame with outside clu
 
   it('numbers the framed grid 1 to 9 on all four sides, with no number on the clue margin', async () => {
     const { context, page } = await openSolvePage(browser(), FRAMED_GRID_LINK, { served: true })
-    await turnOn(page)
+    await flipSettingsSwitch(page, SWITCH)
     const labels = await page.evaluate(() => [...document.querySelectorAll('.ui-grid-coordinate')].map((n) => ({ text: n.textContent, axis: n.dataset.axis, side: n.dataset.side })))
     for (const axis of ['column', 'row']) for (const side of SIDES) assert.deepEqual(texts(labels, axis, side), oneToNine, `${axis} labels on the ${side} side`)
     await context.close()
@@ -424,12 +385,8 @@ describe('"Number the grid only" on a grid inside a thick frame with outside clu
 
   it('numbers the whole canvas on the top and left only when the option is off', async () => {
     const { context, page } = await openSolvePage(browser(), FRAMED_GRID_LINK, { served: true })
-    await turnOn(page)
-    await page.getByRole('button', { name: 'Settings' }).click()
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-    await page.locator('wa-switch').filter({ has: page.getByRole('switch', { name: 'Number the grid only' }) }).click()
-    await page.keyboard.press('Escape')
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
+    await flipSettingsSwitch(page, SWITCH)
+    await flipSettingsSwitch(page, 'Number the grid only')
     const labels = await page.evaluate(() => [...document.querySelectorAll('.ui-grid-coordinate')].map((n) => ({ text: n.textContent, axis: n.dataset.axis, side: n.dataset.side })))
     assert.equal(labels.length, 24, 'twelve columns and twelve rows, one side each')
     assert.ok(labels.every((l) => l.side === 'start'), 'top and left only')
@@ -438,7 +395,7 @@ describe('"Number the grid only" on a grid inside a thick frame with outside clu
 
   it('keeps the far labels at the card\'s right and bottom edges when the board is zoomed past its card and scrolled', async () => {
     const { context, page } = await openSolvePage(browser(), await boardLink({ columns: 9, rows: 9 }), { served: true })
-    await turnOn(page)
+    await flipSettingsSwitch(page, SWITCH)
     await zoomIn(page)
     await scrollThird(page)
     const view = await page.evaluate(bodyViewInPage)

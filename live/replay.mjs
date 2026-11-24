@@ -27,47 +27,38 @@
 // Beside it, `<name>.expected.json` holds the canonical state at each checkpoint, written from a replay by
 // `npm run recordings:approve`, `live/generate-recordings.mjs` or `live/generate-tier-c.mjs`, never by hand. A fuzz recording has none until its bug is fixed, and its replay test fails until then.
 import { execFileSync } from 'node:child_process'
-import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { inflateRawSync } from 'node:zlib'
 import { canonicalState, readEngineState } from './canonical-state.mjs'
+import { checkpointWords, changedKeys, diffLine, entries, stepWords, withoutDuplicateDrops } from './recordings.mjs'
 import { jsRequest, linkFromNewBoard, openPenpa, openReloader } from './page.mjs'
 import { settle } from './settle.mjs'
 
-export const RECORDINGS = new URL('./recordings/', import.meta.url)
-export const STEPS_SUFFIX = '.steps.json'
-export const EXPECTED_SUFFIX = '.expected.json'
 // The replay page's clock is installed and paused at this instant before the page opens, so the timer and every
 // replay timestamp read 0 (`research/replay-determinism-2026-11.md` § Recommended setup).
 const CLOCK_START = new Date('2026-01-01T00:00:00Z')
 
-// Installs `context`'s clock paused at CLOCK_START, before its page opens.
 export async function pauseClock (context) {
   await context.clock.install({ time: CLOCK_START })
   await context.clock.pauseAt(CLOCK_START)
 }
 const CONTEXT_OPTIONS = { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }
-// Pages one `roundTrips` loads links in at once.
 const ROUND_TRIP_LANES = 4
-// A replay under the engine driver round-trips the duplicate link of its board at the first checkpoint, at every
-// ROUND_TRIP_EVERY-th one after it and at the last; Infinity makes that the first and last only (#267: a load boots a page and cost about three quarters of a
-// replay's time, `research/engine-replay-profile-2026-11.md`). With this environment variable set to `1` it
-// round-trips every checkpoint, the full mode a run that wants nothing skipped sets.
-export const ROUND_TRIP_EVERY = Infinity
+// The engine driver round-trips the duplicate link at the first and last checkpoint only, since a load boots a page and
+// costs about three quarters of a replay (`research/engine-replay-profile-2026-11.md`); this variable set to `1`
+// round-trips every checkpoint.
 export const FULL_ROUND_TRIPS_ENV = 'REPLAY_FULL_ROUND_TRIPS'
 
-export function roundTripEvery (env = process.env) {
-  return env[FULL_ROUND_TRIPS_ENV] === '1' ? 1 : ROUND_TRIP_EVERY
+export function fullRoundTrips (env = process.env) {
+  return env[FULL_ROUND_TRIPS_ENV] === '1'
 }
 
-export function roundTripAt ({ index, last, every }) {
-  return index === last || index % every === 0
+export function roundTripAt ({ index, last, full }) {
+  return full || index === 0 || index === last
 }
 
-// Indices in `pu.centerlist` of the cells the answer of `makeSurfaceSolveLink`'s puzzle shades.
 export const ANSWER_CELLS = [5, 9]
 
-// Runs in the page. Builds a 4x4 grid whose author's answer shades `answerCells`, checked as shading, and returns its
-// solve link's `#` part.
 function surfaceSolveLinkInPage (answerCells) {
   document.getElementById('nb_size1').value = 4
   document.getElementById('nb_size2').value = 4
@@ -78,12 +69,10 @@ function surfaceSolveLinkInPage (answerCells) {
   return pu.maketext_solve_solution()
 }
 
-// A link's `#` part, which holds its puzzle.
 export function linkHash (url) {
   return url.slice(url.indexOf('#'))
 }
 
-// The viewport pixel of point `num` of `pu.point`.
 export async function pointPixel (page, num) {
   const board = await page.evaluate((num) => {
     const { x, y } = pu.point[num]
@@ -92,41 +81,29 @@ export async function pointPixel (page, num) {
   return page.evaluate(boardPixelInPage, board)
 }
 
-// The viewport pixel of the centre of the cell at `index` of the center list.
 export async function cellPixel (page, index) {
   return pointPixel(page, await page.evaluate((index) => pu.centerlist[index], index))
 }
 
-// The `#` part of a solve link to a 4x4 puzzle whose answer shades ANSWER_CELLS.
 export async function makeSurfaceSolveLink (browser) {
   return linkHash(await linkFromNewBoard(browser, surfaceSolveLinkInPage, ANSWER_CELLS))
 }
 
-// Opens `query`, a solve link's `#` part, with the recorder on, once its answer has loaded.
 export async function openRecordingPage (browser, query) {
   const opened = await openPenpa(browser, '?record=1' + query)
   await settle(() => opened.page.evaluate(() => Boolean(pu.solution)), true)
   return opened
 }
 
-// A real click at the centre of the cell at `index` of the center list.
 export async function clickCell (page, index, options) {
   const { x, y } = await cellPixel(page, index)
   await page.mouse.click(x, y, options)
 }
 
-// Clicks the recorder's download button on a `?record=1` page and returns the file's name, its text and its recording.
 export async function downloadRecording (page) {
   const [file] = await Promise.all([page.waitForEvent('download'), page.click('#recorder_download')])
   const text = await readFile(await file.path(), 'utf8')
   return { name: file.suggestedFilename(), text, recording: JSON.parse(text) }
-}
-
-// A recording's file text, laid out as `docs/js/recorder.js` writes one: the header and the final board on a line
-// each, then one step per line.
-export function recordingText ({ header, final, steps }) {
-  return '{"header": ' + JSON.stringify(header) + ',\n"final": ' + JSON.stringify(final) +
-    ',\n"steps": [\n' + steps.map((s) => JSON.stringify(s)).join(',\n') + '\n]}\n'
 }
 
 // The short sha of the engine a generated recording's goldens come from: master's, where this checkout branched from
@@ -135,44 +112,6 @@ export function engineCommit () {
   return execFileSync('git', ['merge-base', 'HEAD', 'origin/master'], { encoding: 'utf8', cwd: new URL('.', import.meta.url) }).trim().slice(0, 7)
 }
 
-// The id of every recording under `live/recordings/`, sorted.
-export async function listRecordings () {
-  const files = await readdir(RECORDINGS, { recursive: true })
-  return files.filter((f) => f.endsWith(STEPS_SUFFIX)).map((f) => f.slice(0, -STEPS_SUFFIX.length)).sort()
-}
-
-export async function readRecording (id) {
-  return JSON.parse(await readFile(new URL(id + STEPS_SUFFIX, RECORDINGS), 'utf8'))
-}
-
-// The expected file as JSON reads it, or null when the recording has none.
-export async function readExpectedFile (id) {
-  try {
-    return JSON.parse(await readFile(new URL(id + EXPECTED_SUFFIX, RECORDINGS), 'utf8'))
-  } catch (e) {
-    if (e.code !== 'ENOENT') throw e
-    return null
-  }
-}
-
-// The expected checkpoints, each state back as the string `canonicalState` writes.
-export async function readExpected (id) {
-  const file = await readExpectedFile(id)
-  if (!file) throw new Error(`${id} has no expected file: once the replay is right, run npm run recordings:approve -- ${id}`)
-  return file.checkpoints.map(({ step, state }) => ({ step, state: state.join('\n') + '\n' }))
-}
-
-// A replay's checkpoints as the expected file holds them: each state one line per array entry, so a changed line reads
-// as one line of the file's diff.
-export function expectedFile (checkpoints) {
-  return { checkpoints: checkpoints.map(({ step, state }) => ({ step, state: state.trimEnd().split('\n') })) }
-}
-
-export async function writeExpected (id, checkpoints) {
-  await writeFile(new URL(id + EXPECTED_SUFFIX, RECORDINGS), JSON.stringify(expectedFile(checkpoints), null, 1) + '\n')
-}
-
-// Runs in the page: makes the engine call the step's input made, with the pointer fields `main.js` sets before it.
 function applyStepInPage (step) {
   switch (step.kind) {
     case 'pointer': {
@@ -199,7 +138,6 @@ function applyStepInPage (step) {
       pu[step.call](...step.args)
       return
     case 'select':
-      // What `main.js` does on Escape and Ctrl+A.
       if (step.cells === 'none') pu.selection = []
       else if (step.cells === 'all') pu.selection = pu.centerlist.slice()
       else throw new Error(`no selection ${step.cells}`)
@@ -216,7 +154,6 @@ function applyStepInPage (step) {
   }
 }
 
-// Runs in the page: the edit mode, and the sub-mode, style and orientation `mode` is set to.
 function modeInPage (mode) {
   const [submode, style, orientation] = pu.mode[pu.mode.qa][mode]
   return { edit: pu.mode[pu.mode.qa].edit_mode, submode, style, orientation }
@@ -248,8 +185,6 @@ async function switchMode (page, step, choose) {
   }
 }
 
-// A driver's `start(page, steps)` returns the function that makes each of `steps`' inputs in turn on that page, and
-// `checkpointAfter(step, next)` says whether a checkpoint follows `step`, `next` being the step after it.
 // The engine driver: each step as the engine call its input made.
 export const engineDriver = { start: startEngineDriver, checkpointAfter: endsGroup }
 
@@ -264,18 +199,15 @@ function startEngineDriver (page) {
   return (step) => step.kind === 'mode' ? switchMode(page, step, choose) : page.evaluate(applyStepInPage, step)
 }
 
-// The index of the last checkpoint of a replay of `steps` under `driver`, step 0 being index 0.
 function lastCheckpointIndex (driver, steps) {
   return steps.filter((step, index) => isCheckpoint(driver, steps, index + 1)).length
 }
 
-// Whether a checkpoint follows step `n` (counted from 1) of `steps` under `driver`: the last step always has one.
 function isCheckpoint (driver, steps, n) {
   return n === steps.length || driver.checkpointAfter(steps[n - 1], steps[n])
 }
 
-// Runs in the page: the viewport pixel of the board point at `x, y` through the canvas's place in the current layout,
-// for a generator or a test aiming at a point; the UI driver aims through `pagePixelInPage`.
+// Runs in the page, for a generator or a test aiming at a point; the UI driver aims through `pagePixelInPage`.
 function boardPixelInPage ({ x, y }) {
   const box = document.getElementById('canvas').getBoundingClientRect()
   return { x: box.left + x, y: box.top + y }
@@ -356,7 +288,6 @@ function unusedPixelInPage ({ near, cellOnlyTools }) {
   return { x: Math.round(left + best.x), y: Math.round(top + best.y) }
 }
 
-// Runs in the page: a viewport pixel just outside the canvas, above its top-left corner.
 function outsideCanvasInPage () {
   const box = document.getElementById('canvas').getBoundingClientRect()
   return { x: box.left, y: box.top - 1 }
@@ -366,7 +297,6 @@ function outsideCanvasInPage () {
 // page cannot read; `replay.live.mjs` checks the two lists agree).
 export const CELL_ONLY_TOOLS = ['star', 'yajilin', 'mines', 'doublemines', 'akari']
 
-// The cell size Penpa+'s page draws a board at, so the one every recording was made at.
 export const RECORDED_CELL_PX = 38
 
 // How far the UI driver moves the page's clock before each step. `main.js` reads `Date.now()` for its key windows (15
@@ -443,23 +373,19 @@ function twoDigitWindows (steps) {
 // A Multicolor colour key is recorded the other way round, its style step first, and is checked after the key.
 const uiCheckpointAfter = (step, next) => endsGroup(step) && !isSurfaceKey(step, next) && !isKeyStyle(step, next)
 
-// A Surface digit and the style step it makes, which follows it.
 const isSurfaceKey = (step, next) => step.kind === 'key' && step.call === 'key_number' && next?.kind === 'mode' &&
   next.mode === 'surface'
 
-// Penpa+'s own page: a mode change is a click in its mode panel.
 export const uiDriver = {
   start: (page, steps) => startUiDriver(page, steps, panelChoices),
   checkpointAfter: uiCheckpointAfter
 }
 
-// `solve.html`: a mode change is a pick in the Mode card.
-export const solveUiDriver = {
+const solveUiDriver = {
   start: (page, steps) => startUiDriver(page, steps, modeCardChoices),
   checkpointAfter: uiCheckpointAfter
 }
 
-// The `choose` of `switchMode` for Penpa+'s mode panel; `clickInPanel` clicks a button there by id.
 function panelChoices (page, step, clickInPanel, afterInput) {
   return {
     mode: (name) => clickInPanel('mo_' + name),
@@ -480,7 +406,6 @@ function panelChoices (page, step, clickInPanel, afterInput) {
   }
 }
 
-// Picks `tool` (one of `engine.listTools()`) in the Mode card's tree, every branch opened first.
 export async function pickInModeCard (page, tool) {
   const card = page.getByRole('region', { name: 'Mode' })
   await card.getByRole('combobox', { name: 'Tool' }).click()
@@ -488,8 +413,7 @@ export async function pickInModeCard (page, tool) {
   await card.locator(`[role=treeitem][data-mode="${tool.mode}"][data-submode="${tool.submode ?? ''}"]`).click()
 }
 
-// The `choose` of `switchMode` for the Mode card, which picks a whole tool (mode and sub-mode) from its list and then a
-// style from its buttons. A mode is picked as the tool the step names, so the sub-mode that follows is already right.
+// A mode is picked as the tool the step names, so the sub-mode that follows is already right.
 function modeCardChoices (page, step, _clickInPanel, afterInput) {
   const card = page.getByRole('region', { name: 'Mode' })
   const toolOf = async () => {
@@ -548,7 +472,6 @@ function startUiDriver (page, steps, choices) {
     await page.evaluate(clearPanelInPage, pixel)
     return pixel
   }
-  // Where the mouse is, or null once a click in the mode panel has moved it; and the button a down step holds.
   let mousePixel = null
   let pressed = null
   let stepsMade = 0
@@ -567,13 +490,10 @@ function startUiDriver (page, steps, choices) {
     mousePixel = { x, y }
   }
 
-  // A press or release where the mouse already is, as after the move a real gesture starts with.
   async function moveIfAway (pixel) {
     if (!mousePixel || mousePixel.x !== pixel.x || mousePixel.y !== pixel.y) await moveTo(pixel)
   }
 
-  // Presses for a gesture whose press made no call (`silentPress`): after its `out`, where the mouse is, off the canvas;
-  // else on a point out of use near the step, moved to first.
   async function pressSilently (step) {
     const button = silentPress(steps, stepsMade - 1)
     if (!button || pressed) return false
@@ -658,47 +578,21 @@ function startUiDriver (page, steps, choices) {
   }
 }
 
-// Steps built from board points, for a generator: `board.points` maps each point's index in `pu.point` to its board
-// units.
 function pointerStep (board, action, num, button) {
   const { x, y } = board.points[num]
   return { kind: 'pointer', action, button: action === 'down' ? button : null, ctrl: false, x, y, num }
 }
 
-// A press and release of `button` on point `num`.
 export function pressSteps (board, num, button = 'left') {
   return [pointerStep(board, 'down', num, button), pointerStep(board, 'up', num)]
 }
 
-// A left drag through the points `nums`, in order.
 export function dragSteps (board, nums) {
   return [pointerStep(board, 'down', nums[0], 'left'), ...nums.slice(1).map((n) => pointerStep(board, 'move', n)), pointerStep(board, 'up', nums.at(-1))]
 }
 
-// Each character of `text` typed as a content key.
 export function typedSteps (text) {
   return [...text].map((ch) => ({ kind: 'key', call: 'key_number', args: [ch] }))
-}
-
-// A step in words, for a failure report.
-export function stepWords (step) {
-  switch (step.kind) {
-    case 'pointer':
-      return `${step.button ? step.button + ' ' : ''}${step.action}${step.ctrl ? ' with Ctrl' : ''} at point ${step.num}`
-    case 'key':
-      return `${step.call}(${step.args.map((a) => JSON.stringify(a)).join(', ')})`
-    case 'mode':
-      return `mode ${step.mode}, sub-mode ${JSON.stringify(step.submode)}, style ${step.style}${step.orientation ? `, orientation ${step.orientation}` : ''}`
-    case 'select':
-      return `select ${step.cells}`
-    default:
-      return step.kind
-  }
-}
-
-// Step 0 is no input: its checkpoint is the board the link loads.
-export function checkpointWords (steps, n) {
-  return n === 0 ? 'the board the link loads' : stepWords(steps[n - 1])
 }
 
 // A checkpoint follows every step but the down and the moves of a gesture, so a gesture is compared once it has ended,
@@ -707,22 +601,8 @@ export function endsGroup (step) {
   return !(step.kind === 'pointer' && (step.action === 'down' || step.action === 'move'))
 }
 
-// A canonical state as its lines' keys and values.
-export function entries (state) {
-  return new Map(state.split('\n').filter(Boolean).map((line) => {
-    const at = line.indexOf(' = ')
-    return [line.slice(0, at), line.slice(at + 3)]
-  }))
-}
-
 const isReplayWrite = (key) => /\.command_replay\.\d+$/.test(key)
 
-// Every key whose value differs between two states, in the expected state's order, then the replay's new keys.
-export function changedKeys (want, got) {
-  return [...new Set([...want.keys(), ...got.keys()])].filter((k) => want.get(k) !== got.get(k))
-}
-
-// The lines of a report that say how two states differ and how the page went.
 function stateDiff ({ want, got, wantName, gotName = 'replayed', errors }) {
   const w = entries(want)
   const g = entries(got)
@@ -731,7 +611,7 @@ function stateDiff ({ want, got, wantName, gotName = 'replayed', errors }) {
   const value = (map, key) => map.get(key) ?? 'absent'
   return [
     `State, ${wantName} → ${gotName}:`,
-    ...changed.filter((k) => !isReplayWrite(k)).map((k) => `  ${k}: ${value(w, k)} → ${value(g, k)}`),
+    ...changed.filter((k) => !isReplayWrite(k)).map((k) => `  ${diffLine(k, w, g)}`),
     firstWrite
       ? `First differing command_replay write: ${firstWrite.replace(/\.command_replay\.(\d+)$/, ' #$1')}: expected ${value(w, firstWrite)} got ${value(g, firstWrite)}`
       : 'First differing command_replay write: none',
@@ -739,8 +619,6 @@ function stateDiff ({ want, got, wantName, gotName = 'replayed', errors }) {
   ]
 }
 
-// What a replay's checkpoints are compared with, as a report names it: the expected file, or the engine driver's
-// replay when the UI driver's is compared with it.
 const AGAINST_EXPECTED = { source: 'the recording', list: 'the expected file', wantName: 'expected', gotName: 'replayed' }
 const AGAINST_ENGINE = {
   source: 'the engine driver', list: "the engine driver's replay", wantName: 'engine driver', gotName: 'UI driver'
@@ -754,7 +632,6 @@ function failureReport ({ id, step, steps, since, want, got, errors, against }) 
   ].join('\n')
 }
 
-// Null when `state`, the replay's last, is the board the recording page reached, else the report of how they differ.
 function finalReport ({ id, recording, state, errors }) {
   if (!recording.final) return `${id}: the recording has no final board to check the replay against`
   const want = canonicalState(recording.final)
@@ -780,7 +657,6 @@ export function roundTrips (browser, options) {
       const key = withoutTimer(link) + '\n' + want
       if (loaded.has(key)) return null
       loaded.add(key)
-      // The set's size counts the loads started, this one included.
       const lane = lanes[(loaded.size - 1) % ROUND_TRIP_LANES]
       const result = lane.done.then(async () => {
         lane.reloader ??= await openReloader(browser, options)
@@ -814,22 +690,12 @@ export function duplicateLinkInPage () {
   return pu.maketext_duplicate() + '&l=solvedup'
 }
 
-// Lines a duplicate link drops by design, left out of the round trip's comparison: `maketext_duplicate` empties the
-// redo stacks (class_p.js) and no link holds the selection.
-const DUPLICATE_DROPS = /^(pu_a(_col)?\.command_redo\.length|selection) = .*$/
-
-function withoutDuplicateDrops (state) {
-  return state.split('\n').filter((line) => !DUPLICATE_DROPS.test(line)).join('\n')
-}
-
 // The first line of each method of a `Puzzle` class whose name matches `name` (a regular expression's text), the name
 // its first group: methods sit at a 4-space indent in `class_p.js`.
 export function methodStart (name) {
   return new RegExp(`^ {4}(${name})\\(`, 'gm')
 }
 
-// The `mouse_*` and `key_*` methods of `class_p.js`: the handlers a click or key reaches through `mouseevent` and
-// `main.js`'s key calls.
 const HANDLER = methodStart('(?:mouse|key)_\\w+')
 const CLASS_P_URL = jsRequest('class_p.js')
 
@@ -847,7 +713,7 @@ function handlerCallsOf (entries) {
 // Replays `recording` through `driver` (the engine driver unless given) in a fresh page and returns its checkpoints, the
 // first being step 0. With `expected` (as `readExpected` returns it, or another replay's checkpoints, named by
 // `against`) it stops at the first checkpoint that differs and returns the report of it. Under the engine driver, at
-// the checkpoints `roundTripAt` names, `roundTripEvery` (default `roundTripEvery()`) apart, the duplicate link of the
+// the checkpoints `roundTripAt` names (every one with `fullRoundTrips`, default `fullRoundTrips()`), the duplicate link of the
 // board, loaded in another page booted afresh for it (`roundTrips`), must give the same board, less what the link drops
 // by design; `roundTripped` lists the steps of those checkpoints. A replay that does not end on the recording's final board
 // is reported too; otherwise `report` is null. `served`, `solve` and `setup` go to `openPenpa`, and `served` and
@@ -855,7 +721,7 @@ function handlerCallsOf (entries) {
 // with the times the steps called it. `errors` holds every page error and `console.error` of the replay's page.
 export async function replay (browser, recording, {
   id = 'recording', expected, served = false, setup, driver = engineDriver, against = AGAINST_EXPECTED, coverage = false,
-  solve = false, roundTripEvery: every = roundTripEvery()
+  solve = false, fullRoundTrips: full = fullRoundTrips()
 } = {}) {
   // The solved message opens from a 20 ms `setTimeout` in `check_solution`, so under the paused clock it never opens.
   const openOptions = {
@@ -874,10 +740,8 @@ export async function replay (browser, recording, {
   const read = () => readPage(page)
   const apply = driver.start(page, recording.steps)
   const trips = roundTrips(browser, openOptions)
-  // The round trips under way, in step order, each resolving to its report or null.
   const reports = []
   const roundTripped = []
-  // Starts the check that a page booted afresh loads the duplicate link of `state`, the board at checkpoint `n`, as `state`.
   const startRoundTrip = async (n, state) => {
     roundTripped.push(n)
     const link = await page.evaluate(duplicateLinkInPage)
@@ -897,7 +761,6 @@ export async function replay (browser, recording, {
   const { steps } = recording
   const lastCheckpoint = lastCheckpointIndex(driver, steps)
   const checkpoints = []
-  // The report of the first way checkpoint `n` differs from what it is compared with, else null.
   const checkpoint = async (n, since) => {
     const want = expected?.[checkpoints.length]
     if (expected && want?.step !== n) {
@@ -909,12 +772,11 @@ export async function replay (browser, recording, {
     checkpoints.push({ step: n, state })
     if (want && state !== want.state) return failureReport({ id, step: n, steps, since, want: want.state, got: state, errors, against })
     // The duplicate link is the engine's, whichever input made the board, so the engine driver alone checks it.
-    if (driver === engineDriver && roundTripAt({ index: checkpoints.length - 1, last: lastCheckpoint, every })) {
+    if (driver === engineDriver && roundTripAt({ index: checkpoints.length - 1, last: lastCheckpoint, full })) {
       await startRoundTrip(n, state)
     }
     return null
   }
-  // The report of the first way the replay differs from the expected file or the recording, else null.
   const run = async () => {
     const first = await checkpoint(0, [])
     if (first) return first

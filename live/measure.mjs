@@ -1,4 +1,4 @@
-// `npm run measure`: how well the recordings guard the engine (#32). Replays every recording with JS coverage on and
+// `npm run measure`: how well the recordings guard the engine. Replays every recording with JS coverage on and
 // prints, as Markdown, the calls of each `mouse_*` and `key_*` handler of `class_p.js`, then hunts each planted bug of
 // `live/plants.mjs` and prints whether a recording caught it. A handler plant is hunted only over the recordings that
 // called its handler, since no other replay runs the planted line. Exits 1 when the bar is not met: a handler a solve
@@ -8,20 +8,19 @@
 // `live/**/*.live.mjs` skips it.
 import { chromium } from 'playwright'
 import { hunt, inLanes, PLANTS } from './plants.mjs'
-import { FULL_ROUND_TRIPS_ENV, listRecordings, readExpected, readRecording, replay } from './replay.mjs'
+import { listRecordings, readExpected, readRecording } from './recordings.mjs'
+import { FULL_ROUND_TRIPS_ENV, replay } from './replay.mjs'
 
-// Every replay and hunt here round-trips every checkpoint, so the tables stay comparable with the ones before #267.
+// Every replay and hunt here round-trips every checkpoint, so the tables stay comparable with earlier runs.
 process.env[FULL_ROUND_TRIPS_ENV] = '1'
 
 // Replays at once: the box is shared, and the seam's own runs use 4.
 const LANES = 2
-// The handlers no solve mode reaches, each with why.
 const SOLVE_UNREACHABLE = { mouse_board: 'Board is hidden in solve mode (`set_solvemode` in `general.js`)' }
 
 const log = (line) => process.stderr.write(line + '\n')
 const seconds = (since) => ((Date.now() - since) / 1000).toFixed(1)
 
-// Each handler with the ids of the recordings that called it and its calls over all of them.
 async function measureCoverage (browser, ids) {
   const handlers = {}
   await inLanes(ids, LANES, async (id) => {
@@ -71,7 +70,6 @@ try {
     try {
       found = await hunt(browser, plant, plant.handler ? handlers[plant.handler].ids : ids, { lanes: LANES })
     } catch (e) {
-      // `plantIn`'s refusals: the plant's line is gone from its file, or more than once in it, or does not parse.
       results.push({ plant, result: `**not applied**: ${e.message}` })
       log(`plant ${plant.id} not applied: ${e.message}`)
       continue

@@ -1,4 +1,4 @@
-// Runs the live files a change needs (#268, #315). A change to an input of the engine side (a file `docs/index.html`
+// Runs the live files a change needs. A change to an input of the engine side (a file `docs/index.html`
 // loads, or one the engine side's tests import or read) runs the full set; any other change off the skip list runs every
 // live file but the engine side's; a change made only of skip-list paths runs every live file but the safety net's. An
 // empty change, a run with no `--base`, and a detection that fails run the full set.
@@ -12,7 +12,7 @@ import { join, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
-// At most 4 files at once (#76): node runs one per core otherwise, and a Chromium per live file hangs the shared box.
+// At most 4 files at once: node runs one per core otherwise, and a Chromium per live file hangs the shared box.
 export const NODE_TEST_FLAGS = ['--test-concurrency=4', '--test-timeout=60000']
 const LIVE_GLOB = 'live/**/*.live.mjs'
 
@@ -36,7 +36,6 @@ export const SAFETY_NET_FILES = [
 // skip list's rule (controller's ruling on #315, 2026-11-18).
 export const ENGINE_FILES = SAFETY_NET_FILES.filter((file) => !/^live\/ui-replay-\d+\.live\.mjs$/.test(file))
 
-// The page the engine side opens (`live/page.mjs`'s default page).
 export const ENGINE_PAGE = 'docs/index.html'
 
 // What runs the engine side besides its page and its tests: the dependencies, the CI job and action that run the live
@@ -49,7 +48,6 @@ const onSkipList = (path) =>
   path.startsWith('docs/ui/') || path.startsWith('research/') || path.startsWith('adr/') || path.endsWith('.md') ||
   (/^live\/[^/]+\.live\.mjs$/.test(path) && !SAFETY_NET_FILES.includes(path))
 
-// `inputs` is `engineInputs`'s set; the result keeps `allFiles`' order.
 export function chooseLiveFiles (changed, allFiles, inputs) {
   if (changed.length === 0) return { files: allFiles, reason: 'no changed file: the full set' }
   const input = changed.find((path) => isInput(path, inputs))
@@ -94,8 +92,6 @@ export function pageReach (root, page) {
   return reached
 }
 
-// The repo-relative path `name` names when read in `dir`, without its query or fragment; null for an address, an
-// absolute path, a path outside `dir`'s top directory, or a name that holds no path.
 function pathNamed (dir, name) {
   if (/^[a-z][a-z0-9+.-]*:|^\/|^#/i.test(name)) return null
   const bare = name.replace(/[?#].*$/, '')
@@ -130,7 +126,6 @@ export function engineInputs (root, liveFiles) {
   return inputs
 }
 
-// The k-th of n parts (k from 1): the safety net's files first, heaviest first, then the rest, dealt round the parts.
 export function partOf (files, k, n) {
   const ordered = [...SAFETY_NET_FILES.filter((file) => files.includes(file)), ...files.filter((file) => !SAFETY_NET_FILES.includes(file))]
   return ordered.filter((_, i) => i % n === k - 1)

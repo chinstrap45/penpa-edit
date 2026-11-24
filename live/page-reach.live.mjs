@@ -1,7 +1,5 @@
-// The engine side's page reach (`pageReach` in `live/run-live.mjs`, #315) is not stale for what the page loads as it
-// boots a puzzle and switches to the dark theme: every file of `docs/` it asks for then is one the derivation reaches.
-// Files loaded later (the solved popup's image, the GIF worker) are covered by the derivation's own tests only. This
-// file is on the skip list, so it runs on every PR.
+// Files loaded later (the solved popup's image, the GIF worker) are covered only by the derivation's own tests. This file is
+// on the skip list, so it runs on every PR.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
@@ -13,7 +11,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const browser = useBrowser()
 
 describe(`the page reach of ${ENGINE_PAGE}`, () => {
-  it('holds every file the page loads as it boots a puzzle and switches theme', async () => {
+  it('holds every file the page loads as it boots a puzzle and switches theme', async (t) => {
     const asked = new Set()
     const { context, page } = await openPenpa(browser(), AKARI_SOLVE, {
       served: true,
@@ -22,15 +20,12 @@ describe(`the page reach of ${ENGINE_PAGE}`, () => {
         if (url.origin === PENPA_ORIGIN) asked.add('docs' + (url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname)))
       })
     })
-    try {
-      await waitForSettingsLoaded(page)
-      const dark = page.waitForResponse((response) => response.url().includes('/css/dark_theme.css'))
-      await page.evaluate(() => { UserSettings.color_theme = THEME_DARK })
-      await dark
-      await page.waitForLoadState('networkidle')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await waitForSettingsLoaded(page)
+    const dark = page.waitForResponse((response) => response.url().includes('/css/dark_theme.css'))
+    await page.evaluate(() => { UserSettings.color_theme = THEME_DARK })
+    await dark
+    await page.waitForLoadState('networkidle')
     assert.ok(asked.has('docs/js/class_p.js') && asked.has('docs/css/dark_theme.css'), 'the page loaded its scripts and the dark theme (the premise)')
     const reach = pageReach(ROOT, ENGINE_PAGE)
     assert.deepEqual([...asked].filter((path) => !reach.has(path)).sort(), [], 'every file the page loaded is reached')
