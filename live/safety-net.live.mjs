@@ -8,7 +8,8 @@ import { describe, it } from 'node:test'
 import { chromium } from 'playwright'
 import { takePageErrors, useBrowser } from './page.mjs'
 import { auditRecordings, hunt, plantIn, PLANTS } from './plants.mjs'
-import { listRecordings, readRecording, replay } from './replay.mjs'
+import { listRecordings, readRecording } from './recordings.mjs'
+import { replay } from './replay.mjs'
 
 const browser = useBrowser()
 

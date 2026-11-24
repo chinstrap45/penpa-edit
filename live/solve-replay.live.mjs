@@ -7,7 +7,8 @@ import { readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { useBrowser } from './page.mjs'
-import { compareDrivers, readRecording } from './replay.mjs'
+import { readRecording } from './recordings.mjs'
+import { compareDrivers } from './replay.mjs'
 
 const browser = useBrowser()
 

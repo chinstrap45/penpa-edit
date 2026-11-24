@@ -6,7 +6,8 @@
 // (`.claude/hooks/deny-recording-writes.mjs`). Not a check itself, so `live/**/*.live.mjs` skips it.
 import { chromium } from 'playwright'
 import { expectedDiff } from './expected-diff.mjs'
-import { expectedFile, listRecordings, readExpectedFile, readRecording, replay, writeExpected } from './replay.mjs'
+import { expectedFile, listRecordings, readExpectedFile, readRecording, writeExpected } from './recordings.mjs'
+import { replay } from './replay.mjs'
 
 const ids = process.argv.slice(2)
 if (!ids.length) {
@@ -23,7 +24,7 @@ const browser = await chromium.launch()
 try {
   for (const id of ids) {
     const recording = await readRecording(id)
-    const { checkpoints, report } = await replay(browser, recording, { id, roundTripEvery: 1 })
+    const { checkpoints, report } = await replay(browser, recording, { id, fullRoundTrips: true })
     if (report) throw new Error(report)
     const changes = expectedDiff({ steps: recording.steps, before: await readExpectedFile(id), after: expectedFile(checkpoints) })
     console.log(`${id}: ${changes.length ? 'changes:' : 'unchanged'}`)

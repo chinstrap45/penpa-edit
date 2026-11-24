@@ -8,7 +8,8 @@
 import { readEngineState } from './canonical-state.mjs'
 import { random } from './fuzz.mjs'
 import { openPenpa } from './page.mjs'
-import { dragSteps, endsGroup, engineDriver, linkHash, pauseClock, pressSteps, stepWords, typedSteps } from './replay.mjs'
+import { stepWords } from './recordings.mjs'
+import { dragSteps, endsGroup, engineDriver, linkHash, pauseClock, pressSteps, typedSteps } from './replay.mjs'
 import {
   answerLinkInPage, boardLoaded, historyPuzzle, openingModeInPage, pointsInPage, withPage
 } from './tier-c-puzzles.mjs'

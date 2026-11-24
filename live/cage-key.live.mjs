@@ -5,7 +5,8 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'
 import { REPLAY_TIMESTAMP } from './canonical-state.mjs'
-import { engineDriver, pointAtSize, readRecording, RECORDED_CELL_PX } from './replay.mjs'
+import { readRecording } from './recordings.mjs'
+import { engineDriver, pointAtSize, RECORDED_CELL_PX } from './replay.mjs'
 
 const browser = useBrowser()
 

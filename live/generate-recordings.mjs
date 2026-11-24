@@ -9,13 +9,14 @@
 //   of each grid class no import builds. A genre whose smallest import does not record (its solve link does not boot)
 //   takes its next smallest, and the header's `import` names the one taken.
 // The header's `tier` (`A` or `B`) marks a recording as generated.
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { rm } from 'node:fs/promises'
 import { chromium } from 'playwright'
 import { canonicalState, readEngineState } from './canonical-state.mjs'
 import { openPenpa } from './page.mjs'
 import { cases, readSnapshot } from './puzzlink-cases.mjs'
+import { EXPECTED_SUFFIX, RECORDINGS, writeExpected, writeRecording } from './recordings.mjs'
 import {
-  ANSWER_CELLS, RECORDINGS, downloadRecording, engineCommit, linkHash, makeSurfaceSolveLink, pointPixel, replay, writeExpected
+  ANSWER_CELLS, downloadRecording, engineCommit, linkHash, makeSurfaceSolveLink, pointPixel, replay
 } from './replay.mjs'
 import { settle } from './settle.mjs'
 
@@ -373,12 +374,11 @@ try {
       continue
     }
     const { text, recording } = made
-    await mkdir(new URL(id.slice(0, id.lastIndexOf('/') + 1), RECORDINGS), { recursive: true })
-    await writeFile(new URL(id + '.steps.json', RECORDINGS), text)
-    const { checkpoints, report } = await replay(browser, recording, { id, roundTripEvery: 1 })
+    await writeRecording(id, text)
+    const { checkpoints, report } = await replay(browser, recording, { id, fullRoundTrips: true })
     if (report) {
       refused.push(report)
-      await rm(new URL(id + '.expected.json', RECORDINGS), { force: true })
+      await rm(new URL(id + EXPECTED_SUFFIX, RECORDINGS), { force: true })
     } else {
       await writeExpected(id, checkpoints)
     }

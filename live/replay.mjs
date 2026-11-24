@@ -27,15 +27,13 @@
 // Beside it, `<name>.expected.json` holds the canonical state at each checkpoint, written from a replay by
 // `npm run recordings:approve`, `live/generate-recordings.mjs` or `live/generate-tier-c.mjs`, never by hand. A fuzz recording has none until its bug is fixed, and its replay test fails until then.
 import { execFileSync } from 'node:child_process'
-import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { inflateRawSync } from 'node:zlib'
 import { canonicalState, readEngineState } from './canonical-state.mjs'
+import { checkpointWords, changedKeys, diffLine, entries, stepWords, withoutDuplicateDrops } from './recordings.mjs'
 import { jsRequest, linkFromNewBoard, openPenpa, openReloader } from './page.mjs'
 import { settle } from './settle.mjs'
 
-export const RECORDINGS = new URL('./recordings/', import.meta.url)
-export const STEPS_SUFFIX = '.steps.json'
-export const EXPECTED_SUFFIX = '.expected.json'
 // The replay page's clock is installed and paused at this instant before the page opens, so the timer and every
 // replay timestamp read 0 (`research/replay-determinism-2026-11.md` § Recommended setup).
 const CLOCK_START = new Date('2026-01-01T00:00:00Z')
@@ -48,19 +46,18 @@ export async function pauseClock (context) {
 const CONTEXT_OPTIONS = { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }
 // Pages one `roundTrips` loads links in at once.
 const ROUND_TRIP_LANES = 4
-// A replay under the engine driver round-trips the duplicate link of its board at the first checkpoint, at every
-// ROUND_TRIP_EVERY-th one after it and at the last; Infinity makes that the first and last only (#267: a load boots a page and cost about three quarters of a
-// replay's time, `research/engine-replay-profile-2026-11.md`). With this environment variable set to `1` it
-// round-trips every checkpoint, the full mode a run that wants nothing skipped sets.
-export const ROUND_TRIP_EVERY = Infinity
+// A replay under the engine driver round-trips the duplicate link of its board at the first checkpoint and the last
+// (#267: a load boots a page and cost about three quarters of a replay's time,
+// `research/engine-replay-profile-2026-11.md`). With this environment variable set to `1` it round-trips every
+// checkpoint, the full mode a run that wants nothing skipped sets.
 export const FULL_ROUND_TRIPS_ENV = 'REPLAY_FULL_ROUND_TRIPS'
 
-export function roundTripEvery (env = process.env) {
-  return env[FULL_ROUND_TRIPS_ENV] === '1' ? 1 : ROUND_TRIP_EVERY
+export function fullRoundTrips (env = process.env) {
+  return env[FULL_ROUND_TRIPS_ENV] === '1'
 }
 
-export function roundTripAt ({ index, last, every }) {
-  return index === last || index % every === 0
+export function roundTripAt ({ index, last, full }) {
+  return full || index === 0 || index === last
 }
 
 // Indices in `pu.centerlist` of the cells the answer of `makeSurfaceSolveLink`'s puzzle shades.
@@ -122,54 +119,10 @@ export async function downloadRecording (page) {
   return { name: file.suggestedFilename(), text, recording: JSON.parse(text) }
 }
 
-// A recording's file text, laid out as `docs/js/recorder.js` writes one: the header and the final board on a line
-// each, then one step per line.
-export function recordingText ({ header, final, steps }) {
-  return '{"header": ' + JSON.stringify(header) + ',\n"final": ' + JSON.stringify(final) +
-    ',\n"steps": [\n' + steps.map((s) => JSON.stringify(s)).join(',\n') + '\n]}\n'
-}
-
 // The short sha of the engine a generated recording's goldens come from: master's, where this checkout branched from
 // it, which a branch that adds recordings has not changed.
 export function engineCommit () {
   return execFileSync('git', ['merge-base', 'HEAD', 'origin/master'], { encoding: 'utf8', cwd: new URL('.', import.meta.url) }).trim().slice(0, 7)
-}
-
-// The id of every recording under `live/recordings/`, sorted.
-export async function listRecordings () {
-  const files = await readdir(RECORDINGS, { recursive: true })
-  return files.filter((f) => f.endsWith(STEPS_SUFFIX)).map((f) => f.slice(0, -STEPS_SUFFIX.length)).sort()
-}
-
-export async function readRecording (id) {
-  return JSON.parse(await readFile(new URL(id + STEPS_SUFFIX, RECORDINGS), 'utf8'))
-}
-
-// The expected file as JSON reads it, or null when the recording has none.
-export async function readExpectedFile (id) {
-  try {
-    return JSON.parse(await readFile(new URL(id + EXPECTED_SUFFIX, RECORDINGS), 'utf8'))
-  } catch (e) {
-    if (e.code !== 'ENOENT') throw e
-    return null
-  }
-}
-
-// The expected checkpoints, each state back as the string `canonicalState` writes.
-export async function readExpected (id) {
-  const file = await readExpectedFile(id)
-  if (!file) throw new Error(`${id} has no expected file: once the replay is right, run npm run recordings:approve -- ${id}`)
-  return file.checkpoints.map(({ step, state }) => ({ step, state: state.join('\n') + '\n' }))
-}
-
-// A replay's checkpoints as the expected file holds them: each state one line per array entry, so a changed line reads
-// as one line of the file's diff.
-export function expectedFile (checkpoints) {
-  return { checkpoints: checkpoints.map(({ step, state }) => ({ step, state: state.trimEnd().split('\n') })) }
-}
-
-export async function writeExpected (id, checkpoints) {
-  await writeFile(new URL(id + EXPECTED_SUFFIX, RECORDINGS), JSON.stringify(expectedFile(checkpoints), null, 1) + '\n')
 }
 
 // Runs in the page: makes the engine call the step's input made, with the pointer fields `main.js` sets before it.
@@ -680,47 +633,13 @@ export function typedSteps (text) {
   return [...text].map((ch) => ({ kind: 'key', call: 'key_number', args: [ch] }))
 }
 
-// A step in words, for a failure report.
-export function stepWords (step) {
-  switch (step.kind) {
-    case 'pointer':
-      return `${step.button ? step.button + ' ' : ''}${step.action}${step.ctrl ? ' with Ctrl' : ''} at point ${step.num}`
-    case 'key':
-      return `${step.call}(${step.args.map((a) => JSON.stringify(a)).join(', ')})`
-    case 'mode':
-      return `mode ${step.mode}, sub-mode ${JSON.stringify(step.submode)}, style ${step.style}${step.orientation ? `, orientation ${step.orientation}` : ''}`
-    case 'select':
-      return `select ${step.cells}`
-    default:
-      return step.kind
-  }
-}
-
-// Step 0 is no input: its checkpoint is the board the link loads.
-export function checkpointWords (steps, n) {
-  return n === 0 ? 'the board the link loads' : stepWords(steps[n - 1])
-}
-
 // A checkpoint follows every step but the down and the moves of a gesture, so a gesture is compared once it has ended,
 // and every key, mode change, undo and redo on its own.
 export function endsGroup (step) {
   return !(step.kind === 'pointer' && (step.action === 'down' || step.action === 'move'))
 }
 
-// A canonical state as its lines' keys and values.
-export function entries (state) {
-  return new Map(state.split('\n').filter(Boolean).map((line) => {
-    const at = line.indexOf(' = ')
-    return [line.slice(0, at), line.slice(at + 3)]
-  }))
-}
-
 const isReplayWrite = (key) => /\.command_replay\.\d+$/.test(key)
-
-// Every key whose value differs between two states, in the expected state's order, then the replay's new keys.
-export function changedKeys (want, got) {
-  return [...new Set([...want.keys(), ...got.keys()])].filter((k) => want.get(k) !== got.get(k))
-}
 
 // The lines of a report that say how two states differ and how the page went.
 function stateDiff ({ want, got, wantName, gotName = 'replayed', errors }) {
@@ -731,7 +650,7 @@ function stateDiff ({ want, got, wantName, gotName = 'replayed', errors }) {
   const value = (map, key) => map.get(key) ?? 'absent'
   return [
     `State, ${wantName} → ${gotName}:`,
-    ...changed.filter((k) => !isReplayWrite(k)).map((k) => `  ${k}: ${value(w, k)} → ${value(g, k)}`),
+    ...changed.filter((k) => !isReplayWrite(k)).map((k) => `  ${diffLine(k, w, g)}`),
     firstWrite
       ? `First differing command_replay write: ${firstWrite.replace(/\.command_replay\.(\d+)$/, ' #$1')}: expected ${value(w, firstWrite)} got ${value(g, firstWrite)}`
       : 'First differing command_replay write: none',
@@ -814,14 +733,6 @@ export function duplicateLinkInPage () {
   return pu.maketext_duplicate() + '&l=solvedup'
 }
 
-// Lines a duplicate link drops by design, left out of the round trip's comparison: `maketext_duplicate` empties the
-// redo stacks (class_p.js) and no link holds the selection.
-const DUPLICATE_DROPS = /^(pu_a(_col)?\.command_redo\.length|selection) = .*$/
-
-function withoutDuplicateDrops (state) {
-  return state.split('\n').filter((line) => !DUPLICATE_DROPS.test(line)).join('\n')
-}
-
 // The first line of each method of a `Puzzle` class whose name matches `name` (a regular expression's text), the name
 // its first group: methods sit at a 4-space indent in `class_p.js`.
 export function methodStart (name) {
@@ -847,7 +758,7 @@ function handlerCallsOf (entries) {
 // Replays `recording` through `driver` (the engine driver unless given) in a fresh page and returns its checkpoints, the
 // first being step 0. With `expected` (as `readExpected` returns it, or another replay's checkpoints, named by
 // `against`) it stops at the first checkpoint that differs and returns the report of it. Under the engine driver, at
-// the checkpoints `roundTripAt` names, `roundTripEvery` (default `roundTripEvery()`) apart, the duplicate link of the
+// the checkpoints `roundTripAt` names (every one with `fullRoundTrips`, default `fullRoundTrips()`), the duplicate link of the
 // board, loaded in another page booted afresh for it (`roundTrips`), must give the same board, less what the link drops
 // by design; `roundTripped` lists the steps of those checkpoints. A replay that does not end on the recording's final board
 // is reported too; otherwise `report` is null. `served`, `solve` and `setup` go to `openPenpa`, and `served` and
@@ -855,7 +766,7 @@ function handlerCallsOf (entries) {
 // with the times the steps called it. `errors` holds every page error and `console.error` of the replay's page.
 export async function replay (browser, recording, {
   id = 'recording', expected, served = false, setup, driver = engineDriver, against = AGAINST_EXPECTED, coverage = false,
-  solve = false, roundTripEvery: every = roundTripEvery()
+  solve = false, fullRoundTrips: full = fullRoundTrips()
 } = {}) {
   // The solved message opens from a 20 ms `setTimeout` in `check_solution`, so under the paused clock it never opens.
   const openOptions = {
@@ -909,7 +820,7 @@ export async function replay (browser, recording, {
     checkpoints.push({ step: n, state })
     if (want && state !== want.state) return failureReport({ id, step: n, steps, since, want: want.state, got: state, errors, against })
     // The duplicate link is the engine's, whichever input made the board, so the engine driver alone checks it.
-    if (driver === engineDriver && roundTripAt({ index: checkpoints.length - 1, last: lastCheckpoint, every })) {
+    if (driver === engineDriver && roundTripAt({ index: checkpoints.length - 1, last: lastCheckpoint, full })) {
       await startRoundTrip(n, state)
     }
     return null

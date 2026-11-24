@@ -8,7 +8,8 @@
 // `live/**/*.live.mjs` skips it.
 import { chromium } from 'playwright'
 import { hunt, inLanes, PLANTS } from './plants.mjs'
-import { FULL_ROUND_TRIPS_ENV, listRecordings, readExpected, readRecording, replay } from './replay.mjs'
+import { listRecordings, readExpected, readRecording } from './recordings.mjs'
+import { FULL_ROUND_TRIPS_ENV, replay } from './replay.mjs'
 
 // Every replay and hunt here round-trips every checkpoint, so the tables stay comparable with the ones before #267.
 process.env[FULL_ROUND_TRIPS_ENV] = '1'

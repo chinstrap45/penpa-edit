@@ -8,7 +8,8 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { useBrowser } from './page.mjs'
 import { replayPartIds } from './engine-replay-part.mjs'
-import { compareDrivers, listRecordings, readRecording } from './replay.mjs'
+import { listRecordings, readRecording } from './recordings.mjs'
+import { compareDrivers } from './replay.mjs'
 import { TIER_C_FAMILY } from './tier-c.mjs'
 
 export const UI_REPLAY_PARTS = 4
