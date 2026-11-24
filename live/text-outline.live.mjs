@@ -1,4 +1,3 @@
-// The white outline on board text (#144): on by default on `solve.html`, one switch in its Settings dialog, and `index.html` as before.
 // The outline is read as white pixels around a black digit on a black cell, where nothing else on the board is white.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
@@ -13,7 +12,6 @@ const BLACK_SURFACE = 4
 const CELL_REACH = 0.4
 const NEAR_WHITE = 200
 
-// Runs in the page: how many near-white pixels the cell at `index` of the center list holds in its middle.
 function whitePixelsInPage ({ index, cellReach, nearWhite }) {
   const { x, y } = pu.point[pu.centerlist[index]]
   const reach = pu.size * pu.resol * cellReach
@@ -103,7 +101,6 @@ describe('the outline on board text of solve.html', () => {
     await page.waitForFunction(() => typeof pu !== 'undefined')
     assert.equal(await page.evaluate(() => UserSettings.outline_text), false, 'index.html draws as before')
 
-    // The cookie index.html writes with every other setting.
     await page.evaluate(() => { document.cookie = 'outline_text=false; path=/' })
     await page.goto(solvePage)
     await waitForDesk(page)
