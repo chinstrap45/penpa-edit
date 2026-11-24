@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Node's non-TTY report closes with a "failing tests:" block of "test at <file:line:col>" then "✖ <title> (<duration>)";
 # a failing todo test is listed there with ⚠ instead.
-# Usage: failing-tests.sh <log>
 set -euo pipefail
 names=$(awk '
   /^✖ failing tests:$/ { block = 1; next }

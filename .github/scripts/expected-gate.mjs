@@ -1,4 +1,4 @@
-// The expected-file gate (#33): a PR may change a recording's expected file only when a ticket it closes listed that
+// The expected-file gate: a PR may change a recording's expected file only when a ticket it closes listed that
 // recording's id before the fix started, under a `## Expected changes` heading, one `- \`<id>\`: <the change in words>`
 // bullet per id. The fix started at the earliest author date of the PR's commits, which a rebase or an amend keeps. A
 // new expected file is not a re-approval and passes unlisted. Every change, listed or not, goes into the PR comment in
@@ -21,7 +21,6 @@ const RECORDINGS_DIR = relative(fileURLToPath(new URL('../../', import.meta.url)
 // Lines of one recording's diff the comment shows; GitHub refuses a comment over 65536 characters.
 export const DIFF_LINES = 40
 
-// The ids a ticket body lists: the first backticked word of each bullet in its `## Expected changes` section.
 export function listedIds (body) {
   const ids = new Set()
   let inSection = false
@@ -58,7 +57,6 @@ export function gateVerdict ({ changes, fixStartedAt, tickets }) {
   return verdict
 }
 
-// `sections` maps each id to its diff's lines; each is cut at DIFF_LINES.
 export function commentBody ({ head, verdict, sections }) {
   const out = [`## Expected-file gate at ${head}`, '']
   const block = (title, items) => {
@@ -81,7 +79,6 @@ const run = (cmd, ...args) => execFileSync(cmd, args, { encoding: 'utf8', maxBuf
 const git = (...args) => run('git', ...args)
 const gh = (...args) => run('gh', ...args)
 
-// A file's content at `sha` as JSON, or null when it does not exist there.
 function jsonAt (sha, path) {
   if (!git('ls-tree', '--name-only', sha, '--', path).trim()) return null
   return JSON.parse(git('show', `${sha}:${path}`))
@@ -99,7 +96,6 @@ function changedExpectedFiles (base, head) {
   })
 }
 
-// The earliest author date of the PR's own commits.
 function fixStart (base, head) {
   const dates = git('log', '--format=%aI', `${base}..${head}`).split('\n').filter(Boolean).map((d) => new Date(d).toISOString())
   if (!dates.length) throw new Error(`no commit between ${base} and ${head}`)
@@ -126,7 +122,6 @@ function ticketVersions (repo, number) {
   return versions.sort((a, b) => a.at.localeCompare(b.at))
 }
 
-// The diff's lines for one changed expected file; a new or deleted file is summed up in one line.
 function diffLines (base, head, { path, status }) {
   const before = jsonAt(base, path)
   const after = jsonAt(head, path)
@@ -146,7 +141,6 @@ async function main ([pr, base, head, commentFile]) {
   const changed = changedExpectedFiles(base, head)
   appendFileSync(output, `changed=${changed.length > 0}\n`)
   if (!changed.length) {
-    // Replaces an earlier run's comment, which may say this check fails.
     writeFileSync(commentFile, `## Expected-file gate at ${head}\n\nNo expected file changed.\n`)
     console.log('No expected file changed.')
     return 0

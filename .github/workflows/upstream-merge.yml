@@ -1,11 +1,9 @@
 name: Upstream merge
 
-# Merges upstream Penpa+ into master with a merge commit (docs/solve.html rebuilt from index.html by
-# live/build-solve.mjs inside it, #431) and pushes only when the lint and both test suites pass on the merged
-# tree and it changes no recording's expected file (each such change is Chris's to rule on, #33); master:/docs is what
-# Pages serves, so the push publishes. A conflict, a red run, a changed expected file or a refused push pushes nothing
-# and files one issue, or comments on it while it is open. Each upstream commit that touched a file we own
-# (merge=ours) gets one needs-triage issue, filed before the tests, and even when the merge conflicts.
+# master:/docs is what Pages serves, so the push publishes: it goes only when the lint and both test suites pass on the
+# merged tree and no recording's expected file changed (each such change is Chris's to rule on). Each upstream commit
+# that touched a file we own (merge=ours) gets one needs-triage issue, filed before the tests, and even when the merge
+# conflicts.
 on:
   schedule:
     - cron: '17 5 * * *'
@@ -94,7 +92,6 @@ jobs:
           if [[ '${{ steps.merge.outputs.merged }}' == false ]]; then
             echo 'Upstream has nothing new.' >>"$GITHUB_STEP_SUMMARY"
           fi
-          # The report is absent when a step before the merge failed; the issue step says so.
           if [[ -f $REPORT ]]; then cat "$REPORT" >>"$GITHUB_STEP_SUMMARY"; fi
       - if: failure()
         name: File or comment on the issue

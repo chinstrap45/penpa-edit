@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# A failed merge exits non-zero with no merge left in progress; the report says whether it conflicted.
 # <owned-commits-file> gets one line per upstream commit that touched a merge=ours file: sha, subject and those files (comma-separated), split by the ASCII unit separator: `read` collapses tabs, so an empty subject would vanish.
-# Usage: upstream-merge.sh <upstream-ref> <report-file> <owned-commits-file>
 set -euo pipefail
 upstream=$1
 report=$2
@@ -42,7 +40,7 @@ EOF
 fi
 
 # Git has no built-in `ours` driver; this merge alone names one, so a merge=ours file both sides changed keeps our side.
-# It is never written to a config: every other merge in a clone must text-merge or conflict (#117).
+# It is never written to a config: every other merge in a clone must text-merge or conflict.
 if ! git -c merge.ours.driver=true merge --no-ff --no-commit "$upstream"; then
   conflicted=$(git diff --name-only --diff-filter=U)
   if [[ -n $conflicted ]]; then
@@ -50,7 +48,6 @@ if ! git -c merge.ours.driver=true merge --no-ff --no-commit "$upstream"; then
   else
     printf '## The merge failed with no conflicting file\n\nRead the run.\n' >>"$report"
   fi
-  # A merge git refused before starting leaves nothing to abort.
   if git rev-parse -q --verify MERGE_HEAD >/dev/null; then git merge --abort; fi
   exit 1
 fi

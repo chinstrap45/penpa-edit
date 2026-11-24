@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Fails when HEAD changes a recording's expected file against <base>, and names each file in the report. Every
-# expected-file change an upstream merge brings goes to Chris (#33), so the nightly pushes no such merge.
-# Usage: expected-unchanged.sh <base> <report-file>
 set -euo pipefail
 base=$1
 report=$2
