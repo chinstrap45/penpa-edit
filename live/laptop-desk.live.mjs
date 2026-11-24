@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, it } from 'node:test'
 import { CARD_GAP_PX, MOUSE_MIN_HEIGHT_PX, MOUSE_SLACK_PX, overlaps, SLACK_PX, steady, CARDS, TOP_MARGIN_PX, dragFrom } from './desk-layout.mjs'
-import { afterChange, LONG_RULES_PUZZLE, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, resetLayoutInSettings, useBrowser, waitForDesk } from './page.mjs'
+import { afterChange, cellSize, LONG_RULES_PUZZLE, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, resetLayoutInSettings, useBrowser, waitForDesk } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -492,12 +492,11 @@ describe('the desk holds together', () => {
   it('keeps a zoom the solver set through the refit a window resize brings', async () => {
     const page = await open(LAPTOPS[1])
     const fresh = (await deskSettled(page)).cards
-    const cell = () => page.evaluate(() => engine.getState().cellSize)
     await page.getByRole('region', { name: 'Board' }).getByRole('button', { name: 'Zoom in' }).click()
-    const zoomed = await cell()
+    const zoomed = await cellSize(page)
     await page.setViewportSize(LAPTOPS[0])
     await settle(async () => (await cardsOf(page)).Board.w < fresh.Board.w, true)
-    assert.equal(await cell(), zoomed)
+    assert.equal(await cellSize(page), zoomed)
   })
 
   const KILLER = JSON.parse(readFileSync(new URL('./recordings/solve/killer.steps.json', import.meta.url))).header.source

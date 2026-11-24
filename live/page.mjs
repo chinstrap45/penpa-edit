@@ -29,10 +29,10 @@ export function takePageErrors () {
 }
 
 // Launches one Chromium before a file's tests and closes it after them, and fails any test during which a page
-// it opened raised a page error or logged a `console.error`, one a test's own `t.after` hook (the context's close) raises
-// included: node runs a hook registered inside an after hook last, which an `afterEach` does not (it runs before them).
-// Its hooks run with the file's other top-level hooks,
-// so a test reads `browser()` in a `describe`'s hooks or tests, never in a top-level `before`.
+// it opened raised a page error or logged a `console.error`. The check is registered inside an `after` hook, which node
+// runs last, so an error a test's own `t.after` hook (the context's close) raises is caught too; an `afterEach` runs before those.
+// The hooks run with the file's other top-level hooks, so a test reads `browser()` in a `describe`'s hooks or tests,
+// never in a top-level `before`.
 export function useBrowser () {
   let browser
   before(async () => { browser = await chromium.launch() })
@@ -346,12 +346,20 @@ export async function openSettings (page) {
   return page.locator('wa-dialog[open]')
 }
 
-// Flips the Settings switch named `name` as a visitor does, and closes the dialog.
-export async function flipSettingsSwitch (page, name) {
-  const dialog = await openSettings(page)
-  await dialog.locator('wa-switch').filter({ has: page.getByRole('switch', { name }) }).click()
+// Web Awesome's switch hides its input under the visible track, so Playwright's check for a covered target never passes on the
+// input. The click goes to the switch element holding it, which waits for the dialog's opening animation to settle first.
+export const flipSwitch = (page, name) => page.locator('wa-switch').filter({ has: page.getByRole('switch', { name }) }).click()
+
+export async function closeSettings (page) {
   await page.keyboard.press('Escape')
   await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
+}
+
+// Opens Settings, flips the switch named `name` and closes the dialog.
+export async function flipSettingsSwitch (page, name) {
+  await openSettings(page)
+  await flipSwitch(page, name)
+  await closeSettings(page)
 }
 
 export async function resetLayoutInSettings (page) {
@@ -360,10 +368,8 @@ export async function resetLayoutInSettings (page) {
   await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
 }
 
-// The board's cell size in pixels.
 export const cellSize = (page) => page.evaluate(() => engine.getState().cellSize)
 
-// The Recent card.
 export const recentCard = (page) => page.getByRole('region', { name: 'Recent' })
 
 // The cards the solver can close, in the Cards menu's order.

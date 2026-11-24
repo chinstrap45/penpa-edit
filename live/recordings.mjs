@@ -1,7 +1,6 @@
 // Recordings as files (GLOSSARY.md; the format is described at the top of `live/replay.mjs`): their paths, how they are
 // read and written, and the helpers that put two canonical states side by side. It imports no browser library, so the
-// expected-file gate (`.github/scripts/expected-gate.mjs`) loads no Playwright (#437). Not a check itself, so
-// `live/**/*.live.mjs` skips it.
+// expected-file gate (`.github/scripts/expected-gate.mjs`) loads no Playwright.
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'

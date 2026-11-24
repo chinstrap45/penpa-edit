@@ -4,7 +4,7 @@
 // box. Label positions are read against the cells Penpa+ draws.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { boardCanvasInPage, linkFromNewBoard, solveLinkOfImport, openSolvePage, useBrowser, waitForDesk, openSettings, flipSettingsSwitch } from './page.mjs'
+import { boardCanvasInPage, linkFromNewBoard, solveLinkOfImport, openSolvePage, useBrowser, waitForDesk, openSettings, flipSettingsSwitch, closeSettings, cellSize } from './page.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
 import { settle } from './settle.mjs'
 import { FRAMED_GRID_LINK } from './framed-grid-link.mjs'
@@ -124,8 +124,7 @@ async function assertBands (page, columns, rows) {
 const switchChecked = async (page) => {
   await openSettings(page)
   const checked = await page.getByRole('switch', { name: SWITCH }).isChecked()
-  await page.keyboard.press('Escape')
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
+  await closeSettings(page)
   return checked
 }
 
@@ -139,9 +138,9 @@ describe('board coordinates on a square-cell grid', () => {
 
   it('show 1-9 on a sudoku at Fit and after zooming in twice, and the setting survives a reload', async () => {
     const { context, page } = await openSolvePage(browser(), await solveLinkOfImport(browser(), IMPORTS['sudoku-9x9']), { served: true })
-    const cellWithout = await page.evaluate(() => engine.getState().cellSize)
+    const cellWithout = await cellSize(page)
     await flipSettingsSwitch(page, SWITCH)
-    assert.ok(await page.evaluate(() => engine.getState().cellSize) < cellWithout, 'Fit gives the numbers their room, so the cells get smaller')
+    assert.ok(await cellSize(page) < cellWithout, 'Fit gives the numbers their room, so the cells get smaller')
     const body = await page.evaluate(() => { const b = document.querySelector('section[aria-label="Board"] .ui-body'); return { w: b.scrollWidth - b.clientWidth, h: b.scrollHeight - b.clientHeight } })
     assert.deepEqual(body, { w: 0, h: 0 }, 'the Board card does not scroll at Fit')
     await assertAligned(page, 9, 9)

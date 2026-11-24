@@ -14,7 +14,7 @@ const MINUTE_MS = 60000
 // would keep one stray action.
 const ERRORS_LAND_MS = 200
 const DEFAULT_MINUTES = 2
-const DEFAULT_SHRINK_MINUTES = 10
+const SHRINK_MINUTES = 10
 const UNBOUNDED = 1000000
 
 // The actions a printed list holds, in order. fast-check prints them joined by commas, so no action's label holds one.
@@ -77,7 +77,7 @@ function listsOn (puzzles, named, options) {
 }
 
 // Fuzzes with `seed` over `puzzles` (each list picks one, or `puzzle`, a name, for every list) until `minutes` pass or
-// `runs` lists have run, then shrinks a failure for at most `DEFAULT_SHRINK_MINUTES`. `path`, as a failure prints it, replays that
+// `runs` lists have run, then shrinks a failure for at most `SHRINK_MINUTES`. `path`, as a failure prints it, replays that
 // one list with no hunt and no shrink; `maxCommands` and `focus` (the areas whose actions are drawn more often) shape the
 // lists, so a replay needs the ones it was found with. Returns `{ failed: false, seed, runs }` or the failure: `error`,
 // `step` (the count of steps run when it was read), `puzzle` (its name), `actions` (the actions, in words), `huntActions`
@@ -104,7 +104,7 @@ export async function runFuzz ({ openTarget, puzzles, puzzle, seed, runs, minute
   let found = hunt
   if (!replaying) {
     const shrunk = await fc.check(property, {
-      seed, numRuns: upTo(hunt.counterexamplePath), path: hunt.counterexamplePath.split(':')[0], interruptAfterTimeLimit: DEFAULT_SHRINK_MINUTES * MINUTE_MS, verbose: 0
+      seed, numRuns: upTo(hunt.counterexamplePath), path: hunt.counterexamplePath.split(':')[0], interruptAfterTimeLimit: SHRINK_MINUTES * MINUTE_MS, verbose: 0
     })
     if (shrunk.failed && shrunk.counterexample !== null) found = shrunk
   }

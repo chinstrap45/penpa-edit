@@ -1,7 +1,10 @@
-// The Settings dialog of `solve.html`; the page is served over https://penpa.test/ because Settings live in cookies.
+// The Settings dialog of `solve.html`: `engine.getSettings` / `setSetting` over the fixed list, the dialog's groups, every change
+// saved at once, conflict detection off for one puzzle only, Clear saved progress, and the keys. The UI is found by role and
+// accessible name, the board by what Penpa+ would save (`readEngineState`, defined by recorder.js). Settings live in cookies, so
+// every page is served over https://penpa.test/.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
-import { AKARI_SOLVE, board, boardCanvasInPage, linkFromNewBoard, makeNumberSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, typedDigits, useBrowser, waitForDesk, openSettings } from './page.mjs'
+import { AKARI_SOLVE, board, boardCanvasInPage, linkFromNewBoard, makeNumberSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, typedDigits, useBrowser, waitForDesk, openSettings, closeSettings, flipSwitch, cellSize } from './page.mjs'
 import { cellPixel, clickCell } from './replay.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
 import { settle } from './settle.mjs'
@@ -70,15 +73,6 @@ const CONFIRM_CLEAR = 'Clear progress'
 const pageGroup = (dialog) => dialog.getByRole('group', { name: 'Page' })
 const pinsGroup = (dialog) => dialog.getByRole('group', { name: 'Pins' })
 const settings = (page) => page.evaluate(() => engine.getSettings())
-
-const closeDialog = async (page) => {
-  await page.keyboard.press('Escape')
-  await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
-}
-
-// Web Awesome's switch hides its input under the visible track, so Playwright's check for a covered target never passes on the
-// input. The click goes to the switch element holding it, which waits for the dialog's opening animation to settle first.
-const flipSwitch = (page, name) => page.locator('wa-switch').filter({ has: page.getByRole('switch', { name }) }).click()
 
 async function useControl (page, group, control) {
   if (control.toggle) {
@@ -162,7 +156,7 @@ describe('the Settings dialog', () => {
       const group = dialog.getByRole('group', { name: control.group })
       await useControl(page, group, control)
       assert.equal(await settle(async () => (await settings(page))[control.name], control.to), control.to)
-      await closeDialog(page)
+      await closeSettings(page)
       await reload(page)
       assert.equal((await settings(page))[control.name], control.to, 'the value is back after a reload')
       const again = await openSettings(page)
@@ -171,7 +165,7 @@ describe('the Settings dialog', () => {
       } else {
         assert.equal(await again.getByRole('combobox', { name: control.select }).inputValue(), control.choose)
       }
-      await closeDialog(page)
+      await closeSettings(page)
       await openLink(page, await otherLink())
       assert.equal((await settings(page))[control.name], control.to, 'the value holds on another puzzle')
     })
@@ -256,17 +250,17 @@ describe('conflict detection off for this puzzle only', () => {
     await page.getByRole('option', { name: 'Off for this puzzle' }).click()
     assert.equal(await settle(async () => (await settings(page)).conflict_detection, 2), 2)
     assert.equal(await dialog.getByText('This puzzle only').isVisible(), true, 'the setting is tagged')
-    await closeDialog(page)
+    await closeSettings(page)
 
     await reload(page)
     assert.equal((await settings(page)).conflict_detection, 2, 'A: off again after a reload')
     assert.equal(await (await openSettings(page)).getByText('This puzzle only').isVisible(), true, 'A: tagged again')
-    await closeDialog(page)
+    await closeSettings(page)
 
     await openLink(page, linkB)
     assert.equal((await settings(page)).conflict_detection, 1, 'B: on')
     assert.equal(await (await openSettings(page)).getByText('This puzzle only').isVisible(), false, 'B: not tagged')
-    await closeDialog(page)
+    await closeSettings(page)
 
     await openLink(page, AKARI_SOLVE)
     assert.equal((await settings(page)).conflict_detection, 2, 'A: off when opened again later')
@@ -281,7 +275,7 @@ describe('conflict detection off for this puzzle only', () => {
     await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
     await page.getByRole('option', { name: 'Off for this puzzle' }).click()
     assert.equal(await settle(async () => (await settings(page)).conflict_detection, 2), 2)
-    await closeDialog(page)
+    await closeSettings(page)
     await page.evaluate(() => engine.setSetting('auto_save_history', true))
     const before = await page.evaluate(() => location.hash)
     await savePenpa(page)
@@ -301,7 +295,7 @@ describe('conflict detection off for this puzzle only', () => {
     await dialog.getByRole('combobox', { name: 'Conflict detection' }).click()
     await page.getByRole('option', { name: 'On', exact: true }).click()
     assert.equal(await settle(async () => (await settings(page)).conflict_detection, 1), 1)
-    await closeDialog(page)
+    await closeSettings(page)
     await reload(page)
     assert.equal((await settings(page)).conflict_detection, 1)
   })
@@ -327,7 +321,7 @@ describe('Clear saved progress', () => {
     const dialog = await openSettings(page)
     await dialog.getByRole('button', { name: CLEAR_BUTTON, exact: true }).click()
     await page.getByRole('button', { name: CONFIRM_CLEAR, exact: true }).click()
-    await closeDialog(page)
+    await closeSettings(page)
     await reload(page)
     assert.deepEqual(await settle(() => typedDigits(page), []), [], 'the saved progress is gone')
   })
@@ -393,7 +387,7 @@ describe('the Progress settings', () => {
     await openSettings(page)
     await flipSwitch(page, 'Save progress in this browser')
     assert.equal(await settle(async () => (await settings(page)).local_storage, false), false)
-    await closeDialog(page)
+    await closeSettings(page)
     // Choosing the tool in `openSolve` was saved while the setting was still on; the store holds that and no digit.
     const before = await storedProgress(page)
     assert.notEqual(before, null, 'the tool chosen while the setting was on was saved')
@@ -417,7 +411,7 @@ describe('the Progress settings', () => {
     await openSettings(page)
     await flipSwitch(page, 'Save a copy to the browser history on every save')
     assert.equal(await settle(async () => (await settings(page)).auto_save_history, true), true)
-    await closeDialog(page)
+    await closeSettings(page)
     await savePenpa(page)
     const after = await where()
     assert.equal(after.entries, start.entries + 1, 'on: the save added a history entry')
@@ -443,7 +437,7 @@ describe('the Progress settings', () => {
     await openSettings(page)
     await flipSwitch(page, 'Ask before leaving the page')
     assert.equal(await settle(async () => (await settings(page)).reload_button, true), true)
-    await closeDialog(page)
+    await closeSettings(page)
     await reloadCounting()
     assert.deepEqual(asked, ['beforeunload'], 'on: the page asked once')
   })
@@ -467,7 +461,7 @@ describe('the keys', () => {
     await page.keyboard.press('Backspace')
     assert.deepEqual(await board(page), before, 'the board is as it was')
 
-    await closeDialog(page)
+    await closeSettings(page)
     await page.keyboard.press('5')
     assert.deepEqual(await settle(() => typedDigits(page), ['5']), ['5'], 'a digit after Escape reaches the board')
   })
@@ -482,14 +476,14 @@ describe('the keys', () => {
 
     await openSettings(page)
     await flipSwitch(page, 'Z, X, C and V shortcuts')
-    await closeDialog(page)
+    await closeSettings(page)
     await setTool(page, start)
     await page.keyboard.press('z')
     assert.equal(await modeNow(), start.mode, 'Z does nothing with shortcuts off')
 
     await openSettings(page)
     await flipSwitch(page, 'Z, X, C and V shortcuts')
-    await closeDialog(page)
+    await closeSettings(page)
     await page.keyboard.press('z')
     assert.equal(await settle(modeNow, firstPin.mode), firstPin.mode, 'Z jumps to the first pin with shortcuts on')
   })
@@ -616,7 +610,7 @@ describe('each Board look and Checking setting, on a board where it applies', ()
       await setTool(page, { mode: 'combi', submode: 'star' })
       const nearCorner = async () => {
         const centre = await cellPixel(page, 6)
-        const size = await page.evaluate(() => engine.getState().cellSize)
+        const size = await cellSize(page)
         return { x: centre.x + size * 0.42, y: centre.y + size * 0.42 }
       }
       const rightClickNearCorner = async () => {
@@ -671,7 +665,7 @@ describe('the desk\'s own settings in the dialog', () => {
     await pageGroup(dialog).getByRole('combobox', { name: 'Theme' }).click()
     await page.getByRole('option', { name: 'Dark' }).click()
     assert.equal(await settle(async () => (await settings(page)).theme, 'dark'), 'dark')
-    await closeDialog(page)
+    await closeSettings(page)
     await reload(page)
     assert.equal((await settings(page)).theme, 'dark', 'dark after a reload')
     assert.equal(await pageGroup(await openSettings(page)).getByRole('combobox', { name: 'Theme' }).inputValue(), 'Dark')
@@ -715,7 +709,7 @@ describe('the desk\'s own settings in the dialog', () => {
     await pinsGroup(dialog).getByRole('combobox', { name: 'Your presets' }).click()
     await page.getByRole('option', { name: 'Mine' }).click()
     await deleteButton.click()
-    await closeDialog(page)
+    await closeSettings(page)
     assert.equal(await offered(), false, 'the deleted preset is no longer offered')
   })
 })

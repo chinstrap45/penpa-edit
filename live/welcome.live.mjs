@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { settle } from './settle.mjs'
-import { afterChange, DIGIT_CELL, makeNumberSolveLink, openSolvePage, setTool, typedDigits, useBrowser, waitForDesk, WELCOME_KEY, WELCOME_SEEN } from './page.mjs'
+import { afterChange, DIGIT_CELL, makeNumberSolveLink, openSettings, openSolvePage, setTool, typedDigits, useBrowser, waitForDesk, WELCOME_KEY, WELCOME_SEEN } from './page.mjs'
 import { clickCell } from './replay.mjs'
 
 const browser = useBrowser()
@@ -23,12 +23,10 @@ async function welcomeShownAfterLoad (page) {
 }
 
 async function replayFromSettings (page) {
-  await page.getByRole('button', { name: 'Settings', exact: true }).click()
-  const settings = page.getByRole('dialog', { name: 'Settings' })
-  await settings.waitFor()
-  await page.locator('wa-dialog[open]').getByRole('group', { name: 'Page' }).getByRole('button', { name: 'Show the welcome' }).click()
+  const dialog = await openSettings(page)
+  await dialog.getByRole('group', { name: 'Page' }).getByRole('button', { name: 'Show the welcome' }).click()
   await welcome(page).waitFor()
-  await settings.waitFor({ state: 'hidden' })
+  await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
 }
 
 describe('the welcome dialog on a first visit', () => {

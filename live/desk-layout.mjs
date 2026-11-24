@@ -44,7 +44,6 @@ export function readDeskInPage (names) {
   }
 }
 
-// Presses at `point`, moves by `dx`, `dy` in steps and lets go.
 export async function dragFrom (page, point, dx, dy) {
   await page.mouse.move(point.x, point.y)
   await page.mouse.down()
