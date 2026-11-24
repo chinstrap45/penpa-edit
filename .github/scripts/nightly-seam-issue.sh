@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Files the nightly full seam's failure (#268): the failing tests named in the parts' logs, then one issue, or a comment
-# on the open one with the same title.
-# Usage: nightly-seam-issue.sh <logs-dir> <run-url>
 set -euo pipefail
 scripts=$(dirname "$0")
 body=$(mktemp)

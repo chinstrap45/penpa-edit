@@ -1,10 +1,7 @@
 name: UI corpus
 
-# The UI driver's nightly run (#80): every recording replays through real mouse and keyboard on Penpa+'s page and on
-# `solve.html`, compared with the engine driver (`live/ui-replay-part.mjs`). Every PR replays only a sample, inside the
-# seam's budget; this is the rest (the Safety net map's standing ruling, #6). A recording that still differs is `todo`
-# against its ticket and fails nothing; a new difference fails the run, and the `report` job files one issue naming it, or
-# comments on the open one (#324). A green night says so on that issue; a run that compared nothing counts as red.
+# Every PR replays only a sample on the UI driver, inside the seam's budget; this run replays the rest. A recording that
+# still differs is `todo` against its ticket and fails nothing; a new difference fails the run.
 on:
   schedule:
     - cron: '47 5 * * *'
