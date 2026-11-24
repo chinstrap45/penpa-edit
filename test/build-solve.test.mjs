@@ -13,7 +13,7 @@ describe('the solve page build', () => {
 
   it('reaches solve.html with a change made to index.html', () => {
     const changed = read('index.html').replace('<title>', '<title>upstream change ')
-    assert.ok(buildSolve(changed).includes('<title>upstream change '))
+    assert.match(buildSolve(changed), /<title>upstream change /)
   })
 
   it('fails naming the edit when upstream moved its text, or when it occurs twice', () => {
@@ -26,7 +26,7 @@ describe('the solve page build', () => {
 
   it('keeps the line ending of index.html in what it adds', () => {
     const lf = buildSolve(read('index.html').replaceAll('\r\n', '\n'))
-    assert.ok(!lf.includes('\r'))
+    assert.doesNotMatch(lf, /\r/)
     assert.equal(lf.replaceAll('\n', '\r\n'), read('solve.html'))
   })
 })
