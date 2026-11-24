@@ -126,18 +126,18 @@ async function findsAndReplays (target, error, { hunt = PLANT_HUNT, focus = PLAN
   const { output, result: found } = await fuzzCommand([...hunt, ...focus.flatMap((area) => ['--focus', area])], target)
   assert.equal(found.failed, true, `the run finds the plant, got ${output}`)
   assert.match(found.error, error)
-  assert.match(found.sequence.at(-1), last, 'the shrunk list ends on the planted step')
-  if (only) assert.equal(found.sequence.length, 1, `shrunk to the one step, got ${found.sequence.join('; ')}`)
-  assert.ok(found.sequence.length <= HANDFUL, `shrunk to at most ${HANDFUL} steps, got ${found.sequence.join('; ')}`)
-  assert.ok(found.huntSteps > found.sequence.length, `the shrink cut the ${found.huntSteps} steps the hunt found to fewer, got ${found.sequence.length}`)
-  assert.equal(found.step, found.sequence.length, 'the failure is read after the last step of the shrunk list')
+  assert.match(found.actions.at(-1), last, 'the shrunk list ends on the planted step')
+  if (only) assert.equal(found.actions.length, 1, `shrunk to the one step, got ${found.actions.join('; ')}`)
+  assert.ok(found.actions.length <= HANDFUL, `shrunk to at most ${HANDFUL} steps, got ${found.actions.join('; ')}`)
+  assert.ok(found.huntActions > found.actions.length, `the shrink cut the ${found.huntActions} steps the hunt found to fewer, got ${found.actions.length}`)
+  assert.equal(found.step, found.actions.length, 'the failure is read after the last step of the shrunk list')
 
   const command = /^replay: (.*)$/m.exec(output)?.[1]
   assert.ok(command, `the run prints a replay command, got ${output}`)
   assert.match(command, new RegExp(` --puzzle akari .*${focus.map((area) => ` --focus ${area}`).join('')}$`), 'the replay command names the puzzle and carries the focus')
   const [, args] = command.split(' -- ')
   const replayed = await fuzzCommand(args.split(' '), target)
-  const failedOn = (r) => ({ failed: r.failed, puzzle: r.puzzle, step: r.step, sequence: r.sequence, error: r.error })
+  const failedOn = (r) => ({ failed: r.failed, puzzle: r.puzzle, step: r.step, actions: r.actions, error: r.error })
   assert.deepEqual(failedOn(replayed.result), failedOn(found), `${command} fails again on the same step`)
   assert.equal(replayed.output.split('\n').slice(1).join('\n'), output.split('\n').slice(1).join('\n'), `${command} prints the same failure`)
 
@@ -149,8 +149,8 @@ async function findsAndReplays (target, error, { hunt = PLANT_HUNT, focus = PLAN
 // The share of `area`'s actions among 50 lists drawn with `seed` and `focus`.
 function areaShare (area, focus, seed) {
   // fast-check hands each command out in a wrapper that holds it as `cmd`.
-  const steps = fc.sample(actionList(puzzles, { focus }), { seed, numRuns: 50 }).flatMap(({ commands }) => [...commands].map((wrapped) => wrapped.cmd))
-  return steps.filter((step) => step.area === area).length / steps.length
+  const actions = fc.sample(actionList(puzzles, { focus }), { seed, numRuns: 50 }).flatMap(({ commands }) => [...commands].map((wrapped) => wrapped.cmd))
+  return actions.filter((action) => action.area === area).length / actions.length
 }
 
 describe('the solve page\'s UI fuzz', () => {

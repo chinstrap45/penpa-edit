@@ -6,15 +6,14 @@ import { chmodSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { ENGINE, ENV, PINS, scratchRepo, tree, UI } from './live-scratch.mjs'
+import { ENGINE, ENV, listedBy, PINS, scratchRepo, tree, UI } from './live-scratch.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const RUN = join(ROOT, 'live/run-narrowed.mjs')
 const run = (dir, args, env = ENV) => spawnSync(process.execPath, [RUN, ...args], { cwd: dir, env, encoding: 'utf8' })
 const listed = (dir, ...args) => {
-  const out = run(dir, ['--list', ...args])
-  assert.equal(out.status, 0, out.stderr)
-  return { suites: out.stdout.split('\n').filter(Boolean), said: out.stderr }
+  const { lines, said } = listedBy(RUN, dir, ...args)
+  return { suites: lines, said }
 }
 
 describe('node live/run-narrowed.mjs --list', () => {

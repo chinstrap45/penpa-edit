@@ -553,7 +553,7 @@ function commandOf (k, arg) {
 // The replay path fast-check prints after a list of commands (`/*replayPath="..."*/`).
 export const REPLAY_PATH = /\/\*replayPath="([^"]*)"\*\//
 
-export const DEFAULT_MAX_COMMANDS = 20
+const DEFAULT_MAX_COMMANDS = 20
 
 // The generator of whole lists, each `{ puzzle, commands }`: a puzzle of `puzzles`, then at most `maxCommands` actions, the
 // kinds of each area in `focus` drawn FOCUS_FACTOR times as often. `replayPath` replays a shrunk list (fast-check's own,
@@ -564,9 +564,9 @@ export const actionList = (puzzles, { maxCommands = DEFAULT_MAX_COMMANDS, replay
   return fc.commands([action], { maxCommands, size: 'max', replayPath }).map((commands) => ({ puzzle, commands, toString: () => String(commands) }))
 })
 
-// A list written out by hand: `steps` are `[kind, arg]` of the kinds above.
-export function scriptedList (steps) {
-  return steps.map(([kind, arg]) => {
+// A list written out by hand: `actions` are `[kind, arg]` of the kinds above.
+export function scriptedList (actions) {
+  return actions.map(([kind, arg]) => {
     const k = KINDS.find((x) => x.kind === kind)
     if (!k) throw new Error(`no action kind "${kind}"`)
     return commandOf(k, arg)

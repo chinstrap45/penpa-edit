@@ -198,8 +198,6 @@ export function shadeInPage (cell) {
   pu.redraw()
 }
 
-// Indices in `pu.centerlist` of the given of `makeNumberSolveLink`'s puzzle, of the cell its answer fills and of an
-// empty cell in the given's row.
 // The localStorage key `desk.js` keeps the desk's layout under.
 export const LAYOUT_KEY = 'chinstrap-solve-layout-v1'
 
@@ -210,6 +208,8 @@ export const THEME_KEY = 'chinstrap-solve-theme-v1'
 export const WELCOME_KEY = 'chinstrap-solve-tour-v1'
 export const WELCOME_SEEN = 'seen'
 
+// Indices in `pu.centerlist` of the given of `makeNumberSolveLink`'s puzzle, of the cell its answer fills and of an
+// empty cell in the given's row.
 export const GIVEN_CELL = 0
 export const ANSWER_CELL = 1
 export const SAME_ROW_CELL = 2

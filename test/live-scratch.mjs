@@ -1,6 +1,7 @@
 // Scratch git repos for the tests of the live runners (`test/run-live.test.mjs`, `test/run-narrowed.test.mjs`).
 // Every directory made here is removed when the test process exits.
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { strict as assert } from 'node:assert'
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -13,6 +14,14 @@ export const PINS = 'live/pins.live.mjs'
 // The environment for a child that runs `node --test`, without NODE_TEST_CONTEXT, which makes a child runner report to
 // this one instead.
 export const { NODE_TEST_CONTEXT, ...ENV } = process.env
+
+// Runs `script --list ...args` in `dir`, the way both live runners take it, and returns what it printed one line each, with
+// what it said on stderr.
+export function listedBy (script, dir, ...args) {
+  const out = spawnSync(process.execPath, [script, '--list', ...args], { cwd: dir, env: ENV, encoding: 'utf8' })
+  assert.equal(out.status, 0, out.stderr)
+  return { lines: out.stdout.split('\n').filter(Boolean), said: out.stderr }
+}
 
 const made = []
 process.on('exit', () => made.forEach((dir) => rmSync(dir, { recursive: true, force: true })))

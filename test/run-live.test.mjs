@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { ENGINE, ENV, PINS, scratchRepo, tree, UI } from './live-scratch.mjs'
+import { ENGINE, ENV, listedBy, PINS, scratchRepo, tree, UI } from './live-scratch.mjs'
 import { chooseLiveFiles, ENGINE_FILES, engineInputs, pageReach, partOf, SAFETY_NET_FILES } from '../live/run-live.mjs'
 
 const SOLVE_UI_FILES = ['live/pins.live.mjs', 'live/mouse-card.live.mjs', 'live/desk.live.mjs']
@@ -127,9 +127,8 @@ describe('partOf', () => {
 const RUN_LIVE = fileURLToPath(new URL('../live/run-live.mjs', import.meta.url))
 const runLive = (dir, ...args) => spawnSync(process.execPath, [RUN_LIVE, ...args], { cwd: dir, env: ENV, encoding: 'utf8' })
 const list = (dir, ...args) => {
-  const out = runLive(dir, '--list', ...args)
-  assert.equal(out.status, 0, out.stderr)
-  return { files: out.stdout.split('\n').filter(Boolean), said: out.stderr }
+  const { lines, said } = listedBy(RUN_LIVE, dir, ...args)
+  return { files: lines, said }
 }
 
 describe('node live/run-live.mjs', () => {

@@ -1,5 +1,5 @@
 // `npm run fuzz:ui:nightly`: the nightly workflow's 30-minute UI fuzz (#234). It runs `run.mjs` with a fresh seed and reads
-// what it prints. A failure files one `bug` and `needs-info` issue titled by the failure (the seed, the shrunk steps and
+// what it prints. A failure files one `bug` and `needs-info` issue titled by the failure (the seed, the shrunk actions and
 // the replay command in the body); a title an open issue already has gets the body as a comment instead, and one night
 // files or comments once per title. After a failure the fuzz starts again on a new seed with the time left, so one
 // failure cannot use the whole night. A run that could not start or printed no verdict files one "did not run" issue and
@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-export const FUZZ_MINUTES = 30
+const FUZZ_MINUTES = 30
 const MINUTE_MS = 60000
 export const TITLE_MAX = 110
 const FILER = '.github/scripts/file-issue-once.sh'
@@ -47,17 +47,17 @@ export function parseFuzzOutput (output) {
   const error = /^error: (.*(?:\n(?!\d+ steps?:$).*)*)$/m.exec(output)?.[1]
   const replay = /^replay: (.*)$/m.exec(output)?.[1]
   if (!head || error == null || !replay) return null
-  const steps = /^\d+ steps?:\n((?: {2}\d+\. .*\n?)*)/m.exec(output)?.[1].trimEnd().split('\n').map((l) => l.replace(/^ {2}\d+\. /, '')) ?? []
-  return { failed: true, puzzle: head[1], seed: Number(head[2]), error: error.trim(), steps, replay }
+  const actions = /^\d+ steps?:\n((?: {2}\d+\. .*\n?)*)/m.exec(output)?.[1].trimEnd().split('\n').map((l) => l.replace(/^ {2}\d+\. /, '')) ?? []
+  return { failed: true, puzzle: head[1], seed: Number(head[2]), error: error.trim(), actions, replay }
 }
 
 function fuzzIssue (f, { runUrl } = {}) {
   const details = [
     `Error: ${f.error}`,
     '',
-    `Shrunk to ${f.steps.length} ${f.steps.length === 1 ? 'step' : 'steps'}:`,
+    `Shrunk to ${f.actions.length} ${f.actions.length === 1 ? 'step' : 'steps'}:`,
     '',
-    ...f.steps.map((s, i) => `${i + 1}. ${s}`),
+    ...f.actions.map((s, i) => `${i + 1}. ${s}`),
     '',
     'Replay:',
     '',
