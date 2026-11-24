@@ -1,4 +1,3 @@
-// Scratch git repos for the tests of the live runners (`test/run-live.test.mjs`, `test/run-narrowed.test.mjs`).
 // Every directory made here is removed when the test process exits.
 import { execFileSync, spawnSync } from 'node:child_process'
 import { strict as assert } from 'node:assert'
@@ -26,7 +25,6 @@ export function listedBy (script, dir, ...args) {
 const made = []
 process.on('exit', () => made.forEach((dir) => rmSync(dir, { recursive: true, force: true })))
 
-// Writes `files` (path: text) under a fresh directory and returns it.
 export function tree (files) {
   const dir = mkdtempSync(join(tmpdir(), 'live-scratch-'))
   made.push(dir)
@@ -49,8 +47,6 @@ export function committedTree (files) {
   return { dir, git }
 }
 
-// A scratch repo holding the real package.json, one engine-side file, one UI-driver replay, one solve-UI file, a page
-// naming one script and a file it does not have yet, and the solve UI's source.
 export function scratchRepo () {
   return committedTree({
     ...Object.fromEntries([ENGINE, UI, PINS, 'docs/ui/pins.js', 'docs/js/class_p.js', 'docs/js/engine_bridge.js']

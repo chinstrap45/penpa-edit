@@ -1,4 +1,4 @@
-// The nightly UI corpus's report (`.github/workflows/ui-corpus.yml`, #324): a planted differing recording in the run's
+// The nightly UI corpus's report (`.github/workflows/ui-corpus.yml`): a planted differing recording in the run's
 // log files one issue naming it, a second red night comments on that issue, and a night that compared nothing or did not
 // run is red too. Through a stub `gh`; the workflow's own run on GitHub is proven only by a scheduled run.
 import assert from 'node:assert/strict'

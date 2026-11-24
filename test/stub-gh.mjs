@@ -2,8 +2,6 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-// A stub `gh` on PATH prints `listOutput` for `issue list`, whatever its flags, or fails it when `listFails`; `run list`
-// prints `runListOutput`.
 export function stubGh ({ listOutput = '', listFails = false, runListOutput = '' }) {
   const dir = mkdtempSync(join(tmpdir(), 'stub-gh-'))
   const log = join(dir, 'calls.jsonl')

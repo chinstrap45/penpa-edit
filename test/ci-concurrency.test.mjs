@@ -1,4 +1,4 @@
-// CI's concurrency rule (#317): a newer push to a PR cancels the PR's older run; a push to master and the nightly's call
+// CI's concurrency rule: a newer push to a PR cancels the PR's older run; a push to master and the nightly's call
 // are never cancelled. GitHub's behaviour on a real double push is proven only by one (the ticket's first criterion);
 // this reads the workflow's own lines, since no YAML parser is a dependency.
 import assert from 'node:assert/strict'

@@ -1,7 +1,5 @@
-// The engine side's page reach (`pageReach` in `live/run-live.mjs`, #315) is not stale for what the page loads as it
-// boots a puzzle and switches to the dark theme: every file of `docs/` it asks for then is one the derivation reaches.
-// Files loaded later (the solved popup's image, the GIF worker) are covered by the derivation's own tests only. This
-// file is on the skip list, so it runs on every PR.
+// Files loaded later (the solved popup's image, the GIF worker) are covered only by the derivation's own tests. This file is
+// on the skip list, so it runs on every PR.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'

@@ -1,14 +1,9 @@
-// The conflict checkers (`pu.check_conflict`) on a live page: small sudokus and consecutive-pairs bars.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'
 
 const browser = useBrowser()
 
-// Runs in the page. Builds an empty `size`x`size` square grid tagged `tag`, fills `givens` ([x, y, value] with x, y
-// counted from the grid's top left) as large black question numbers, adds each `symbols` entry ([x1, y1, x2, y2,
-// symbol]) on the edge between those two cells, draws region lines around boxes of `boxes` = [rows, columns]
-// cells (none when absent) or only the horizontal lines between `bands` rows (a partly drawn layout), runs `pu.check_conflict` and returns the conflicting cells as [x, y].
 function checkInPage ({ size, tag, givens, symbols = [], boxes, bands, solve }) {
   document.getElementById('nb_size1').value = size
   document.getElementById('nb_size2').value = size
@@ -88,7 +83,6 @@ describe('conflict checks', () => {
   })
 
   describe('a classic sudoku with its boxes drawn', () => {
-    // A valid 6x6 whose boxes are 3 rows by 2 columns.
     const solved = [[1, 2, 3, 4, 5, 6], [3, 4, 5, 6, 1, 2], [5, 6, 1, 2, 3, 4], [2, 1, 4, 3, 6, 5], [4, 3, 6, 5, 2, 1], [6, 5, 2, 1, 4, 3]]
     const fill = solved.flatMap((row, y) => row.map((value, x) => [x, y, value]))
 

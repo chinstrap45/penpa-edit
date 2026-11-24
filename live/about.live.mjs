@@ -1,4 +1,4 @@
-// The solve page credits Penpa+ (#244): the top bar's Penpa+ text button (the one mention there) and an About group at the
+// The solve page credits Penpa+: the top bar's Penpa+ text button (the one mention there) and an About group at the
 // bottom of Settings with Penpa+'s MIT lines and this fork's repository, both read at 1366x768 in both themes.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
@@ -22,7 +22,6 @@ async function open (theme) {
   return opened
 }
 
-// Runs in the page: the bar's own box, the title's, every visible control's, and each control's width as laid out.
 function barBoxes () {
   const bar = document.querySelector('.ui-bar')
   const heading = bar.querySelector('.ui-heading')

@@ -1,4 +1,4 @@
-// The live run's selection (`live/run-live.mjs`, #268, #315): a change to an input of the engine side runs every live
+// The live run's selection (`live/run-live.mjs`): a change to an input of the engine side runs every live
 // file, any other change off the skip list every one but the engine side's, a change made only of skip-list paths every
 // one but the safety net's, and the parts CI spreads them over hold each file once.
 import assert from 'node:assert/strict'
@@ -14,7 +14,6 @@ import { chooseLiveFiles, ENGINE_FILES, engineInputs, pageReach, partOf, SAFETY_
 const SOLVE_UI_FILES = ['live/pins.live.mjs', 'live/mouse-card.live.mjs', 'live/desk.live.mjs']
 const ALL = [...SAFETY_NET_FILES, ...SOLVE_UI_FILES].sort()
 
-// The engine side's inputs as this checkout derives them, so each case below checks the real derivation.
 const INPUTS = engineInputs(fileURLToPath(new URL('..', import.meta.url)), SAFETY_NET_FILES)
 const BUT_ENGINE = ALL.filter((file) => !ENGINE_FILES.includes(file))
 
@@ -33,7 +32,6 @@ describe('chooseLiveFiles', () => {
     assert.match(reason, /docs\/js\/class_p\.js is an input of the engine side/)
   })
 
-  // What index.html loads, directly or through its scripts and sheets, and what the engine side's tests import or read.
   for (const path of ['docs/index.html', 'docs/js/class_p.js', 'docs/js/progress_autosave.js', 'docs/js/libs/gif.worker.js',
     'docs/css/base-structure.css', 'docs/css/dark_theme.css', 'docs/css/images/corners.png', 'docs/js/images/new_year.jpg',
     'docs/fonts/fontawesome-webfont.woff2', 'docs/identity.js', 'live/recordings/value/a.json', 'live/replay.mjs',
@@ -98,7 +96,6 @@ describe('pageReach', () => {
     }
   })
 
-  // A pull request that deletes a file the page still loads changes no reached file that still exists.
   it('holds a file the page names that does not exist, so deleting a loaded file reaches the page', () => {
     const files = { ...PAGE }
     delete files['docs/js/main.js']

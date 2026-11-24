@@ -1,4 +1,4 @@
-// Planted bugs that measure the recordings (#32): each plant is a one-line change to a file of `docs/js/`, served in
+// Planted bugs that measure the recordings: each plant is a one-line change to a file of `docs/js/`, served in
 // place of the real file while recordings replay, so the files on disk never hold a bug. A plant is caught when a
 // replay of some recording fails on it. Not a check itself, so `live/**/*.live.mjs` skips it.
 //
@@ -16,7 +16,6 @@ import { methodStart, replay } from './replay.mjs'
 
 const DOCS = new URL('../docs/', import.meta.url)
 
-// The ids of the recordings made for an audit finding start with this, as `audit-c1-or-empty-category` does.
 const auditPrefix = (audit) => `audit-${audit.toLowerCase()}-`
 
 export const PLANTS = [
@@ -189,7 +188,6 @@ export const PLANTS = [
     find: 'number = this[this.mode.qa].numberS[k][0].slice(0, -1);',
     replace: 'number = this[this.mode.qa].numberS[k][0].slice(0, -2);'
   },
-  // The audit's engine bugs, each its fix undone in one line.
   {
     id: 'or-answer-empty-category-solves',
     bug: 'an empty OR answer category counts as solved',
@@ -247,8 +245,6 @@ export const UI_PLANTS = [
   }
 ]
 
-// The text of `source` that `plant.find` is searched for in: the whole file, or the method `plant.handler`, from its
-// first line to the closing brace at its indent.
 function scopeOf (source, plant) {
   if (!plant.handler) return { start: 0, end: source.length }
   const start = source.search(methodStart(plant.handler))
@@ -280,28 +276,22 @@ export function plantIn (source, plant) {
   return planted
 }
 
-// The `setup` that serves `docs/<dir>/<plant.file>` with the plant in it, for a page opened with `served: true`;
-// `request` matches the page's requests for that file.
 async function plantSetup (plant, dir = 'js', request = jsRequest(plant.file)) {
   const body = plantIn(await readFile(new URL(`${dir}/${plant.file}`, DOCS), 'utf8'), plant)
   return (context) => context.route(request, (route) => route.fulfill({ contentType: 'text/javascript', body }))
 }
 
-// `plantSetup` for one of `UI_PLANTS`: served from `docs/ui/`, so a page opened with it needs its files served.
 export const uiPlantSetup = (plant) => plantSetup(plant, 'ui', new RegExp(`/ui/${plant.file.replace(/\./g, '\\.')}(\\?|$)`))
 
-// The recordings of `ids` made for the audit finding `plant` undoes the fix of; none for a plant of no finding.
 export function auditRecordings (plant, ids) {
   return plant.audit ? ids.filter((id) => id.split('/').pop().startsWith(auditPrefix(plant.audit))) : []
 }
 
-// `ids` in the order a hunt replays them: an audit plant's own recordings first.
 function huntOrder (plant, ids) {
   const own = auditRecordings(plant, ids)
   return [...own, ...ids.filter((id) => !own.includes(id))]
 }
 
-// Runs `work(item)` for each of `items` in order, `lanes` at once, starting no more once `stop()` is true.
 export async function inLanes (items, lanes, work, stop = () => false) {
   let next = 0
   const lane = async () => {

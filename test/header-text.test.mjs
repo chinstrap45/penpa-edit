@@ -1,5 +1,3 @@
-// The header's text escapes round-trip text without an escape code in it. As in upstream, `%` is not escaped, so a
-// typed `%2C` reads back as a comma.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'

@@ -1,4 +1,4 @@
-// What must always be true on the solve page in a UI fuzz run (#195), as pure functions over page snapshots. The engine
+// What must always be true on the solve page in a UI fuzz run, as pure functions over page snapshots. The engine
 // (`engine.mjs`) checks every rule after every action and once more after the last; a broken rule fails the run as a
 // crash does. A rule tracks the page as master had it when the rule was written, not an older layout. Not a check itself.
 //
@@ -32,11 +32,8 @@ export const PIN_KEYS = ['Z', 'X', 'C', 'V']
 // the page does makes a new overlap on the solver's layout (`repairOverlaps` in desk.js).
 const PLACING_KINDS = ['card drag', 'card resize', 'interrupted drag']
 const RESET_LAYOUT = 'reset layout'
-// The card whose chips last for the visit only (docs/ui/recent.js): a reload empties it, so its height follows.
 const RECENT_CARD = 'Recent'
-// The card whose height follows the current tool's option rows (docs/ui/tool-cards.js) until #252 fixes it.
 const MODE_CARD = 'Mode'
-// The card that shows a preset's undo line for the visit only (docs/ui/pin-presets.js): a reload drops it.
 const PINNED_CARD = 'Pinned'
 // The mode in which a pin key types a letter instead (pins.js).
 const NUMBER_MODE = 'number'
@@ -47,11 +44,9 @@ const SLACK_PX = 1
 const LIGHT_MIN_LUMINANCE = 0.4
 
 const shownCards = (page) => page.cards.filter((c) => c.shown)
-// Whether the layout is the solver's: a card placed by hand since the page's own layout was last given back.
 const solverPlaced = (history) => history.findLastIndex((kind) => PLACING_KINDS.includes(kind)) > history.lastIndexOf(RESET_LAYOUT)
 const box = ({ x, y, width, height }) => `${x},${y} ${width}x${height}`
 
-// Each pair of shown cards of `page` that overlap, as `{ key, line }`: `key` names the pair, `line` the overlap in words.
 function overlaps (page) {
   const cards = shownCards(page)
   return cards.flatMap((a, i) => cards.slice(i + 1).flatMap((b) => {
@@ -70,7 +65,6 @@ function luminance (colour) {
   const [, fn, inner] = match
   const [channels, alpha] = inner.split('/')
   const parts = channels.trim().split(/[\s,]+/)
-  // A channel or alpha as a number, `scale` being what 100% means.
   const num = (part, scale) => part.endsWith('%') ? Number(part.slice(0, -1)) / 100 * scale : Number(part)
   const opacity = alpha !== undefined ? num(alpha.trim(), 1) : fn.startsWith('rgb') && parts.length === 4 ? num(parts[3], 1) : 1
   if (opacity === 0) return null
@@ -84,12 +78,10 @@ function luminance (colour) {
   if (fn === 'oklch' || fn === 'oklab') return num(parts[0], 1) ** 3
   return undefined
 }
-// 'light' or 'dark' for a computed colour; null when it is transparent or not a colour `luminance` reads.
 function themeOf (colour) {
   const y = luminance(colour)
   return y == null || Number.isNaN(y) ? null : y >= LIGHT_MIN_LUMINANCE ? 'light' : 'dark'
 }
-// What is wrong, in words, with `what` drawn in `colour` in `theme`; null when nothing is.
 function offTheme (what, colour, theme) {
   const drawn = themeOf(colour)
   if (drawn === theme) return null
@@ -146,7 +138,6 @@ export const RULES = [
         ? []
         : [`pin ${i + 1} (${p.label}) shows ${p.shortcut ? `key ${p.shortcut}` : 'no key'}, not ${PIN_KEYS[i] ?? 'none'}`])
       if (action?.kind !== 'pin key' || before.tool.mode === NUMBER_MODE || !before.shortcutsEnabled) return labels
-      // The action presses the key as typed (`z`); a chip shows it in capitals (`Z`).
       const key = action.arg.toUpperCase()
       const target = before.pins.find((p) => p.shortcut === key)
       if (!target || now.pins.some((p) => p.label === target.label && p.current)) return labels
@@ -169,10 +160,8 @@ export const RULES = [
     check: ({ now, before, action }) => {
       if (action?.kind !== 'reload') return []
       // A card whose content lasts the visit only may change height on a reload, and each card stacked under it in its
-      // column must move by exactly as much: Recent's chips go (its bottom stays where it was), and so does Pinned's undo line (`presetUndo`). A reload can
-      // also bring back another tool than the one in use (#263: it is kept only when Penpa+'s unawaited save on unload wins),
-      // and the Mode card's height follows the tool (#252). The tool is #263's to check, not this rule's: when it changed,
-      // Mode may change height too.
+      // column must move by exactly as much: Recent's chips go (its bottom stays where it was), and so does Pinned's undo line
+      // (`presetUndo`). A reload can bring back another tool than the one in use, and the Mode card's height follows the tool.
       const toolChanged = before.tool.mode !== now.tool.mode || before.tool.submode !== now.tool.submode
       const mayChange = { [RECENT_CARD]: true, [PINNED_CARD]: before.presetUndo, [MODE_CARD]: toolChanged }
       const grew = (name) => {
@@ -185,7 +174,7 @@ export const RULES = [
         const is = now.cards.find((c) => c.name === was.name)
         if (!is || is.shown !== was.shown) return [`the reload ${was.shown ? 'closed' : 'opened'} ${was.name}`]
         // Recent's bottom stays on the desk's bottom, so a Recent that gets shorter ends lower, and the cards above it
-        // do not move it (#306, #392). Where the column has no room Recent stacks under them (desk.js placeRightColumn),
+        // do not move it. Where the column has no room Recent stacks under them (desk.js placeRightColumn),
         // so a Recent of the same height may still move with them.
         const recentResized = was.name === RECENT_CARD && Math.abs(grew(was.name)) > SLACK_PX
         const expected = {
@@ -193,7 +182,6 @@ export const RULES = [
           y: recentResized ? was.rect.y - grew(was.name) : was.rect.y + above(was.rect).reduce((sum, c) => sum + grew(c.name), 0),
           height: was.rect.height + grew(was.name)
         }
-        // A card whose rectangle is as it was never moved, whatever the column above it did.
         const differs = (want) => ['x', 'y', 'width', 'height'].some((side) => Math.abs(is.rect[side] - want[side]) > SLACK_PX)
         const moved = differs(expected) && differs(was.rect)
         return was.shown && moved ? [`the reload moved ${was.name} from ${box(was.rect)} to ${box(is.rect)}`] : []
@@ -211,5 +199,4 @@ export const RULES = [
   }
 ]
 
-// Every broken rule's lines, each led by its rule's name; none means every rule holds.
 export const ruleViolations = (context) => RULES.flatMap((r) => r.check(context).map((line) => `${r.name}: ${line}`))

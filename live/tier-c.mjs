@@ -1,10 +1,3 @@
-// Tier C (`research/agentic-legacy-migration.md` § Corpus, #34): full solves on solve links with an answer check, on
-// the puzzles of `live/tier-c-puzzles.mjs`. Not a check itself, so `live/**/*.live.mjs` skips it.
-// - The generator: a puzzle's answer entered in a seeded random order through the recording's steps
-//   (`live/replay.mjs`), with pencil marks, helper marks, wrong entries later corrected, undo and redo, and mode changes
-//   mixed in where the genre has them.
-// - The answer run: a generated solve made through the engine driver, checked as the answer-aimed fuzz checks it.
-// - The converter: a solver's Share > Replay link turned into a recording.
 import { readEngineState } from './canonical-state.mjs'
 import { random } from './fuzz.mjs'
 import { openPenpa, withPage } from './page.mjs'
@@ -14,37 +7,27 @@ import {
   answerLinkInPage, boardLoaded, historyPuzzle, openingModeInPage, pointsInPage
 } from './tier-c-puzzles.mjs'
 
-// The directory of `live/recordings/` tier C's recordings go in, as the first part of their ids.
 export const TIER_C_FAMILY = 'solve'
 // The seeds the seam's answer-aimed fuzz solves every puzzle with: three, each run a few seconds, so the six puzzles'
 // fuzz stays near a minute of the seam. `TIER_C_FUZZ_SEEDS=<k>` runs seeds 1 to k instead, for a wider run by hand.
 export const TIER_C_SEEDS = [...Array(Number(process.env.TIER_C_FUZZ_SEEDS) || 3).keys()].map((i) => i + 1)
-// The seed a kept recording is made with.
 export const RECORDING_SEED = 1
 
-// Chance, out of 1, that another piece of noise comes before the next correct entry.
 const NOISE = 0.4
-
-// ---- The generator ----
 
 const sameMode = (a, b) => a.mode === b.mode && a.submode === b.submode && a.style === b.style
 
-// What each kind of puzzle's solve is made of, given the run's `run` (below): `enter(item)` the steps of one correct
-// entry, and `noise` each kind of noise with its weight, a function returning its steps or null when it cannot be made
-// now.
 const KITS = {
   digits: {
     enter (run, { num, digit }) {
       return [...run.inMode(SUDOKU_MODE('1')), ...pressSteps(run.puzzle, num), ...typedSteps(String(digit))]
     },
     noise: [
-      // A wrong digit in a cell still to be entered, which its correct entry later overwrites.
       [3, (run) => {
         const { num, digit } = run.pick(run.pending)
         const wrong = 1 + run.below(run.puzzle.digits - 1)
         return [...run.inMode(SUDOKU_MODE('1')), ...pressSteps(run.puzzle, num), ...typedSteps(String(wrong >= digit ? wrong + 1 : wrong))]
       }],
-      // Corner or centre pencil marks in one cell still to be entered, or in it and the next one along its row.
       [4, (run) => {
         const cell = run.pick(run.pending)
         const next = run.pending.find((c) => c.row === cell.row && c.col === cell.col + 1)
@@ -58,11 +41,8 @@ const KITS = {
     outside: cellsOutside,
     enter: (run, { num }) => [...run.inMode(run.puzzle.mode), ...pressSteps(run.puzzle, num)],
     noise: [
-      // A star on a cell outside the answer, taken away later.
       [2, (run) => run.mistake((num) => [...run.inMode(run.puzzle.mode), ...pressSteps(run.puzzle, num)])],
-      // A dot on a cell outside the answer.
       [3, (run) => run.mark((num) => [...run.inMode(run.puzzle.mode), ...pressSteps(run.puzzle, num, 'right')])],
-      // Shading on a cell outside the answer, in Surface mode.
       [1, (run) => run.mark((num) => [...run.inMode(SURFACE_MODE), ...pressSteps(run.puzzle, num)])]
     ]
   },
@@ -70,9 +50,7 @@ const KITS = {
     outside: (puzzle) => puzzle.edges.filter((e) => !puzzle.answer.includes(e)),
     enter: (run, { a, b }) => [...run.inMode(run.puzzle.mode), ...dragSteps(run.puzzle, [a, b])],
     noise: [
-      // A line on an edge outside the answer, drawn over again later to take it away.
       [2, (run) => run.mistake(({ a, b }) => [...run.inMode(run.puzzle.mode), ...dragSteps(run.puzzle, [a, b])])],
-      // An X on an edge outside the answer.
       [3, (run) => run.mark(({ mid }) => [...run.inMode(run.puzzle.mode), ...pressSteps(run.puzzle, mid, 'right')])]
     ]
   },
@@ -83,12 +61,9 @@ const KITS = {
     outside: cellsOutside,
     enter: (run, { num }) => (run.own.surface ? shade : square)(run, num),
     noise: [
-      // An entry of the run's category on a cell outside the answer, taken away later: a shading by shading it again,
-      // a black square by Delete.
       [2, (run) => run.own.surface
         ? run.mistake((num) => shade(run, num))
         : run.mistake((num) => square(run, num), (num) => [...run.inMode(SQUARE_MODE), ...pressSteps(run.puzzle, num), DELETE])],
-      // A dot (Surface's right button) on a cell outside the answer.
       [2, (run) => run.mark((num) => [...run.inMode(SURFACE_MODE), ...pressSteps(run.puzzle, num, 'right')])],
       // An entry of the other category on a cell still to be entered, never on all of them, so the other category is
       // never complete.
@@ -101,7 +76,6 @@ const KITS = {
   }
 }
 
-// Shading in Surface mode; a second shading of the same cell takes it away.
 function shade (run, num) {
   return [...run.inMode(SURFACE_MODE), ...pressSteps(run.puzzle, num)]
 }
@@ -112,10 +86,8 @@ function square (run, num) {
   return [...run.inMode(SQUARE_MODE), ...pressSteps(run.puzzle, num), ...typedSteps('2')]
 }
 
-// The Delete key, as `main.js` passes it.
 const DELETE = { kind: 'key', call: 'key_space', args: [46, false, false] }
 
-// The cells of a puzzle with a `cells` list that are outside its answer.
 function cellsOutside (puzzle) {
   return puzzle.cells.filter((num) => !puzzle.answer.some((a) => a.num === num))
 }
@@ -127,7 +99,6 @@ const SURFACE_MODE = { mode: 'surface', submode: '', style: 1 }
 // Sudoku mode's sub-mode `submode`: 1 the digit, 2 corner marks, 3 centre marks.
 const SUDOKU_MODE = (submode) => ({ mode: 'sudoku', submode, style: 9 })
 
-// Undo then redo as many groups, which leaves the board as it was; any kind of puzzle has it.
 const UNDO_REDO = [2, (run) => {
   const k = 1 + run.below(2)
   return [...Array(k).fill({ kind: 'undo' }), ...Array(k).fill({ kind: 'redo' })]
@@ -153,23 +124,18 @@ export function generateSolve (puzzle, seed) {
       return out
     },
     mode: puzzle.mode,
-    // The mode step that switches to `mode`, or none when it is the current one.
     inMode (mode) {
       if (sameMode(run.mode, mode)) return []
       run.mode = mode
       return [{ kind: 'mode', ...mode }]
     },
     pending: [],
-    // What is outside the answer and holds nothing of the run's yet (cells, or edges), and the wrong entries still to
-    // be taken away.
     free: kit.outside?.(puzzle) ?? [],
     fixes: [],
-    // The steps of `make(place)` on a free place, which is then no longer free, or null when none is.
     mark (make) {
       if (!run.free.length) return null
       return make(run.free.splice(run.below(run.free.length), 1)[0])
     },
-    // A mark that is wrong, taken away later by `unmake`, by default the same input made again.
     mistake (make, unmake = make) {
       return run.mark((place) => {
         run.fixes.push(() => unmake(place))
@@ -177,7 +143,6 @@ export function generateSolve (puzzle, seed) {
       })
     }
   }
-  // Takes away the oldest wrong entry still on the board.
   const fix = [3, (run) => run.fixes.length ? run.fixes.shift()() : null]
   run.own = kit.start?.(run, seed)
   const noise = [...kit.noise, UNDO_REDO, fix]
@@ -196,13 +161,6 @@ export function generateSolve (puzzle, seed) {
   return steps
 }
 
-// ---- The answer run ----
-
-// Makes `steps` on the solve link `source` through the engine driver, under the replay's paused clock so that the
-// engine state it ends on is the same on every run, calling `check(n, page)` at every checkpoint and at the last step;
-// `name` goes into a failure's words. Returns the first failure in words or null (a
-// step that threw, a page error, or what `check` returned), and from the end of the run its engine state, its Replay
-// link's `#` part, and the page's grid type and genre tags.
 async function runSteps (browser, { name, source, steps, check = async () => null }) {
   const { context, page, errors } = await openPenpa(browser, source, { setup: pauseClock })
   try {
@@ -232,9 +190,6 @@ async function runSteps (browser, { name, source, steps, check = async () => nul
   }
 }
 
-// Makes a generated solve (`generateSolve`) on `puzzle`'s solve link through the engine driver and checks, at every
-// checkpoint, that no page error was raised and that the answer check reads unsolved before the last step, the last
-// correct entry, and solved after it. Returns what `runSteps` does.
 export function answerRun (browser, puzzle, steps) {
   return runSteps(browser, {
     name: puzzle.name,
@@ -249,17 +204,12 @@ export function answerRun (browser, puzzle, steps) {
   })
 }
 
-// ---- The Replay-link converter ----
-
-// The mode each kind of change in a solve history is made in: the natural one of the genre that changes it.
 const NATURAL = {
   symbol: { mode: 'combi', submode: 'star', style: 3 },
   lineE: { mode: 'combi', submode: 'edgex', style: 3 },
   surface: SURFACE_MODE
 }
 
-// The inputs to try, in order, for a change to `pu_a[prop][key]`: a press of either button, or of one then the other,
-// on the point the key names; or, for a `lineE` key of two corners, a drag from one to the other.
 function changeInputs (prop, key, board) {
   if (prop === 'lineE' && String(key).includes(',')) return [dragSteps(board, String(key).split(',').map(Number))]
   const num = Number(key)
@@ -273,21 +223,17 @@ function replayChangesInPage (r) {
   return JSON.parse(decrypt_data(r)).reverse()
 }
 
-// Runs in the page: `pu_a[prop][key]` as JSON, or null when it is absent.
 function answerValueInPage ([prop, key]) {
   const value = pu.pu_a[prop]?.[key]
   return value === undefined ? null : JSON.stringify(value)
 }
 
-// Runs in the page: undoes groups until the answer's undo stack is back to `depth`.
 function undoToInPage (depth) {
   while (pu.pu_a.command_undo.__a.length > depth) pu.undo()
 }
 
 const asJson = (value) => (value === null ? null : JSON.stringify(value))
 
-// The first input of `changeInputs` that makes `pu_a[prop][key]` `value` on the page, made there, or null when none
-// does; each input that does not is undone.
 async function makeChange (page, apply, [prop, key, value]) {
   const board = { points: await page.evaluate(pointsInPage, String(key).split(',').map(Number)) }
   for (const input of changeInputs(prop, key, board)) {
@@ -309,8 +255,6 @@ function splitReplayLink (link) {
   return { base: '#' + parts.filter((p) => !/^[qr]=/.test(p)).join('&'), r }
 }
 
-// The steps that make the changes of a solve history on `page` (its puzzle, with nothing entered), and the history's
-// last board as `[prop, key, value]` entries.
 async function historySteps (page, r) {
   const changes = await page.evaluate(replayChangesInPage, r)
   const apply = engineDriver.start(page)

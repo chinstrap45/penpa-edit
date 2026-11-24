@@ -1,5 +1,5 @@
-// The tool in use, and a Restart, survive a reload of solve.html whatever the timing of Penpa+'s unload save (#263). Penpa+'s own
-// save as the page unloads is not awaited, so it is switched off here: only the progress autosave can have stored the change.
+// The tool in use, and a Restart, survive a reload of solve.html whatever the timing of Penpa+'s unload save.
+// Penpa+'s own save as the page unloads is not awaited, so it is switched off here: only the progress autosave can have stored the change.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { makeNumberSolveLink, openSolvePage, setTool, typedDigits, useBrowser, waitForDesk, waitForTool } from './page.mjs'
@@ -9,7 +9,6 @@ import { settle } from './settle.mjs'
 const browser = useBrowser()
 
 const NUMBER_TOOL = { mode: 'number', submode: '1' }
-// Index in `pu.centerlist` of a cell clear of the board's edges.
 const FREE_CELL = 12
 
 const setToolTo = (tool) => (page) => setTool(page, tool)
@@ -24,7 +23,6 @@ const TOOL_CHANGES = [
   ['a style of the same tool', { ...NUMBER_TOOL, style: 1 }, (page) => page.evaluate(() => pu.stylemode_check('st_number2'))]
 ]
 
-// Opens solve.html on `link` with the unload save switched off, after `before` was chosen and saved.
 async function openWithUnloadSaveOff (link, before) {
   const opened = await openSolvePage(browser(), link)
   await setTool(opened.page, before)

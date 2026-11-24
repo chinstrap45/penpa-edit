@@ -1,5 +1,3 @@
-// Penpa's SweetAlert popups on the solve page take the page dialog's look (#379): the font, the panel's colours and the
-// confirm button's, read as computed styles. Penpa+'s own page keeps SweetAlert's default look.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { AKARI_SOLVE, animationsDone, openPenpa, openSolvePage, useBrowser, openSettings } from './page.mjs'
@@ -8,7 +6,6 @@ const browser = useBrowser()
 
 const STYLE_PROPS = ['fontFamily', 'backgroundColor', 'color', 'borderRadius']
 
-// Runs in the page. The computed values of a Penpa+ popup (the answer check's kind: a title, a text and a confirm button).
 async function popupStyleInPage (props) {
   const read = (node, keys = props) => Object.fromEntries(keys.map((p) => [p, getComputedStyle(node)[p]]))
   Swal.fire({ title: 'Congratulations!', text: 'You solved it.', icon: 'success' })
@@ -24,7 +21,7 @@ async function popupStyleInPage (props) {
   }
 }
 
-// Runs in the page, with the Settings dialog open. The values of that dialog's panel, and of a brand button, which is what a dialog's main action is.
+// A brand button is what a dialog's main action is.
 async function pageDialogStyleInPage (props) {
   const read = (node, keys = props) => Object.fromEntries(keys.map((p) => [p, getComputedStyle(node)[p]]))
   const dialog = document.querySelector('wa-dialog[label="Settings"]')
@@ -56,7 +53,6 @@ describe('a Penpa+ popup', () => {
       assert.equal(got.title.fontFamily, want.panel.fontFamily)
       assert.equal(got.text.fontFamily, want.panel.fontFamily)
       assert.equal(got.focused.boxShadow, 'none', 'no SweetAlert purple ring on a focused button')
-      // A keyboard focus gets the page's focus ring, as a wa-button's.
       await page.evaluate(() => document.querySelector('.swal2-confirm').blur())
       // After a key press the browser rings a script's focus as it does a keyboard's.
       await page.keyboard.press('Shift')

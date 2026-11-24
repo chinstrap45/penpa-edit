@@ -1,6 +1,4 @@
-// A press and release on a Pinned or Recent chip's main area switches to that tool (#346), whatever the timing: fast repeats, a few
-// pixels of movement between press and release, a board redraw between them, and no chip text selected. The mouse is real. The no-selection
-// checks hold with or without the chips' own `user-select: none`, since upstream's base CSS already sets it on every element.
+// The no-selection checks pass with or without the chips' own `user-select: none`: upstream's base CSS already sets it on every element.
 import assert from 'node:assert/strict'
 import { before, after, describe, it } from 'node:test'
 import { afterChange, currentTool, newBoardSolveLink, openSolvePage, setTool, useBrowser, waitForTool } from './page.mjs'
@@ -15,7 +13,6 @@ const MOVES_PX = [3, 6, 10]
 const openSolve = async (tabSet) => openSolvePage(browser(), await newBoardSolveLink(browser(), tabSet))
 const selectedText = (page) => page.evaluate(() => getSelection().toString())
 
-// A press, a move of `movePx` (none when 0), `between` (a board redraw, say) and the release, all on the chip's centre.
 async function press (page, chip, movePx, between) {
   await afterChange(page)
   await chip.waitFor()
@@ -29,8 +26,6 @@ async function press (page, chip, movePx, between) {
   await page.mouse.up()
 }
 
-// Clicks the chips of `tools` alternately, each click straight after the last with no wait for the page between, and reads the tool the
-// instant a click returns.
 async function quickClicks (page, chipOf, tools, count) {
   for (let i = 0; i < count; i++) {
     const tool = tools[i % tools.length]
@@ -41,7 +36,6 @@ async function quickClicks (page, chipOf, tools, count) {
   }
 }
 
-// Presses the chips of `tools` alternately, and checks each switches the tool and no text is selected.
 async function pressAlternately (page, chipOf, tools, count, movePx, between) {
   for (let i = 0; i < count; i++) {
     const tool = tools[i % tools.length]

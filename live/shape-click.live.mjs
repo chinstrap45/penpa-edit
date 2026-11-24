@@ -1,5 +1,5 @@
-// A left click with a Shape tool on `solve.html` places the shape's first variant, and again clears it, whatever Penpa+'s
-// hidden input-panel setting is, and picking the tool leaves that setting as it was (#130).
+// A left click with a Shape tool on `solve.html` places the shape's first variant, and again clears it, whatever Penpa+'s hidden input-panel setting is.
+// A Shape click must work whatever Penpa+'s hidden input-panel setting is, and picking the tool must not change it.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { newBoardSolveLink, openSolvePage, useBrowser } from './page.mjs'

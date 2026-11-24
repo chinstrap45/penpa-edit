@@ -13,10 +13,8 @@ const UI_EXTENSIONS = /\.(js|css|html)$/
 // Web Awesome's bundle is not ours to check.
 const VENDOR_DIR = 'vendor'
 
-// Penpa+'s own names a UI file must not use, as whole words.
 const INTERNAL_NAMES = ['pu', 'UserSettings', 'sw_timer', 'Swal']
 
-// The element ids Penpa+'s page marks up.
 function legacyIds (indexHtml) {
   return new Set([...indexHtml.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]))
 }
@@ -68,7 +66,6 @@ const STREAM_FIT_PARTS = [
 
 const streamFitLines = (text) => text.split('\n').flatMap((lineText, i) => (STREAM_FIT_PARTS.some((part) => part.pattern.test(lineText)) ? [i + 1] : []))
 
-// The files the shipped page runs: the solve UI, the engine bridge and the solve page.
 const shippedFiles = () => [...uiFiles(UI_DIR), join(ROOT, 'docs/js/engine_bridge.js'), join(ROOT, 'docs/solve.html')]
 
 describe('the shipped page', () => {

@@ -1,7 +1,5 @@
-// The UI fuzz's actions (#195): what a solver does on `solve.html`, as weighted kinds fast-check draws lists of. Each kind
-// names the area of the page it exercises, and `--focus <area>` draws that area's kinds more often. Each action is one step
-// that leaves the mouse up, no key held and no list or dialog open, so a shrunk list reads as plain steps and replays from
-// its numbers. A list names its puzzle first, so its path replays on the same one. Not a check itself.
+// Each action is one step that leaves the mouse up, no key held and no list or dialog open, so a shrunk list reads as plain
+// steps and replays from its numbers. A list names its puzzle first, so its path replays on the same one.
 import fc from 'fast-check'
 import { CARDS } from '../desk-layout.mjs'
 import { DRAG_REACH, pointsInPage } from '../fuzz.mjs'
@@ -10,7 +8,6 @@ import { choosePreset, closed, openList, pinnedCard, presetField, presetList, sa
 import { pickInModeCard, pointPixel } from '../replay.mjs'
 import { PIN_KEYS } from './rules.mjs'
 
-// The windows a resize picks from, laptop to desktop.
 export const WINDOW_SIZES = [
   { width: 1366, height: 768 }, { width: 1440, height: 900 }, { width: 1536, height: 864 }, { width: 1600, height: 900 }, { width: 1920, height: 1080 }
 ]
@@ -18,41 +15,29 @@ export const WINDOW_SIZES = [
 // the current mode takes), so a list replays from its numbers on any puzzle.
 const PICK = fc.nat({ max: 999 })
 const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-// A drag passes through at most this many board points.
 const MAX_DRAG_POINTS = 3
 const DRAG = fc.array(PICK, { minLength: 2, maxLength: MAX_DRAG_POINTS })
 const UNDO_KEY = 'Control+z'
 const REDO_KEY = 'Control+y'
-// The areas `--focus` names, each a card or a part of the page a kind declares it exercises.
 export const AREAS = ['bar', 'board', 'pinned', 'mode', 'recent', 'layout', 'theme']
-// How many times more often a focused area's kinds are drawn.
 const FOCUS_FACTOR = 5
-// The resize handles a card resize picks from, by their `data-testid` suffix (desk.js).
 const HANDLES = ['top', 'right', 'bottom', 'left', 'top-left', 'top-right', 'bottom-right', 'bottom-left']
-// The moves a card drag or resize picks from, in pixels, each way.
 const MOVES = [-240, -80, -20, 0, 20, 80, 240]
 const MOVE = fc.nat({ max: MOVES.length - 1 })
-// A drag is let go in this many mouse moves, so the page sees it travel.
 const DRAG_MOVES = 5
-// What breaks off a card drag halfway: a key, a window resize, or the window losing focus.
 const INTERRUPTIONS = ['Escape', 'resize', 'blur']
-// A reload waits this long for the page: a navigation on a busy box takes longer than an action's click.
 const RELOAD_TIMEOUT_MS = 30000
 const PAUSE_KEY = 'F4'
 // The pins' own unpin buttons (docs/ui/pins.js): a role-and-name match on "Unpin " also takes the disabled "Unpin all" button.
 // `live/unpin-all.live.mjs` checks it finds one per pin on the real page.
 export const UNPIN_SELECTOR = '.ui-pins .ui-chip-unpin'
 
-// The points the current mode takes, each `{ x, y, num }`, and the cell size.
 async function boardPoints (page) {
   const offered = await page.evaluate(pointsInPage)
   if (!offered.points.length) throw new Error('the board offers no point in the current mode')
   return offered
 }
 
-// Presses `button` at board point `first` (wrapped to the points the current mode takes), moves through `rest` and lets go;
-// each of `rest` is wrapped to the points near the one before, as a hand's drag goes. The button is let go even when a
-// move throws.
 async function drag (page, [first, ...rest], button) {
   const { points, size } = await boardPoints(page)
   let at = points[first % points.length]
@@ -72,13 +57,11 @@ async function drag (page, [first, ...rest], button) {
   }
 }
 
-// The viewport pixel of board point `pick`, wrapped to the points the current mode takes.
 async function boardPixel (page, pick) {
   const { points } = await boardPoints(page)
   return pointPixel(page, points[pick % points.length].num)
 }
 
-// Undo or Redo through the top bar's button, or through its key. A disabled button is a click that does nothing, as for a solver.
 async function history (page, name, key, via) {
   if (via === 'key') return page.keyboard.press(key)
   const button = page.getByRole('button', { name, exact: true })
@@ -94,7 +77,6 @@ const isDisabled = (locator) => locator.evaluate((node) => node.hasAttribute('di
 // only the fitted cards apart), and a click there reaches the card on top, so the step does nothing.
 const COVERED = 'covered by another card'
 
-// Whether a click at the centre of `locator`'s element reaches it, and not a card dragged over it. Scrolls it into view first.
 async function reachable (locator) {
   await locator.scrollIntoViewIfNeeded()
   const box = await locator.boundingBox()
@@ -107,14 +89,11 @@ async function reachable (locator) {
   }, { x: box.x + box.width / 2, y: box.y + box.height / 2 })
 }
 
-// Clicks `locator`'s element when a click reaches it; resolves to COVERED when one would not.
 async function clickReachable (locator) {
   if (!await reachable(locator)) return COVERED
   await locator.click()
 }
 
-// Clicks the `pick`-th of what `locator` finds, wrapped to how many there are; resolves to its accessible name or text, to
-// `none` when there is nothing to click, or to COVERED.
 async function clickNth (locator, pick, none) {
   const count = await locator.count()
   if (!count) return none
@@ -123,16 +102,12 @@ async function clickNth (locator, pick, none) {
   return (await clickReachable(target)) ?? name
 }
 
-// What a step that needs a closed card resolves to: a closed card and its controls are gone from the page (#334), so the step does nothing.
 const CARD_CLOSED = 'card closed'
 
-// Whether the card `name` is open.
 const isOpen = (page, name) => card(page, name).isVisible()
 
-// `run`, but resolving to CARD_CLOSED, running nothing, when the card `name` is closed (#342).
 const inOpenCard = (name, run) => async (page, arg) => await isOpen(page, name) ? run(page, arg) : CARD_CLOSED
 
-// The centre of a card's heading, where a drag takes hold of the card; null when the card is closed.
 async function headingCentre (page, name) {
   const section = card(page, name)
   if (!await section.isVisible()) return null
@@ -140,7 +115,6 @@ async function headingCentre (page, name) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
 
-// Presses at `from`, moves by `dx`, `dy` in steps and lets go; `midway()`, when given, runs halfway, with the button down.
 async function mouseDrag (page, from, dx, dy, midway) {
   await page.mouse.move(from.x, from.y)
   await page.mouse.down()
@@ -153,7 +127,6 @@ async function mouseDrag (page, from, dx, dy, midway) {
   }
 }
 
-// Opens the Settings dialog, runs `inDialog(dialog)` and, unless `inDialog` closed it, closes it with Escape.
 async function inSettings (page, inDialog) {
   await button(page, 'Settings').click()
   await settingsDialog(page).waitFor()
@@ -164,11 +137,8 @@ async function inSettings (page, inDialog) {
   return result
 }
 
-// The other end of the window sizes from the current one: a resize that always changes the window.
 const otherSize = (page) => WINDOW_SIZES[page.viewportSize().width === WINDOW_SIZES[0].width ? WINDOW_SIZES.length - 1 : 0]
 
-// Runs `inList()` with the preset list open, then closes it with Escape in its field; resolves to COVERED, running nothing,
-// when the field is under another card.
 async function inPresetList (page, inList) {
   if (!await reachable(presetField(page))) return COVERED
   await openList(page)
@@ -311,7 +281,7 @@ export const KINDS = [
     kind: 'pin key',
     area: 'pinned',
     weight: 2,
-    // The key as typed (`z`); a chip shows it in capitals. A key press looks for no control, so a closed Pinned card cannot time it out (#342).
+    // The key as typed (`z`); a chip shows it in capitals. A key press looks for no control, so it needs no open Pinned card.
     arg: fc.constantFrom(...PIN_KEYS.map((key) => key.toLowerCase())),
     label: (key) => `press pin key ${key.toUpperCase()}`,
     run: (page, key) => page.keyboard.press(key)
@@ -329,7 +299,6 @@ export const KINDS = [
       const target = chips.nth(to % count)
       if (!await reachable(chips.nth(from % count)) || !await reachable(target)) return COVERED
       const box = await target.boundingBox()
-      // Dropped on the target's left edge, so the dragged pin goes before it.
       await chips.nth(from % count).dragTo(target, { targetPosition: { x: 2, y: box.height / 2 } })
     })
   },
@@ -478,7 +447,6 @@ export const KINDS = [
     weight: 1,
     arg: fc.constant(null),
     label: () => 'Reset layout in the Settings dialog',
-    // Settings' Page group holds the page's one Reset layout button (settings.js), which closes the dialog.
     run: (page) => inSettings(page, (dialog) => dialog.getByRole('group', { name: 'Page' }).getByRole('button', { name: 'Reset layout' }).click())
   },
   {
@@ -536,8 +504,7 @@ export const KINDS = [
   }
 ]
 
-// One step of kind `k` with `arg`, in the shape fast-check runs a command in; `real.page` is the page it runs on. `kind` and
-// `arg` are what the rules read of the step (`rules.mjs`).
+// `kind` and `arg` are what `rules.mjs` reads of the step.
 function commandOf (k, arg) {
   let picked = null
   return {
@@ -550,14 +517,11 @@ function commandOf (k, arg) {
   }
 }
 
-// The replay path fast-check prints after a list of commands (`/*replayPath="..."*/`).
 export const REPLAY_PATH = /\/\*replayPath="([^"]*)"\*\//
 
 const DEFAULT_MAX_COMMANDS = 20
 
-// The generator of whole lists, each `{ puzzle, commands }`: a puzzle of `puzzles`, then at most `maxCommands` actions, the
-// kinds of each area in `focus` drawn FOCUS_FACTOR times as often. `replayPath` replays a shrunk list (fast-check's own,
-// read from a failure's printed list); the weights shape the lists, so a replay needs the focus it was found with.
+// The weights shape the lists, so a `replayPath` replays only with the focus it was found with.
 export const actionList = (puzzles, { maxCommands = DEFAULT_MAX_COMMANDS, replayPath, focus = [] } = {}) => fc.constantFrom(...puzzles).chain((puzzle) => {
   const weight = (k) => k.weight * (focus.includes(k.area) ? FOCUS_FACTOR : 1)
   const action = fc.oneof(...KINDS.map((k) => ({ weight: weight(k), arbitrary: k.arg.map((arg) => commandOf(k, arg)) })))
@@ -572,7 +536,6 @@ export const dragAction = (name, dx, dy) => ['card drag', [cardArg(name), moveAr
 export const interruptedDragAction = (name, how) => ['interrupted drag', [cardArg(name), how]]
 export const resizeAction = (name, edge, dx, dy) => ['card resize', [cardArg(name), handleArg(edge), moveArg(dx), moveArg(dy)]]
 
-// A list written out by hand: `actions` are `[kind, arg]` of the kinds above.
 export function scriptedList (actions) {
   return actions.map(([kind, arg]) => {
     const k = KINDS.find((x) => x.kind === kind)

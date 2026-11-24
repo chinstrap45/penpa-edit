@@ -1,9 +1,3 @@
-// The solve page's UI fuzz (`live/ui-fuzz/`): a scripted action list holding every action kind runs clean, rules included,
-// on every puzzle of its set, `--focus` raises its area's share of the actions, a run whose time limit passes before its
-// first list gives no verdict, and `npm run fuzz:ui` on a page that throws on one action, or breaks a rule on one, finds
-// it, shrinks it and prints a replay command, puzzle and focus and all, that fails again on the same step, even on a
-// reordered puzzle list. A planted solve-UI bug (`UI_PLANTS`, `live/plants.mjs`) is found the same way, and the same seed
-// runs as many lists clean with no plant in (#233).
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import fc from 'fast-check'
@@ -19,7 +13,7 @@ import { openTarget } from './ui-fuzz/target.mjs'
 const browser = useBrowser()
 const puzzles = await uiFuzzPuzzles()
 
-// Every action kind once or more, with the mouse left up between them.
+// Leave the mouse up between actions.
 const SCRIPT = [
   ['mode pick', 3],
   ['click', 5],
@@ -70,8 +64,7 @@ const SCRIPT = [
   ['resize', 0]
 ]
 
-// The seed and puzzle the in-page plants are hunted with (seed 1 reaches #288's card overlap before the plants, since #295), as `npm run fuzz:ui` arguments, and the focus most of them are
-// hunted with.
+// Seed 1 hits a card overlap before the plants, so the in-page plants are hunted with seed 4 on akari.
 const PLANT_HUNT = ['--seed', '4', '--puzzle', 'akari']
 // The same for a UI_PLANTS plant: a seed whose lists reach the plant before any other failure, on short lists, so the
 // hunt, its shrink and the clean rerun of its lists take about a minute.
@@ -80,15 +73,12 @@ const UI_PLANT_HUNT = ['--seed', '3', '--puzzle', 'akari', '--max-steps', '6']
 const UI_PLANT_TIMEOUT_MS = 240000
 const PLANT_FOCUS = ['mode']
 
-// Runs in the page, before its scripts: throws, uncaught, on every click on a tool in the Mode card's tree.
 function throwOnToolPickInPage () {
   addEventListener('click', (e) => {
     if (e.target.closest?.('[role=treeitem]')) throw new Error('planted tool pick')
   })
 }
 
-// Runs in the page, before its scripts: on every click on a tool in the Mode card's tree, moves the Pinned card onto the
-// Board card, which breaks the cards-do-not-overlap rule and throws nothing.
 function overlapOnToolPickInPage () {
   addEventListener('click', (e) => {
     if (!e.target.closest?.('[role=treeitem]')) return
@@ -97,31 +87,21 @@ function overlapOnToolPickInPage () {
   })
 }
 
-// Runs in the page, before its scripts: swallows the pin keys Z X C V, so pressing one selects no pin, which breaks the
-// pin-keys-select-their-pin rule (a rule that reads the step's action) and throws nothing.
 function swallowPinKeysInPage () {
   addEventListener('keydown', (e) => {
     if (/^Key[ZXCV]$/.test(e.code)) e.stopImmediatePropagation()
   }, true)
 }
 
-// The most steps a planted bug's shrunk list may hold: a handful, which a person reads at a glance.
 const HANDFUL = 5
-// `openTarget`'s options that run `inPage` in the page before its scripts.
 const initScript = (inPage) => ({ setup: (context) => context.addInitScript(inPage) })
 
-// Runs `npm run fuzz:ui -- <args>` (`run.mjs`) in this process on pages opened with `target` (`openTarget`'s options, the
-// planted bug, which no command names), and returns what it printed and its result.
 async function fuzzCommand (args, target) {
   const lines = []
   const result = await fuzzUi(args, { browser: browser(), target, print: (line) => lines.push(line) })
   return { output: lines.join('\n'), result }
 }
 
-// Hunts with `hunt` (`npm run fuzz:ui` arguments) and `focus` on pages opened with `target`, checks the run fails with an
-// error matching `error` after a list the shrink cut down to one whose last step matches `last` (`only`: the list is that
-// one step; else at most HANDFUL), that the replay command it prints fails again on the same step, and that the replay
-// opens the puzzle it names whatever order the puzzle list is in. Returns the failure.
 async function findsAndReplays (target, error, { hunt = PLANT_HUNT, focus = PLANT_FOCUS, last = /^pick tool \d+ in the Mode card/, only = true } = {}) {
   const { output, result: found } = await fuzzCommand([...hunt, ...focus.flatMap((area) => ['--focus', area])], target)
   assert.equal(found.failed, true, `the run finds the plant, got ${output}`)
@@ -146,7 +126,6 @@ async function findsAndReplays (target, error, { hunt = PLANT_HUNT, focus = PLAN
   return found
 }
 
-// The share of `area`'s actions among 50 lists drawn with `seed` and `focus`.
 function areaShare (area, focus, seed) {
   // fast-check hands each command out in a wrapper that holds it as `cmd`.
   const actions = fc.sample(actionList(puzzles, { focus }), { seed, numRuns: 50 }).flatMap(({ commands }) => [...commands].map((wrapped) => wrapped.cmd))
@@ -200,7 +179,6 @@ describe('the solve page\'s UI fuzz', () => {
   for (const plant of UI_PLANTS) {
     it(`finds the planted ${plant.id}, shrinks it, replays it on the same step, and passes on the same seed without it`, { timeout: UI_PLANT_TIMEOUT_MS }, async () => {
       const found = await findsAndReplays({ served: true, setup: await uiPlantSetup(plant) }, plant.caughtBy, { hunt: UI_PLANT_HUNT, focus: plant.focus, last: plant.last, only: false })
-      // The lists the hunt ran, the planted one last, run again with no plant in.
       const clean = await runFuzz({ openTarget: openTarget(browser(), { served: true }), puzzles, ...parseFuzzArgs(UI_PLANT_HUNT), focus: plant.focus, runs: found.runs })
       assert.equal(clean.failed, false, `with no plant the same seed passes, got ${clean.error}`)
       assert.equal(clean.runs, found.runs, 'with no plant the same seed runs every list up to the planted one')

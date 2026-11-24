@@ -1,4 +1,3 @@
-// Undo after reopening saved progress: one undo removes one group of edits, and the stacks stay paired (#19).
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { markedForPenpa, openPenpa, shadeInPage, useBrowser } from './page.mjs'
@@ -6,20 +5,16 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// Index in `pu.centerlist` of the cell each session shades.
 const SAVED_CELL = 12
 const NEW_CELL = 20
-// The group id of the recorded line-edge delete, and the line edge's key.
 const GROUP = 7
 const LINE_EDGE = '5,6'
 
-// Runs in the page: puts a given in the first cell, and returns the solve link that opens it.
 function solveLinkInPage () {
   pu.pu_q.number[pu.centerlist[0]] = [5, 1, '1']
   return pu.maketext_solve()
 }
 
-// Runs in the page: what each undo stack holds, and the counter.
 function stateInPage () {
   const lengths = ['pu_q', 'pu_q_col', 'pu_a', 'pu_a_col'].map((p) => pu[p].command_undo.__a.length)
   return { shaded: Object.keys(pu.pu_a.surface), lengths, counter: pu.undoredo_counter }
@@ -60,8 +55,6 @@ describe('undo after reopening saved progress', () => {
   })
 })
 
-// Runs in the page: records a delete of the question's line edge in the answer, as group `group`, and returns what
-// the answer's stacks hold for each of `record` and `record_replay`.
 function recordDeleteLineEInPage ({ key, group }) {
   pu.mode.qa = 'pu_a'
   pu.pu_q.deletelineE[key] = 1

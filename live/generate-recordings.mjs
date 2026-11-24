@@ -31,7 +31,6 @@ const CENTRE = [0]
 const CORNER = [1]
 const EDGE = [3, 2]
 
-// Each mode's family, `research/penpa-mode-key-map.md` § Families, as the recording's directory.
 const FAMILY = {
   sudoku: 'value',
   number: 'value',
@@ -48,8 +47,8 @@ const FAMILY = {
 }
 // One Shape tool on each of `key_number`'s two paths: a plain variant number, and one from `onoff_symbolmode_list`.
 const SHAPE_TOOLS = ['circle_L', 'cross']
-// The modes the clearing keys are recorded in, which the gesture set does not press (#32): Number on a cell and on a
-// corner (1/4), whose Backspace deletes one character, Shape, whose Ctrl+Space clears a shape, and Multicolor, whose
+// The modes the clearing keys are recorded in, which the gesture set does not press : Number on a cell and on a
+// corner, whose Backspace deletes one character, Shape, whose Ctrl+Space clears a shape, and Multicolor, whose
 // Delete clears a colour.
 const CLEAR_KEY_PAIRS = [
   { mode: 'number', sub: '1', name: 'Normal' },
@@ -57,18 +56,13 @@ const CLEAR_KEY_PAIRS = [
   { mode: 'symbol', tool: SHAPE_TOOLS[0], name: SHAPE_TOOLS[0] },
   { mode: 'multicolor', name: '' }
 ]
-// Grid classes no puzz.link import builds, each with the size `create_newboard` reads for it.
 const GRID_BOARDS = { hex: 2, tri: 3, pyramid: 3, uniform: 2 }
-// The uniform tilings share one class (`class_uniform.js`); this one stands for them.
 const UNIFORM_TILING = 'truncated_square'
 
 const slug = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
 if (Object.values(CELLS).some((c) => ANSWER_CELLS.includes(c))) throw new Error('a gesture starts on one of ANSWER_CELLS')
 
-// Runs in the page: the indices in `pu.point` of a run of up to `length` points of the first of `types` the board's
-// canvas has, from the one nearest the centre of the cell at `cell` of the center list, each next point the nearest one
-// to the right of the last, or where none is to the right the nearest one not yet in the run.
 function runInPage ({ cell, types, length }) {
   const canvas = document.getElementById('canvas')
   const onCanvas = (p) => p.x > 0 && p.x < canvas.clientWidth && p.y > 0 && p.y < canvas.clientHeight
@@ -86,19 +80,15 @@ function runInPage ({ cell, types, length }) {
     if (!next) break
     run.push(next)
   }
-  // The key panel Shape mode opens floats over the board, and a click on it never reaches the board; a solver drags
-  // it aside. Still open, so `UserSettings.panel_shown` stays as the engine set it.
   document.getElementById('float-key').style.left = '-10000px'
   return run.map((p) => p.num)
 }
 
-// Runs in the page: what the page shows at a page pixel, when it is not the board.
 function notBoardInPage ({ x, y }) {
   const hit = document.elementFromPoint(x, y)
   return hit?.id === 'canvas' ? null : hit?.id || hit?.tagName || 'nothing'
 }
 
-// Page pixels of a run of points (`runInPage`), each one checked to be on the board.
 async function pixelRun (page, cell, types, length = 1) {
   const pixels = []
   for (const num of await page.evaluate(runInPage, { cell, types, length })) {
@@ -118,9 +108,6 @@ async function drag (page, run) {
   await page.mouse.up()
 }
 
-// The gesture set every recording makes in its mode: click, click again, drag across centres, drag along corners, drag
-// along edges, right-click, Ctrl-click, a digit after each kind of selection, Ctrl+A, Escape, two undos and a redo.
-// `beforeCtrl` runs just before the Ctrl-click.
 async function gestures (page, { beforeCtrl } = {}) {
   const [click] = await pixelRun(page, CELLS.click, CENTRE)
   await page.mouse.click(click.x, click.y)
@@ -146,12 +133,10 @@ async function gestures (page, { beforeCtrl } = {}) {
   await page.keyboard.press('Control+y')
 }
 
-// Runs in the page: a solve link to the board on the page, with whatever answer it has.
 function solveLinkInPage () {
   return pu.maketext_solve()
 }
 
-// Runs in the page: a board of `gridtype` at `size`, as the New Grid dialog builds it.
 function newBoardInPage ({ gridtype, size }) {
   UserSettings.gridtype = gridtype
   document.getElementById('nb_size1').value = size
@@ -160,16 +145,12 @@ function newBoardInPage ({ gridtype, size }) {
   create_newboard()
 }
 
-// A link whose page never makes `pu`: its board did not load.
 class NoBoot extends Error {}
 
-// Records `act(page)` on `query` with the recorder on and returns the recording's file text, the header's `commit`
-// added and the rest as the recorder downloaded it.
 async function record (browser, query, act, header) {
   const opened = await openPenpa(browser, '?record=1' + query).catch((e) => { throw new NoBoot(e.message) })
   const { context, page } = opened
   try {
-    // The board loads after `pu` exists.
     await settle(() => page.evaluate(readEngineState).then(canonicalState))
     // The recorder wraps `pu` on the first input event, so the first mode change must come after one.
     await page.mouse.move(1, 1)
@@ -185,7 +166,6 @@ async function record (browser, query, act, header) {
   }
 }
 
-// Runs in the page: tier A's (mode, sub-mode or tool) pairs, each with a name for its id, in the mode bar's order.
 function tierAInPage (shapeTools) {
   const pairs = []
   const visible = (id) => document.getElementById(id)?.offsetParent != null
@@ -200,7 +180,6 @@ function tierAInPage (shapeTools) {
       pu.mode_set(mode)
       const subs = [...document.querySelectorAll(`input[name="mode_${mode}"]`)].filter((e) => visible(e.id + '_lb'))
       if (!subs.length) pairs.push({ mode, name: '' })
-      // Number's 1/4 and Side labels are drawn by CSS and hold no text.
       for (const e of subs) pairs.push({ mode, sub: e.value, name: document.getElementById(e.id + '_lb').textContent || `sub ${e.value}` })
     }
   }
@@ -233,7 +212,7 @@ async function tierA (browser) {
 }
 
 // Runs in the page: a new board whose solve layer is in Number Arrow. Solve mode hides Arrow's button, but a solve link
-// opens in the mode it was saved in, so this is the one way a solver's click reaches `mouse_number` (#32).
+// opens in the mode it was saved in, so this is the one way a solver's click reaches `mouse_number`.
 function arrowBoardInPage () {
   document.getElementById('nb_size1').value = 4
   document.getElementById('nb_size2').value = 4
@@ -243,9 +222,6 @@ function arrowBoardInPage () {
   pu.submode_check('sub_number2')
 }
 
-// Chooses the mode and enters two digits at a cell, the first a 9, after which Number makes a two-digit number, then
-// takes them away with each clearing key: Backspace, Delete and Ctrl+Space, re-entering a digit before each of the
-// last two.
 async function clearKeys (page, pair) {
   await chooseMode(page, pair)
   const [click] = await pixelRun(page, CELLS.click, CENTRE)
@@ -253,10 +229,8 @@ async function clearKeys (page, pair) {
   for (const key of ['9', '2', 'Backspace', '3', 'Delete', '4', 'Control+Space']) await page.keyboard.press(key)
 }
 
-// Chooses the mode and makes the gesture set in it, after putting on the board what the mode acts on.
 async function inMode (page, pair) {
   if (pair.mode === 'move') {
-    // Something of the solver's to move where the drag starts: a digit, and a shape beside it.
     const [start, next] = await pixelRun(page, CELLS.drag, CENTRE, 2)
     await chooseMode(page, { mode: 'number' })
     await page.mouse.click(start.x, start.y)
@@ -265,7 +239,6 @@ async function inMode (page, pair) {
     await page.mouse.click(next.x, next.y)
   }
   if (pair.mode === 'lineE' && pair.name === 'Erase') {
-    // Edges to erase, along the corners the corner drag takes.
     await chooseMode(page, { mode: 'lineE' })
     await drag(page, await pixelRun(page, CELLS.corners, CORNER, 3))
   }
@@ -275,7 +248,6 @@ async function inMode (page, pair) {
   await gestures(page, { beforeCtrl: pair.mode === 'number' ? turn : undefined })
 }
 
-// Each genre's imports, smallest first by cell count, the earlier one on a tie.
 function importsPerGenre () {
   const byGenre = new Map()
   for (const c of cases) {
@@ -293,14 +265,10 @@ const solveLink = (browser, build) => withPage(browser, '', async (page) => {
   return linkHash(await page.evaluate(solveLinkInPage))
 })
 
-// Runs in the page: the modes whose buttons the mode bar shows.
 function shownModesInPage () {
   return [...document.querySelectorAll('[id^="mo_"][id$="_lb"]')].filter((l) => l.offsetParent != null).map((l) => l.id.slice(3, -3))
 }
 
-// Each recording to make: its id, the boards it may be made on in order of preference (each a function returning a
-// link's `#` part and the name of what it is, or null for a board not to record on), and what it does on the board. A
-// grid class's board is recorded in each mode its solve page shows.
 async function tierB (browser) {
   const recordings = []
   for (const { genre, imports } of importsPerGenre()) {
@@ -313,8 +281,6 @@ async function tierB (browser) {
           await p.evaluate((u) => import_url(u), url)
           full = await p.evaluate(() => !pu.centerlist.some((c) => !pu.pu_q.number[c]))
         })
-        // A board with no cell free of a given (a full grid, or one with no cells, as a 10x1 Firefly) has nowhere for
-        // the gesture set to enter anything.
         return full ? null : { query, name }
       }),
       act: (p) => gestures(p)
@@ -331,8 +297,6 @@ async function tierB (browser) {
   return recordings
 }
 
-// Records on the first of `boards` there is one of and whose link boots, naming each one that did not boot. Any other
-// failure is the recording's own and is thrown.
 async function recordOnFirst (browser, { id, tier, boards, act }) {
   for (const board of boards) {
     const made = await board()

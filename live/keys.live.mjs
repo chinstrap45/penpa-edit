@@ -1,7 +1,3 @@
-// The key front door of `solve.html` (#93): browser keys stay the browser's, a text field keeps its digits, Escape closes
-// one thing at a time, Penpa+'s popups block the board, and the keys the board keeps work as on the old page.
-// The pages are driven with real keys and clicks; the UI is found by role and accessible name, the board by what Penpa+
-// would save (`readEngineState`, defined by recorder.js).
 import assert from 'node:assert/strict'
 import { after, before, beforeEach, describe, it } from 'node:test'
 import {
@@ -14,18 +10,15 @@ const browser = useBrowser()
 
 const DIALOG_NAME = 'Test dialog'
 
-// Index in `pu.centerlist` of a cell clear of the board's edges.
 const CELL = 12
 const OTHER_CELL = 13
 
 const openSolve = (query = AKARI_SOLVE) => openSolvePage(browser(), query)
 
-// Puts Penpa+ in `mode`, as a click on a mode button would.
 const setMode = (page, mode) => page.evaluate((m) => pu.mode_set(m), mode)
 
 const selected = async (page) => (await board(page)).selection.length
 
-// Runs in the page. Adds a Web Awesome dialog holding a menu, a text field and a select to the UI, closed.
 function addDialogInPage (label) {
   document.querySelector('.ui-root').insertAdjacentHTML('beforeend', `
     <wa-dialog label="${label}">
@@ -34,7 +27,6 @@ function addDialogInPage (label) {
     </wa-dialog>`)
 }
 
-// Runs in the page. Adds a text field, a Web Awesome select and a native select to the UI, outside any dialog.
 function addFieldsInPage () {
   document.querySelector('.ui-root').insertAdjacentHTML('beforeend', `
     <div style="position:absolute;right:0;bottom:0;z-index:2000;background:#fff">
@@ -44,7 +36,6 @@ function addFieldsInPage () {
     </div>`)
 }
 
-// Runs in the page. Records `defaultPrevented` of each keydown after every other handler has run.
 function recordPreventionInPage () {
   window.preventedKeys = {}
   window.addEventListener('keydown', (e) => { window.preventedKeys[`${e.ctrlKey ? 'Ctrl+' : ''}${e.altKey ? 'Alt+' : ''}${e.key}`] = e.defaultPrevented })
@@ -180,7 +171,6 @@ describe('the solved dialog', () => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(link)
     t.after(() => context.close())
-    // The author's answer is a 2 in the cell at ANSWER_CELL of the center list.
     await page.evaluate(typeDigitInPage, { index: ANSWER_CELL, digit: '2' })
     await page.getByRole('dialog', { name: 'Puzzle solved' }).waitFor()
     assert.equal(await page.evaluate(() => engine.getState().penpaDialogOpen), false, 'no Penpa+ popup')
@@ -262,7 +252,6 @@ describe('focus returns to the board', () => {
     t.after(() => context.close())
     await setMode(page, 'number')
     await page.evaluate(addDialogInPage, DIALOG_NAME)
-    // The menu sits in the UI itself here, outside the dialog.
     await page.evaluate(() => {
       const menu = document.querySelector('wa-dialog wa-dropdown')
       const holder = document.createElement('div')

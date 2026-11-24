@@ -1,7 +1,3 @@
-// The tool catalog and the Mode and Mouse cards of `solve.html` (#95): the engine lists every tool a link offers and
-// applies a whole one, the Mode card's tree picks any of them, and the Mouse card and the board's title bar say what
-// the current one does. The UI is found by role and accessible name or test id, the board by what Penpa+ would save
-// (`readEngineState`, defined by recorder.js).
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { after, before, describe, it } from 'node:test'
@@ -14,14 +10,11 @@ const browser = useBrowser()
 // The modes a solve link offers on a square grid: every Penpa+ mode but Box, which solve mode hides.
 const SOLVE_MODES = ['surface', 'multicolor', 'line', 'lineE', 'wall', 'number', 'symbol', 'special', 'cage', 'combi', 'sudoku', 'move']
 
-// Index in `pu.centerlist` of cells clear of the board's edges.
 const CELL = 12
 const OTHER_CELL = 18
 
-// With no query, a new board's link.
 const openSolve = async (query) => openSolvePage(browser(), query ?? await newBoardSolveLink(browser()))
 
-// What the solver has shaded: cell index -> the style Penpa+ saved.
 const shaded = (page) => page.evaluate(() => Object.fromEntries(Object.entries(readEngineState().pu_a.surface).map(([cell, style]) => [cell, style])))
 
 const tools = (page) => page.evaluate(() => engine.listTools())
@@ -75,10 +68,8 @@ describe('engine.listTools', () => {
   })
 })
 
-// Runs in the page: draws one edge of the cell at `cell` in pen style `style` into `mode`'s layer and returns the pixel
-// beside the edge's middle as [r, g, b], then takes the edge off again. Penpa+ draws the grid line over a wall, so the
-// pixel is a little off the grid line, still inside the 3 px pen. On solve.html both lines grow with the cell (#330), so the
-// offset grows as the pen does: its width on the board over its width on a canvas of its own.
+// Penpa+ draws the grid line over a wall, so the pixel is read a little off the grid line, inside the 3 px pen; on
+// solve.html both lines grow with the cell, so the offset scales by the pen's board width over its own width.
 function penPixelInPage ({ mode, style, cell }) {
   const corners = pu.point[pu.centerlist[cell]].surround
   const scratch = document.createElement('canvas').getContext('2d')
@@ -130,9 +121,7 @@ describe('the pen styles of line, edge line and wall (#158)', () => {
   }
 })
 
-// Runs in the page: puts a "1" in `style` into the cell at `cell` of Number mode's normal sub-mode and returns the pixels at
-// each of `dxs` cell-widths right of the cell's centre as [r, g, b] (0.3 is inside the disc some styles draw, clear of the
-// digit; 0.41 to 0.43 is its ring), then takes the digit off again.
+// 0.3 cell-widths right of centre is inside the disc some styles draw, clear of the digit; 0.41 to 0.43 is its ring.
 function numberPixelsInPage ({ style, cell, dxs }) {
   const index = pu.centerlist[cell]
   pu[pu.mode.qa].number[index] = ['1', style, '1']
@@ -147,7 +136,6 @@ function numberPixelsInPage ({ style, cell, dxs }) {
   return pixels
 }
 
-// A CSS colour as [r, g, b], read through a canvas.
 const rgbOfColour = (page, colour) => page.evaluate((c) => {
   const ctx = document.createElement('canvas').getContext('2d')
   ctx.fillStyle = c
@@ -157,8 +145,7 @@ const rgbOfColour = (page, colour) => page.evaluate((c) => {
 
 const distance = (a, b) => Math.max(...a.map((v, i) => Math.abs(v - b[i])))
 
-// Runs in the page: draws the SVG of a button at 4x and counts the pixels in its middle (clear of the disc's ring) that are
-// near black, near white and near red, so what the button shows is read, not the attributes that make it.
+// Rasterized so what the button shows is read, not the attributes that make it; the middle is clear of the disc's ring.
 async function middleInkInPage (svgMarkup) {
   const image = new Image()
   image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`
@@ -300,7 +287,7 @@ describe('engine.setTool and engine.getTool', () => {
   })
 })
 
-// solve.html never turns Penpa Lite on (#145): importing a puzz.link sudoku sets the Tab set Surface and Sudoku, and the same
+// solve.html never turns Penpa Lite on: importing a puzz.link sudoku sets the Tab set to Surface and Sudoku, and the same
 // puzzle with no Tab set shows what Penpa Lite would have hidden.
 const SUDOKU_LINK = 'https://puzz.link/p?sudoku/4/4/g2j1h1j3g'
 
@@ -504,7 +491,6 @@ describe('the Mouse card and the title bar', () => {
     assert.equal(await settle(() => titleBarTool().textContent(), 'Akari'), 'Akari')
   })
 
-  // The card's rows as [gesture, effect] pairs.
   const rows = () => opened.page.getByRole('region', { name: 'Mouse' }).locator('.ui-mrow')
     .evaluateAll((els) => els.map((el) => [...el.children].map((c) => c.textContent)))
 
@@ -531,7 +517,7 @@ describe('the Mouse card and the title bar', () => {
       ['Right click', 'cursor on the cell'], ['Digit', 'that variant (1–9) at the cursor → clear (same digit)']]],
     [{ mode: 'symbol', submode: 'cross' }, 'Cross arms', [['Left click', 'cursor on the cell'], ['Right click', 'cursor on the cell'],
       ['Digit', 'that part (1–9) of the shape added at the cursor, again: removed']]],
-    // The rows past Left click, Right click and Drag that #186 corrected, which the agreed table's check does not read.
+    // The rows past Left click, Right click and Drag which the agreed table's check does not read.
     [{ mode: 'combi', submode: 'linex' }, 'Line x', [['Right click', '× on the edge → clear'],
       ['Drag', 'line through cell centres; starting on a line: clear it'], ['Right drag', 'from an edge: × on each edge it passes; starting on a ×: clear them']]],
     [{ mode: 'combi', submode: 'linedir' }, 'Line x<>', [['Right click', 'edge: × → arrowhead one way → the other way → clear'], ['Drag', 'line through cell centres; starting on a line: clear it'],
@@ -560,7 +546,6 @@ describe('the Mouse card and the title bar', () => {
     })
   }
 
-  // The names of the Mouse card's rows, for every tool, whose words are `text`.
   const rowsReading = (text) => opened.page.evaluate(async (wanted) => {
     const bad = []
     for (const t of engine.listTools()) {
@@ -598,7 +583,6 @@ describe('the Mouse card and the title bar', () => {
     for (const [key, agreedWords] of agreed) {
       if (!offered.has(key)) continue
       const tool = tools.find((t) => `${t.mode}/${t.submode ?? ''}` === key)
-      // The card draws on the engine's change, a frame or two after `setTool`.
       const shown = await opened.page.evaluate(async (t) => {
         engine.setTool(t)
         await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
@@ -608,7 +592,7 @@ describe('the Mouse card and the title bar', () => {
         const shown = Object.fromEntries([...document.querySelectorAll('section[aria-label="Mouse"] .ui-mrow')].map((r) => [r.children[0].textContent, wordsOf(r.children[1])]))
         return ['Left click', 'Right click', 'Drag'].map((gesture) => shown[gesture] ?? '—')
       }, tool)
-      // A Drag row that only repeats its click row is not drawn either (#253): the agreed table's words for it are a missing row.
+      // A Drag row that only repeats its click row is not drawn either: the agreed table's words for it are a missing row.
       const words = agreedWords[2] === AS_A_CLICK ? [...agreedWords.slice(0, 2), '—'] : agreedWords
       checked++
       if (shown.join(' | ') !== words.join(' | ')) differ.push(`${key}: card ${shown.join(' | ')} vs agreed ${words.join(' | ')}`)
@@ -636,7 +620,6 @@ describe('the Mouse card and the title bar', () => {
   })
 })
 
-// The Mouse card's wording over every tool (#203), on a laptop screen.
 describe('the Mouse card reads at a glance (#203)', () => {
   let opened
   before(async () => {
@@ -644,7 +627,6 @@ describe('the Mouse card reads at a glance (#203)', () => {
   })
   after(async () => { await opened?.context.close() })
 
-  // Every tool's card: headline, then each row as { gesture, effect, isMore, gestureLines, keypad }.
   const sweep = () => opened.page.evaluate(async () => {
     const card = document.querySelector('section[aria-label="Mouse"]')
     const seen = {}
@@ -706,7 +688,6 @@ describe('the Mouse card reads at a glance (#203)', () => {
     assert.match(polygon['Closing click'], /finishes the polygon/)
   })
 
-  // The dots in the card's rows as [gesture, background colour]; `swatchOf` is Surface's style `style` colour as the browser writes it.
   const dotsOf = () => opened.page.evaluate(async () => {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
     return [...document.querySelectorAll('section[aria-label="Mouse"] .ui-mrow')].filter((r) => r.querySelector('.ui-dot'))

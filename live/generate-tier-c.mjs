@@ -18,8 +18,6 @@ import { buildPuzzle, KEPT_OPEN_CELLS, TIER_C_PUZZLES } from './tier-c-puzzles.m
 
 const removeExpected = (id) => rm(new URL(id + EXPECTED_SUFFIX, RECORDINGS), { force: true })
 
-// Writes `recording` as `id` and its expected file, or removes any earlier expected file and returns the replay's
-// report when it is refused.
 async function write (browser, id, recording) {
   await writeRecording(id, recording)
   const { checkpoints, report } = await replay(browser, recording, { id, fullRoundTrips: true })

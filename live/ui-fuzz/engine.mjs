@@ -1,4 +1,4 @@
-// The UI fuzz's engine (#195), modelled on `sudokupad-scripts/live/fuzz/engine.mjs`: fast-check generates action lists
+// The UI fuzz's engine, modelled on `sudokupad-scripts/live/fuzz/engine.mjs`: fast-check generates action lists
 // (`actions.mjs`), each list runs on a page of its own, the crash signals and the rules (`rules.mjs`) are read after every
 // action and once more after the last, and a failing list is shrunk and reported with the puzzle and path that replay it.
 // It knows no browser: the page comes from `openTarget(puzzle)` (`target.mjs`). Not a check itself.
@@ -20,13 +20,10 @@ const UNBOUNDED = 1000000
 // The actions a printed list holds, in order. fast-check prints them joined by commas, so no action's label holds one.
 const actionsOf = (shown) => shown.replace(REPLAY_PATH, '').split(',').map((action) => action.trim()).filter((action) => action !== '')
 
-// A failure names `step`, the count of steps run when it was read.
 function failure (message, step) {
   return Object.assign(new Error(message), { step })
 }
 
-// Fails on a crash signal first (each uncaught page error and `console.error` line in the snapshot, `page-state.mjs`),
-// then on a broken rule; `rules` is the rules' context (`rules.mjs`) less `now`.
 function assertClean (snapshot, rules, when, step) {
   const signals = snapshot.errors.map((e) => `page error: ${e}`)
   if (signals.length) throw failure(`${signals.length === 1 ? 'crash signal' : 'crash signals'} ${when}: ${signals.join('; ')}`, step)
@@ -106,7 +103,6 @@ export async function runFuzz ({ openTarget, puzzles, puzzle, seed, runs, minute
   const huntActions = actionsOf(String(hunt.counterexample[0])).length
   let found = hunt
   if (!replaying) {
-    // The same list again, from its index alone, this time shrinking; a failure that does not repeat leaves the hunt's own.
     const shrunk = await fc.check(property, {
       seed, numRuns: upTo(hunt.counterexamplePath), path: hunt.counterexamplePath.split(':')[0], interruptAfterTimeLimit: DEFAULT_SHRINK_MINUTES * MINUTE_MS, verbose: 0
     })

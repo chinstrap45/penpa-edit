@@ -1,4 +1,3 @@
-// The Redirect script: its body run in a page whose `location` is the link opened, and its header read as Tampermonkey reads it.
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
@@ -6,14 +5,12 @@ import { describe, it } from 'node:test'
 import vm from 'node:vm'
 import { FORK_URL as FORK, RAW_SCRIPT_URL, REDIRECT_SCRIPT, UPSTREAM_URL as UPSTREAM } from './redirect-urls.mjs'
 
-// Where the script sends a page opened at `href`; null when it leaves the page alone.
 function redirectOf (href) {
   let target = null
   vm.runInNewContext(readFileSync(REDIRECT_SCRIPT, 'utf8'), { location: { href, replace: (url) => { target = url } } })
   return target
 }
 
-// The value of each `// @key value` line of the script's header.
 function headerOf () {
   const header = readFileSync(REDIRECT_SCRIPT, 'utf8').match(/\/\/ ==UserScript==\n([\s\S]*?)\/\/ ==\/UserScript==/)[1]
   return Object.fromEntries([...header.matchAll(/^\/\/ @(\S+)\s+(.*)$/gm)].map(([, key, value]) => [key, value.trim()]))

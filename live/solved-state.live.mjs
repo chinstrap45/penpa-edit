@@ -1,6 +1,4 @@
-// The solved state on `solve.html` (#198): the solved message is the desk's own dialog and shows once; the clock stops at
-// the first solve and never runs again; a reload of a solved puzzle opens calm; a paused board disables what changes it.
-// The UI is read by role and accessible name; the clock and the entries through `engine`.
+// The solved state on `solve.html`: the solved message is the desk's own dialog and shows once; the clock stops at the first solve and never runs again.
 import assert from 'node:assert/strict'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { describe, it } from 'node:test'
@@ -12,7 +10,6 @@ const browser = useBrowser()
 
 // How long a "the clock held" check watches a stopped clock; a held clock cannot be waited for, only watched.
 const HOLD_WATCH_MS = 1500
-// Index in `pu.centerlist` of a cell clear of the board's edges.
 const FREE_CELL = 12
 
 async function openSolve () {
@@ -24,13 +21,10 @@ async function openSolve () {
 const timer = (page) => page.evaluate(() => engine.getTimer())
 const clockText = (page) => page.getByRole('timer').textContent()
 const button = (page, name) => page.getByRole('button', { name, exact: true })
-// True when the card's body is switched off (inert) by a pause.
 const cardIsInert = (page, card) => page.getByRole('region', { name: card }).evaluate((node) => node.querySelector('.ui-body').closest('[inert]') !== null)
 const solvedDialog = (page) => page.getByRole('dialog', { name: 'Puzzle solved' })
-// Penpa+'s popup is SweetAlert2's container.
 const swalCount = (page) => page.locator('.swal2-container').count()
 
-// Counts every time the solved dialog opens, from now on.
 const countSolvedDialogs = (page) => page.evaluate(() => {
   window.solvedDialogsShown = 0
   document.addEventListener('wa-show', (e) => {
@@ -44,7 +38,6 @@ async function enterAnswer (page) {
   await page.keyboard.press('2')
 }
 
-// Solves, closes the solved dialog, and returns the clock as it stopped.
 async function solve (page) {
   await enterAnswer(page)
   await solvedDialog(page).waitFor()
@@ -133,7 +126,6 @@ describe('a solved puzzle reloaded', () => {
     t.after(() => context.close())
     await page.waitForFunction(() => engine.getTimer().seconds >= 1)
     const stopped = await solve(page)
-    // Penpa+ saves on unload without waiting for the write, so the reload would race it.
     assert.equal(await page.evaluate(() => engine.saveProgress()), true, 'the progress is saved')
     await page.reload()
     await page.getByRole('region', { name: 'Board' }).waitFor()
@@ -186,7 +178,6 @@ describe('a shared link to a solved board', () => {
     await solve(solver.page)
     // The link Penpa+'s Clone button writes: the board as entered, marked `l=solvedup`.
     const link = await solver.page.evaluate(() => { const url = pu.maketext_duplicate(); return url.slice(url.indexOf('#')) + '&l=solvedup' })
-    // A new context has no saved progress and no solved mark, so only the link says the board is solved.
     const { context, page } = await openSolvePage(browser(), link)
     t.after(() => context.close())
     await sleep(HOLD_WATCH_MS)

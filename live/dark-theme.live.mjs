@@ -1,4 +1,4 @@
-// The solve page in both themes (#192): the board's ground is dark in the dark theme, the Board label and every card's text
+// The solve page in both themes: the board's ground is dark in the dark theme, the Board label and every card's text
 // meet WCAG AA (4.5:1), and the top-bar buttons keep a visible shape, disabled ones included. Colours are read from the
 // page's computed styles and the board's pixels, so a CSS change that looks wrong fails here.
 import assert from 'node:assert/strict'
@@ -9,19 +9,13 @@ import { settle } from './settle.mjs'
 const browser = useBrowser()
 
 const WCAG_AA_TEXT = 4.5
-// WCAG's bar for a graphic the user must find (an icon, a button's edge).
 const WCAG_GRAPHIC = 3
-// The least a resting button fill may differ from the bar's, and a hovered fill from the resting one (both about 1.3 as built).
 const BUTTON_AGAINST_BAR = 1.25
 const HOVER_AGAINST_REST = 1.15
-// The lightest a Settings button's fill may be in the dark theme: a light slab is about 0.8.
 const DARK_BUTTON_LUMINANCE = 0.15
-// The share of the board's sampled pixels that must stand out from the ground, so a grid and clues, not one pixel, show.
 const MIN_MARK_SHARE = 0.005
-// The board's ground luminance in the dark theme, and the lightest a "dark" ground may be.
 const DARK_GROUND_LUMINANCE = 0.1
 
-// Three of the tools: two whose style buttons are colour swatches, and one whose are not.
 const TOOLS = [{ mode: 'surface' }, { mode: 'multicolor' }, { mode: 'number', submode: '1' }]
 
 async function openIn (theme) {
@@ -74,7 +68,6 @@ describe('the board in the dark theme', () => {
   })
 })
 
-// Runs in the page: every visible text in the cards and the bar whose colour is under `minRatio`:1 against what it sits on.
 function lowContrastTextInPage (minRatio) {
   const { parse, over, ratio } = window.__helpers()
   const texts = [...document.querySelectorAll('.ui-card *, .ui-bar *')].filter((n) =>
@@ -165,7 +158,6 @@ describe('pin colours', () => {
   for (const theme of ['light', 'dark']) {
     it(`are mid-light, hold white text when filled, and tint each chip readably, for 24 pins in the ${theme} theme`, async () => {
       const { context, page } = await openIn(theme)
-      // The saved pin set the Pinned card reads on load: 24 pins run round the hue wheel on the golden angle.
       await page.evaluate(() => {
         const keys = Object.keys(localStorage).filter((key) => localStorage.getItem(key).includes('"pins"'))
         if (keys.length !== 1) throw new Error(`expected one saved pin set, found ${keys.length}`)
@@ -215,7 +207,6 @@ describe('the dark theme elsewhere', () => {
     await context.close()
   })
 
-  // Runs in the page: each visible button of the open dialogs as its name, fill luminance and text against its fill.
   function dialogButtonsInPage () {
     const { parse, over, luminance, ratio } = window.__helpers()
     const buttons = [...document.querySelectorAll('wa-dialog[open] wa-button')].filter((b) => b.checkVisibility())
@@ -245,7 +236,6 @@ describe('the dark theme elsewhere', () => {
     // A disabled button is dimmed on purpose, so it is held to the graphic bar, as in the top bar.
     assert.deepEqual(inSettings.filter((b) => b.text < (b.disabled ? WCAG_GRAPHIC : WCAG_AA_TEXT)).map((b) => `${b.name} ${b.text.toFixed(2)}`), [], 'settings button text at 4.5:1')
 
-    // The danger-styled Clear opens its own confirm dialog, over the Settings dialog.
     await page.locator('wa-dialog[open] wa-button[variant="danger"]').first().click()
     await page.locator('wa-dialog[open][label*="Clear"] wa-button').first().waitFor()
     await animationsDone(page)

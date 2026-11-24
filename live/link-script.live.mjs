@@ -1,4 +1,3 @@
-// A link's data never runs as script in the page (#11): no dialog fires and no `on*` attribute appears.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { setTimeout as sleep } from 'node:timers/promises'
@@ -7,12 +6,10 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// A payload that opens a dialog if the page parses it as HTML.
 const IMG_ALERT = '<img src=x onerror=alert("link-script")>'
 // How long a dialog from that payload's `onerror`, which fires after the image fails to load, is waited for.
 const NO_DIALOG_MS = 500
 
-// Opens Penpa+ blank, runs `build` in it to make a link, and returns that link's `#` part.
 async function makeLink (build, arg) {
   const { context, page } = await openPenpa(browser())
   const url = await page.evaluate(build, arg)
@@ -20,7 +17,6 @@ async function makeLink (build, arg) {
   return url.slice(url.indexOf('#'))
 }
 
-// The names of every `on*` attribute on the element with `id` and on everything inside it.
 function onAttributes (page, id) {
   return page.evaluate((id) => {
     const root = document.getElementById(id)
@@ -30,7 +26,6 @@ function onAttributes (page, id) {
   }, id)
 }
 
-// Both sub-mode labels: the edit mode a link saves, and the span that names its sub-mode.
 const SUB_MODES = [
   { name: 'Shape', editMode: 'symbol', id: 'symmode_content' },
   { name: 'Composite', editMode: 'combi', id: 'combimode_content' }
@@ -62,10 +57,8 @@ for (const { name, editMode, id } of SUB_MODES) {
   })
 }
 
-// A Source that closes the `href` quote of the contest note's link and adds a mouseover handler.
 const QUOTE_BREAKOUT = 'x" onmouseover="alert(\'link-script\')'
 
-// Makes a link of `kind` ('solve' or 'contest') whose Source is `source`.
 function sourceLink (kind, source) {
   return makeLink(({ kind, source }) => {
     document.getElementById('saveinfosource').value = source
@@ -73,7 +66,6 @@ function sourceLink (kind, source) {
   }, { kind, source })
 }
 
-// The `href` attribute of the element `selector` matches, or null when it has none.
 function hrefOf (page, selector) {
   return page.evaluate((selector) => document.querySelector(selector).getAttribute('href'), selector)
 }
@@ -101,7 +93,6 @@ const SOURCES = [
   { source: ' https://example.com/p', href: 'https://example.com/p' },
   { source: '//example.com/p', href: '//example.com/p' }
 ]
-// Where each kind of link shows its Source.
 const SOURCE_ANCHORS = { solve: '#puzzlesourcelink', contest: '#answer_key a' }
 
 for (const { source, href } of SOURCES) {

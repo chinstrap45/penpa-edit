@@ -1,4 +1,4 @@
-// The Mode card's tool tree and the Pinned card's preset list of `solve.html` (#187) open as a floating layer: inside the window
+// The Mode card's tool tree and the Pinned card's preset list of `solve.html` open as a floating layer: inside the window
 // and below the top bar, over the other cards, scrolling to their last row, and the card they live in keeps its size. Driven by
 // role and accessible name, in laptop-sized windows.
 import assert from 'node:assert/strict'
@@ -11,7 +11,6 @@ const browser = useBrowser()
 const WIDTH = 1366
 // A laptop's height, and a window short enough that no list fits below its field.
 const HEIGHTS = [768, 500]
-// A point on the desk that is on no card.
 const EMPTY_DESK = { x: 5, y: 400 }
 
 // Every tab, so the Mode tree has every tool to list.
@@ -49,9 +48,9 @@ for (const height of HEIGHTS) {
     for (const { card: cardName, field: fieldName, list: listOf, row } of CASES) {
       describe(`the ${cardName} card's list`, () => {
         const card = () => page().getByRole('region', { name: cardName })
-        // The default layout stacks the Recent card over the lower half of the Pinned card, where its preset field is, so it is
-        // focused rather than clicked: the keyboard opens the same list. Focus does not scroll, because a short window leaves the
-        // Pinned card taller than the desk, and the browser would scroll the desk (#181's layout) and move the card.
+        // The default layout stacks the Recent card over the Pinned card's preset field, so it is focused rather than clicked.
+        // preventScroll, because a short window leaves the Pinned card taller than the desk and the browser would scroll the
+        // desk and move the card.
         const focusField = () => card().getByRole('combobox', { name: fieldName }).evaluate((node) => node.focus({ preventScroll: true }))
         const list = () => listOf(card()).locator('xpath=ancestor-or-self::*[contains(@class,"ui-list")][1]')
 

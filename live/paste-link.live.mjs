@@ -9,10 +9,9 @@ const browser = useBrowser()
 
 const UPSTREAM = 'https://swaroopg92.github.io/penpa-edit/'
 const FORK = 'https://chinstrap45.github.io/penpa-edit/'
-// The fork's address before the move to chinstrap45: a link shared then still opens (spec #373).
+// The fork's address before the move to chinstrap45: a link shared then must still open.
 const OLD_FORK = 'https://caneff.github.io/penpa-edit/'
 
-// Opens bare solve.html: the paste box shows, no desk is built.
 async function openBare () {
   const { context, page } = await openPenpa(browser(), '', { solve: true })
   const box = page.getByRole('textbox', { name: 'Penpa+ link' })
@@ -89,7 +88,6 @@ describe('solve.html with no puzzle data', () => {
 })
 
 describe('the paste page\'s look (#193)', () => {
-  // Runs in the page: the paste page's own nodes by tag, with whether Web Awesome has upgraded them and the card's colours.
   const lookInPage = () => {
     const card = document.querySelector('.ui-paste')
     const parse = (css) => css.match(/[\d.]+/g).map(Number)
@@ -126,7 +124,6 @@ describe('the paste page\'s look (#193)', () => {
     assert.equal(await bare.page.evaluate(() => location.hash), AKARI_SOLVE)
   })
 
-  // Runs in the page: the error's background against what the theme's danger token paints.
   const errorColoursInPage = () => {
     const probe = document.createElement('div')
     probe.style.background = 'var(--wa-color-danger-fill-quiet)'

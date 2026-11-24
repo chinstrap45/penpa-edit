@@ -1,4 +1,4 @@
-// The Rules card of `solve.html` (#204): one block per line, list items that hang, long strings and URLs that wrap, URLs
+// The Rules card of `solve.html`: one block per line, list items that hang, long strings and URLs that wrap, URLs
 // as links that open in a new tab, rules text that stays text, and a card of one line when the link has no rules.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
@@ -10,7 +10,7 @@ const browser = useBrowser()
 const URL = 'https://example.com/a/very/long/path/that/keeps/going/and/going/and/going/until/it/cannot/fit/in/the/card/at/all'
 const LONG_ITEM = '- ' + 'a wrapped bullet whose text is long enough to need a second line inside the card '.repeat(3).trim()
 const WIKI = 'https://en.wikipedia.org/wiki/Nurikabe_(puzzle)'
-// Short enough to fit the card's own height cap, which a long text meets (#199).
+// Short enough to fit the card's own height cap, which a long text meets.
 const SIX_LINES = ['Line one.', 'Line two.', 'Line three.', 'Line four.', 'Line five.', 'Line six.'].join('\n')
 const RULES = ['Plain line.', LONG_ITEM, '1. numbered item', `See ${URL}.`, '<b>x</b>', '- <b>y</b>', `(see ${WIKI}).`, 'x'.repeat(200)].join('\n')
 
@@ -75,7 +75,6 @@ describe('the Rules card', () => {
     assert.equal(await page.getByRole('button', { name: 'Bigger rules text' }).isHidden(), true)
   })
 
-  // A layout is kept for every puzzle, so a Rules height from one link must not follow the solver to another.
   it('sizes the Rules card for the link it opens, whatever layout another link kept', async () => {
     const withRules = await newBoardSolveLink(browser(), undefined, SIX_LINES)
     const without = await newBoardSolveLink(browser())

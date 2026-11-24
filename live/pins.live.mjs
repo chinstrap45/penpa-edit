@@ -1,4 +1,4 @@
-// The pins and the Tab cycle of `solve.html` (#96): the engine reports the link's Tab set, the Pinned card seeds from it once
+// The pins and the Tab cycle of `solve.html`: the engine reports the link's Tab set, the Pinned card seeds from it once
 // per puzzle and keeps it across reloads, Tab, Shift+Tab, Enter and Z/X/C/V step or jump between pins, a pin remembers its
 // style, and the board's frame tells the pins apart. The UI is found by role and accessible name, the board by what Penpa+
 // would save (`readEngineState`, defined by recorder.js); the keys are real key presses.
@@ -18,7 +18,6 @@ const openSolve = async (tabSet) => openSolvePage(browser(), await newBoardSolve
 const pinnedChips = (page) => cardBodyButtons(page, 'Pinned', { name: /^(?!Unpin|Save pins)/ })
 const chipNames = async (page) => (await pinnedChips(page).allInnerTexts()).map(chipName)
 
-// The colour of the board's frame, as the Board card draws it.
 const frameColour = (page) => page.getByRole('region', { name: 'Board' }).evaluate((card) => getComputedStyle(card).outlineColor)
 
 describe('engine.tabSet', () => {
@@ -84,7 +83,6 @@ describe('a saved value the Pinned card did not write', () => {
   before(async () => { opened = await openSolve(['Line Normal', 'Sudoku Corner']) })
   after(async () => { await opened?.context.close() })
 
-  // Each is short of what the card writes: a mode, a list of pins.
   const BAD_VALUES = [
     { pins: [{ submode: '1', style: null }] },
     { pins: [{ mode: 5, submode: '1', style: null }] },
@@ -167,7 +165,6 @@ describe('Tab, Shift+Tab and Enter', () => {
     await waitForTool(page, { mode: 'surface', submode: null })
     await page.getByRole('region', { name: 'Pinned' }).getByRole('button', { name: 'Unpin Surface' }).focus()
     await page.keyboard.press('Enter')
-    // The focused button took the Enter: it unpinned, and the tool did not step.
     assert.deepEqual(await settle(() => chipNames(page), ['Line > Normal']), ['Line > Normal'])
     assert.deepEqual(await currentTool(page).then(({ mode, submode }) => ({ mode, submode })), { mode: 'surface', submode: null })
   })
@@ -507,7 +504,7 @@ describe('the board frame', () => {
   before(async () => { opened = await openSolve(['Line Normal']) })
   after(async () => { await opened?.context.close() })
 
-  // The frame takes the current pin's colour whatever the style (#243); the first listed tool, Surface, has colour styles.
+  // The frame takes the current pin's colour whatever the style; the first listed tool, Surface, has colour styles.
   const threeTools = (page) => page.evaluate(() => engine.listTools().slice(0, 3).map(({ mode, submode }) => ({ mode, submode })))
 
   // The Pinned card marks the current pin's chip in the same draw that colours the frame.
@@ -567,7 +564,6 @@ describe('the pin toggles', () => {
     await pin.click()
     assert.deepEqual(await settle(() => chipNames(page), ['Line > Normal', 'Sudoku > Corner', 'Surface']), ['Line > Normal', 'Sudoku > Corner', 'Surface'])
     assert.equal(await modeCard(page).getByRole('button', { name: 'Unpin Surface' }).getAttribute('aria-pressed'), 'true')
-    // The Tab cycle follows: Surface is the last pin, so Tab from it wraps to the first.
     await page.keyboard.press('Tab')
     await waitForTool(page, { mode: 'line', submode: '1' })
     await setTool(page, { mode: 'surface', submode: null })
@@ -588,7 +584,6 @@ describe('the pin toggles', () => {
     assert.equal(await wall.getAttribute('aria-pressed'), 'false')
     await wall.click()
     assert.deepEqual(await settle(() => chipNames(page), ['Line > Normal', 'Sudoku > Corner', 'Wall']), ['Line > Normal', 'Sudoku > Corner', 'Wall'])
-    // A pinned mode leaves Recent (#182).
     assert.equal(await recentCard(page).getByRole('button', { name: /Wall/ }).count(), 0)
     assert.equal((await currentTool(page)).mode, 'surface', 'the tool did not change')
     await page.getByRole('region', { name: 'Pinned' }).getByRole('button', { name: 'Unpin Wall' }).click()

@@ -1,11 +1,6 @@
-// The Mouse card says true things (#186): for every tool `solve.html` offers, each gesture a row of the card names is
-// performed for real (Playwright's mouse and keyboard) on a cleared board, and the board's change is checked against what
-// the row says. A row that names no change (`—`) checks that none of what is read changed. What is read: the solver's
-// entries as Penpa+ would save them (`readEngineState`, defined by recorder.js), the grid lines erased, the selection,
-// the cursors and the tool's style, written one entry per line as `layer@kind=value`: `kind` names the board
-// points the entry's key holds (a cell, a corner, an edge's middle), so a check says where a mark went without hard-coding
-// Penpa+'s point numbers. A case's expected lines say what its row's words say; the values Penpa+ stores for each mark (a
-// style number, a symbol) are named once below, read from Penpa+'s code and confirmed on the board.
+// The Mouse card on `solve.html` says true things: each gesture a row names is performed for real on a cleared board and the change is checked against the row.
+// Each change is written one entry per line as `layer@kind=value`: `kind` names the board points the key holds (a cell, a
+// corner, an edge's middle), so a check says where a mark went without hard-coding Penpa+'s point numbers.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { newBoardSolveLink, openSolvePage, shareOf, useBrowser } from './page.mjs'
@@ -19,48 +14,38 @@ const B = 15
 const C = 16
 const D = 20
 const E = 21
-// A knight's move from A, for a line at an angle.
 const F = 22
 
-// Where a gesture aims: a cell's centre, or a point `dx, dy` cell widths off it.
 const at = (cell) => ({ cell, dx: 0, dy: 0 })
 const rightEdge = (cell) => ({ cell, dx: 0.5, dy: 0 })
 const cornerOf = (cell) => ({ cell, dx: 0.5, dy: 0.5 })
-// Part of the way from a cell's centre toward one of the 8 directions, for a flick.
 const FLICK = 0.35
 const DIRECTIONS = { n: [0, -1], ne: [1, -1], e: [1, 0], se: [1, 1], s: [0, 1], sw: [-1, 1], w: [-1, 0], nw: [-1, -1] }
 const toward = (cell, dir) => ({ cell, dx: DIRECTIONS[dir][0] * FLICK, dy: DIRECTIONS[dir][1] * FLICK })
 
-// Gestures. `mods` are keys held through the gesture (`Alt`, `Control`, `Shift`).
 const click = (where, mods = []) => ({ act: 'click', where, button: 'left', mods })
 const rightClick = (where, mods = []) => ({ act: 'click', where, button: 'right', mods })
 const doubleClick = (where) => ({ act: 'dblclick', where })
 const drag = (cells, mods = []) => ({ act: 'drag', path: cells.map((c) => (typeof c === 'number' ? at(c) : c)), button: 'left', mods })
 const rightDrag = (cells, mods = []) => ({ ...drag(cells, mods), button: 'right' })
-// A right drag as a touchpad can send it: pointer events and the mouse events that follow them, dispatched on the board's
-// canvas with button 2 held throughout, rather than Playwright's own mouse (Chris's report of #186 came from a laptop).
+// A right drag as a touchpad sends it, dispatched on the canvas with button 2 held throughout.
 // Penpa+ listens for the mouse events only (main.js), so the pointer events are there to match the sequence, not to act.
 const touchpadRightDrag = (cells) => ({ ...rightDrag(cells), act: 'touchpad' })
 const key = (name, mods = []) => ({ act: 'key', name, mods })
-// A left drag split in two: the press and the moves, then the release.
 const press = (cells) => ({ ...drag(cells), act: 'press' })
 const release = () => ({ act: 'release', button: 'left' })
-// Setup only: switches to another tool for the steps after it, or puts a given into the question's layer.
 const useTool = (tool) => ({ act: 'tool', tool })
 const given = (layer, cell, value) => ({ act: 'given', layer, cell, value })
 
 // A case's stages: each a list of steps and the change, since the case's setup ended, they leave.
 const stage = (steps, change) => [Array.isArray(steps) ? steps : [steps], change]
-// One step repeated: the change after each press, the last usually back to nothing.
 const cycle = (step, ...changes) => changes.map((change) => stage(step, change))
 const times = (n, line) => Array(n).fill(line)
 
-// The values Penpa+ stores for marks, named once.
 const LINE = 3
 const CROSS = 98
 const SHADE = 1
 const SECOND = 2
-// A mark in Penpa+'s `symbol` layer, `[variant, shape, layer]`, at a point of `kind`.
 const sym = (value, kind = 'cell') => `symbol@${kind}=${JSON.stringify(value)}`
 const WHITE = sym([1, 'circle_M', 2])
 const BLACK = sym([2, 'circle_M', 2])
@@ -69,7 +54,6 @@ const TENT = sym([2, 'tents', 2])
 const PLUS = sym([2, 'math_G', 2])
 const MINUS = sym([3, 'math_G', 2])
 const ship = (variant) => sym([variant, 'battleship_B', 2])
-// The variant of `arrow_S` that points each way.
 const ARROW_S = { w: 1, nw: 2, n: 3, ne: 4, e: 5, se: 6, s: 7, sw: 8 }
 const GREY_DOT = sym([8, 'ox_B', 2])
 const DOT = sym([8, 'ox_B', 1])
@@ -82,37 +66,26 @@ const STAR = sym([2, 'star', 2])
 const GREEN_O = sym([1, 'ox_E', 2])
 const GREEN_X = sym([4, 'ox_E', 2])
 const GREY_X = sym([4, 'ox_G', 2])
-// Line + direction marks' arrowheads on a vertical edge, pointing left and right.
 const ARROW_LEFT = sym([5, 'inequality', 2], 'edge')
 const ARROW_RIGHT = sym([7, 'inequality', 2], 'edge')
-// Penpa+'s surface style 7: Line + cell marks' shade and Edges + inside / outside's yellow.
 const SURFACE_7 = 'surface@cell=7'
-// A 5 typed into a cell with Number's normal sub-mode.
 const NUMBER_5 = 'number@cell=["5",2,"1"]'
 
-// ---- Case builders, for rows many tools share --------------------------------------------------------------------
-
-// A row that names no change: the gesture leaves the board as it was.
 const nothing = (step, setup = []) => [['changes nothing', setup, [stage(step, [])]]]
-// The lines that say each of `lines` was taken off again.
 const cleared = (lines) => lines.map((line) => line.replace(/=.*$/, '=-'))
-// A drag draws; the same drag starting on what it drew erases it.
 const drawAndErase = (path, lines) => [
   ['draws', [], [stage(drag(path), lines)]],
   ['starting on it erases', [drag(path)], [stage(drag(path), cleared(lines))]]
 ]
 const lineTool = (path, lines) => ({ 'Left click': nothing(click(at(A))), 'Right click': nothing(rightClick(at(A))), Drag: drawAndErase(path, lines) })
-// The free line tools draw on release: a held drag shows nothing yet.
 const freeLineTool = (path, lines) => {
   const tool = lineTool(path, lines)
   return { ...tool, Drag: [...tool.Drag, ['draws only on release', [], [stage(press(path), []), stage(release(), lines)]]] }
 }
-// A gesture over A B C marks each cell; a gesture over A B starting on a mark clears those two.
 const manyAndClear = (over3, over2, line) => [
   ['marks many cells', [], [stage(over3, times(3, line))]],
   ['starting on a mark clears many', [over3], [stage(over2, cleared(times(2, line)))]]
 ]
-// The edges right of A, B and C, for a right drag that starts on an edge.
 const EDGES_ABC = [rightEdge(A), rightEdge(B), rightEdge(C)]
 // A right drag from an edge marks each edge it passes; one starting on a cell centre marks nothing (Penpa+ starts the
 // marking only when the press lands on an edge).
@@ -122,7 +95,6 @@ const crossEdgeCases = (layerAndKind = 'line@edge') => [
   ['starting on a cell centre marks nothing', [], [stage(rightDrag([A, B, C]), [])]]
 ]
 const MODIFIERS = ['Control', 'Shift']
-// The Number, Sudoku and Multicolor rows: clicks and drags select, a digit fills the selection.
 const sameValueSetup = [click(at(A)), key('1'), click(at(C)), key('1'), click(at(B))]
 const selectingTool = ({ digit, removeDrag = false, double = [['selects every cell with the same value', sameValueSetup, [stage(doubleClick(at(A)), [`selection=${A},${C}`])]]] }) => ({
   'Left click': [['selects the cell and drops the rest', [click(at(B))], [stage(click(at(A)), [`selection=${A}`])]]],
@@ -145,13 +117,11 @@ const cursorTool = (offset, kind, digitLine) => ({
   Drag: [['acts as a click where it starts', [click({ cell: C, ...offset })], [stage(drag([{ cell: A, ...offset }, { cell: B, ...offset }]), [`cursorS@${kind}`, 'cursor@cell', `selection=${A}`])]]],
   Digit: [['writes a number at the cursor', [click({ cell: A, ...offset })], [stage(key('5'), [digitLine])]]]
 })
-// The flick tools: a click writes the centre value, a drag toward a direction that direction's value.
 const flickTool = (lineOf, centre, layout) => ({
   'Left click': [['writes the centre value, then clears', [], cycle(click(at(A)), [lineOf(centre)], [])]],
   'Right click': nothing(rightClick(at(A))),
   Drag: Object.entries(layout).map(([dir, value]) => [`toward ${dir}: ${value}`, [], [stage(drag([at(A), toward(A, dir)]), [lineOf(value)])]])
 })
-// Right click of Stars and the mine tools: × in a cell, a green dot on a corner or an edge.
 const CELL_CROSS_AND_CORNER_DOT = [
   ['on a cell: ×, then clears', [], cycle(rightClick(at(A)), [STAR_CROSS], [])],
   ['on a corner: green dot, then clears', [], cycle(rightClick(cornerOf(A)), [sym(GREEN_DOT, 'corner')], [])],
@@ -192,7 +162,6 @@ const CAGE = { mode: 'cage', submode: '1' }
 const CAGE_STYLE = 10
 const OTHER_CAGE_STYLE = 7
 
-// From A's left edge to C's right edge.
 const WALL_PATH = [{ cell: A, dx: -0.5, dy: 0 }, { cell: C, dx: 0.5, dy: 0 }]
 
 // Cases by tool key and card row: [title, setup steps, stages].
@@ -519,13 +488,8 @@ const SHAPE_CASES = {
   }
 }
 
-// ---- Running a case --------------------------------------------------------------------------------------------------
-
-// Steps a dispatched drag takes between two of its points, as Playwright's `mouse.move` takes `steps`.
 const DRAG_STEPS = 4
 
-// Runs in the page: dispatches a right drag through `points` (viewport pixels) on the board's canvas, each point as a
-// pointer event and the mouse event that follows it, with button 2 held from the press to the release.
 function touchpadRightDragInPage (points) {
   const canvas = document.getElementById('canvas')
   const send = (type, { x, y }, buttons) => {
@@ -546,7 +510,6 @@ function touchpadRightDragInPage (points) {
   send('mouseup', last, 0)
 }
 
-// Runs in the page: what a gesture can change, as plain data.
 function snapshotInPage () {
   const s = readEngineState()
   // The undo and replay logs change with every entry and are not what the card describes.
@@ -562,7 +525,6 @@ function snapshotInPage () {
   }
 }
 
-// Runs in the page: the change from `before` to `after` as sorted `layer@kind=value` lines.
 function changeInPage ({ before, after }) {
   const KINDS = { 0: 'cell', 1: 'corner', 2: 'edge', 3: 'edge' }
   const kindOf = (key) => String(key).split(',').map((k) => KINDS[pu.point[k]?.type] ?? `type${pu.point[k]?.type}`).join('-')
@@ -609,7 +571,6 @@ async function withKeys (page, mods, run) {
   }
 }
 
-// Performs one step with the real mouse and keyboard, or for setup in the page.
 async function perform (page, step) {
   if (step.act === 'click') {
     const { x, y } = await pixel(page, step.where)
@@ -655,8 +616,7 @@ async function perform (page, step) {
   }
 }
 
-// Clears the board and its givens, picks `tool`, runs `setup`, picks `tool` again (setup may have used another), then
-// runs each stage and returns each stage's change. `tool` carries its style, since the engine keeps a tool's last one.
+// `tool` carries its style, since the engine keeps a tool's last one.
 async function runCase (page, tool, setup, stages) {
   await page.evaluate((t) => {
     engine.releaseHolds()
@@ -685,10 +645,8 @@ async function checkedChanges (page, tool, setup, stages) {
   return { changes, expected, mismatch: JSON.stringify(changes) !== JSON.stringify(expected) }
 }
 
-// Whether any case of a row, given as each case's stages, expects the board to change.
 const casesExpectChange = (stagesOfCases) => stagesOfCases.some((stages) => stages.some(([, change]) => change.length > 0))
 
-// A tool's Mouse card rows, as `toolGuide.mouseRows` gives them, as gesture -> words.
 const byGesture = ({ left, right, drag, digit, more }) => Object.fromEntries([['Left click', left], ['Right click', right], ['Drag', drag], ...(digit ? [['Digit', digit]] : []), ...more])
 
 // The words of a Given row, the card's other way to name no change.
@@ -703,8 +661,6 @@ function unlikeRows (label, rows, byRow, nothing, stagesOf) {
     .map(([g, text]) => `${label} ${g}: "${text}"`)
 }
 
-// ---- The checks ------------------------------------------------------------------------------------------------------
-
 const toolOfKey = (key) => {
   const [mode, submode] = key.split('/')
   return { mode, submode: submode === '' ? null : submode }
@@ -715,7 +671,6 @@ describe('the Mouse card against the board', () => {
   before(async () => { opened = await openSolvePage(browser(), await newBoardSolveLink(browser())) })
   after(async () => { await opened?.context.close() })
 
-  // Each tool's style as the page first offers it, before a case changes it.
   let firstStyles
   before(async () => {
     firstStyles = await opened.page.evaluate(() => Object.fromEntries(engine.listTools().map((t) => {

@@ -10,8 +10,6 @@ import { committedTree } from './live-scratch.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 
-// A scratch repo with the given files committed and `.gitattributes` marking `owned` patterns `merge=ours`, and the real
-// tools linked in.
 function scratch (files, owned) {
   return committedTree({ ...files, '.gitattributes': owned.map((pattern) => `${pattern} merge=ours\n`).join('') }).dir
 }

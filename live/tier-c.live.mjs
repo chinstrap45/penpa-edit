@@ -14,13 +14,11 @@ import { boardLoaded, buildPuzzle, puzzleFromRecording, TIER_C_PUZZLES } from '.
 
 const browser = useBrowser()
 
-// The kept recordings of solvers' converted histories.
 const historyIds = []
 for (const id of await listRecordings()) {
   if (id.startsWith(TIER_C_FAMILY + '/') && (await readRecording(id)).header.history) historyIds.push(id)
 }
 
-// Opens `puzzle`'s solve link and makes `steps` on it through the engine driver; the caller closes the context.
 async function solvedPage (puzzle, steps, options) {
   const opened = await openPenpa(browser(), puzzle.source, options)
   await boardLoaded(opened.page)
@@ -29,7 +27,6 @@ async function solvedPage (puzzle, steps, options) {
   return opened
 }
 
-// Runs in the page: the solve history part (`r`) of the page's Replay link.
 function replayHistoryInPage () {
   return pu.maketext_replay().split('&r=')[1]
 }
@@ -43,7 +40,6 @@ function replayLinkOf (puzzle, changes) {
   })
 }
 
-// Every seed of the answer-aimed fuzz solves `puzzle`.
 async function fuzzSolves (puzzle) {
   for (const seed of TIER_C_SEEDS) {
     const { failure } = await answerRun(browser(), puzzle, generateSolve(puzzle, seed))
@@ -125,8 +121,8 @@ describe('tier C', () => {
     })
   })
 
-  // The ticket's open question: a solver's Replay link of a puzzle reopened from saved progress (`PenpaProgress.save`,
-  // which stores the solve-mode duplicate link) still holds the whole solve history, not only the board.
+  // A Replay link of a puzzle reopened from saved progress (`PenpaProgress.save`, which stores the solve-mode duplicate link)
+  // must still hold the whole solve history, not only the board.
   describe('saved progress of a solved puzzle, reloaded', () => {
     let saved, reloaded, solvedAfter
     before(async () => {
@@ -158,7 +154,6 @@ describe('tier C', () => {
 
   it('reads unsolved once a solved sudoku has a conflict', async (t) => {
     const puzzle = puzzles['sudoku-9x9']
-    // A digit of another cell of its row, typed into a solved cell.
     const [cell] = puzzle.answer
     const other = puzzle.answer.find((c) => c.row === cell.row && c.digit !== cell.digit)
     const { x, y } = puzzle.points[cell.num]

@@ -1,7 +1,3 @@
-// Every card but the Board closes by its header × and reopens from the top bar's Cards menu (#334): a closed card leaves its
-// column refitted with no overlap and nothing outside the window, stays closed through a reload, and comes back to its
-// automatic place. A column the solver resized keeps its sizes, an emptied column gives the fitted Board its width, and the
-// pins and the shortcut sheet keep working with cards closed. Read through the cards' bounding boxes; the clicks are real.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import {
@@ -19,7 +15,6 @@ const SOME_RULES = 'Put a digit from 1 to 9 in every cell.'
 const PINS = ['Sudoku Normal', 'Line Normal', 'Wall']
 const LEFT = ['Rules', 'Mouse']
 const RIGHT = ['Pinned', 'Mode', 'Recent']
-// How far two edges may differ by rounding.
 const ROUNDING_PX = 2
 
 const read = (page) => steady(page, readDeskInPage, CARDS)
@@ -30,9 +25,6 @@ const near = (a, b) => Math.abs(a - b) <= ROUNDING_PX
 const sameBox = (a, b) => ['x', 'y', 'w', 'h'].every((edge) => near(a[edge], b[edge]))
 const boxesMeet = (b, c) => b.x + ROUNDING_PX < c.x + c.w && c.x + ROUNDING_PX < b.x + b.w && b.y + ROUNDING_PX < c.y + c.h && c.y + ROUNDING_PX < b.y + b.h
 
-// No two shown cards overlap, every shown card is inside the desk, and each column is laid out as the fitted desk lays it:
-// a left column of one card takes the whole column; the right column's first card at its top, Recent on its bottom, the
-// cards in Pinned, Mode, Recent order, one width.
 function assertTidy ({ desk, cards }, what) {
   const shown = Object.entries(cards).filter(([, box]) => box)
   const say = `${what}: ${JSON.stringify(cards)} in ${JSON.stringify(desk)}`
@@ -66,7 +58,6 @@ function assertSamePlaces (now, was, what, names = CARDS) {
 
 const closeByX = (page, name) => page.getByRole('region', { name }).getByRole('button', { name: `Close ${name} card` }).click()
 
-// Drags a card by its title bar, which ends the fitted layout.
 async function dragHeader (page, name, dx, dy) {
   const head = await page.locator(`section[aria-label="${name}"] .ui-head h2`).boundingBox()
   await page.mouse.move(head.x + 5, head.y + 5)
@@ -75,7 +66,6 @@ async function dragHeader (page, name, dx, dy) {
   await page.mouse.up()
 }
 
-// Drags a card's resize handle `edge` by `dx`, `dy`.
 async function dragHandle (page, name, edge, dx, dy) {
   const box = await page.locator(`section[aria-label="${name}"] [data-testid="resize-${edge}"]`).boundingBox()
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)

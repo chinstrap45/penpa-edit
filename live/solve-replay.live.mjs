@@ -13,7 +13,6 @@ import { compareDrivers } from './replay.mjs'
 const browser = useBrowser()
 
 const TOOL_CARDS = fileURLToPath(new URL('../docs/ui/tool-cards.js', import.meta.url))
-// The line of the Mode card that applies the tool a pick chose.
 const APPLY_PICK = /engine\.setTool\(\{ mode: tool\.mode, submode: tool\.submode \}\)/
 // A recording that picks Sudoku's first sub-mode and then enters digits.
 const SUDOKU_ID = 'value/audit-c7-alphabet-digit'

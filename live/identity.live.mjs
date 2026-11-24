@@ -1,4 +1,3 @@
-// The pages do not name Swaroop or upstream as their owner (#375, spec #373 Identity): popup titles, page titles and share previews.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { AKARI_SOLVE, openPenpa, useBrowser } from './page.mjs'
@@ -9,7 +8,6 @@ const browser = useBrowser()
 const FORK_ADDRESS = 'https://chinstrap45.github.io/penpa-edit/'
 const PAGES = [['index.html', { solve: false }], ['solve.html', { solve: true }]]
 
-// Runs in the page: the head's title and every `og:`/`twitter:` meta, as [name, content] pairs.
 function headIdentity () {
   const metas = [...document.head.querySelectorAll('meta')]
     .map((m) => [m.getAttribute('property') ?? m.getAttribute('name'), m.content])

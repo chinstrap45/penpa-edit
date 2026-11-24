@@ -1,5 +1,5 @@
-// One name per tool across the Mode card (the picker rows add the plain name before the Penpa+ one), the Board card's label, the Mouse card's headline, the Pinned chips and the Recent chips
-// (#190), the tool-change banner and the Board card's colour cue, which mirrors the current pin's chip (#243). The UI is found by role and accessible name where it has one, else by its class or test id; the tool is set through `engine`.
+// One name per tool across the Mode card (the picker rows add the plain name before the Penpa+ one), the Board card's label, the Mouse card's headline, the Pinned chips and the Recent chips,
+// the tool-change banner and the Board card's colour cue, which mirrors the current pin's chip. The UI is found by role and accessible name where it has one, else by its class or test id; the tool is set through `engine`.
 import assert from 'node:assert/strict'
 import { before, after, describe, it } from 'node:test'
 import { afterChange, animationsDone, chipName, listedTools, newBoardSolveLink, openSolvePage, setTool, shareOf, useBrowser, waitForTool } from './page.mjs'
@@ -24,9 +24,7 @@ const pickerName = async (page, tool) => {
   const branch = await pickerRow(page, tool).evaluate((row) => row.parentElement.parentElement.previousElementSibling?.querySelector('.ui-tname')?.textContent)
   return (await labelOf(page, tool)).startsWith(`${branch} > `) ? `${branch} > ${penpa}` : penpa
 }
-// The chip name the shared name gives `tool`.
 const labelOf = (page, tool) => page.evaluate((t) => window.toolGuide.chipLabel(engine.listTools().find((x) => x.mode === t.mode && x.submode === t.submode)), tool)
-// Waits until the first Recent chip is `tool`'s, not an earlier tool's still on show, and returns it.
 const recentChipOf = async (page, tool) => {
   const label = await labelOf(page, tool)
   await settle(async () => (await chipTexts(region(page, 'Recent')))[0], label)
@@ -36,7 +34,6 @@ const chipTexts = async (card) => (await card.locator('.ui-chip-main').allInnerT
 
 const pin = (page, entries) => page.evaluate((e) => window.pinBoard.replace(e), entries)
 
-// How many tests each loop over every tool splits into.
 const BOARD_SHARES = 8
 const RECENT_SHARES = 4
 
@@ -54,7 +51,7 @@ describe('one name per tool', () => {
     }
   })
 
-  // Each share of the tools is its own test, so the loop over every tool stays inside the seam's per-test timeout (#284).
+  // Each share of the tools is its own test, so the loop over every tool stays inside the per-test timeout.
   for (let share = 0; share < BOARD_SHARES; share++) {
     it(`reads the same on the Board label, the Mouse headline, the Mode card, the picker row Penpa+ name and the Pinned chip, for every tool (share ${share + 1} of ${BOARD_SHARES})`, async () => {
       const { page } = opened
@@ -184,7 +181,6 @@ describe('the Board card\'s colour cue', () => {
   before(async () => { opened = await openSolvePage(browser(), await newBoardSolveLink(browser(), ['Sudoku Normal', 'Sudoku Corner', 'Sudoku Centre'])) })
   after(async () => { await opened?.context.close() })
 
-  // The label's text and pill and the card's frame, as computed colours.
   const cue = (page) => page.evaluate(() => {
     const label = document.querySelector('[data-testid="board-tool-name"]')
     return {
@@ -193,12 +189,10 @@ describe('the Board card\'s colour cue', () => {
       frame: getComputedStyle(label.closest('section, [role=region]')).outlineColor
     }
   })
-  // The dot before the label's name, as a computed colour, or null with none.
   const labelDot = (page) => boardLabel(page).evaluate((label) => {
     const dot = label.querySelector('.ui-dot')
     return dot && getComputedStyle(dot).backgroundColor
   })
-  // The computed fill of the current chip, once it is the one `name` labels and its colours have eased in.
   const currentChipFill = async (page, name) => {
     const chip = region(page, 'Pinned').locator('.ui-chip.is-current', { hasText: name })
     await chip.waitFor()
@@ -230,7 +224,6 @@ describe('the Board card\'s colour cue', () => {
   it('puts a dot in the selected style\'s colour before the name', async () => {
     const { page } = opened
     const green = await page.evaluate(() => engine.listTools().find((x) => x.mode === 'sudoku' && x.submode === '1').styles.find((s) => s.name === 'green'))
-    // Landing on a pin restores the pin's style, so the style is chosen once the tool is current.
     await setTool(page, { mode: 'sudoku', submode: '1' })
     await waitForTool(page, { mode: 'sudoku', submode: '1' })
     await afterChange(page)
@@ -256,7 +249,6 @@ describe('the style mark beside the tool name', () => {
   // The em height desk.css gives the mark's drawing.
   const MARK_EM = 1.1
 
-  // The style of the tool at `mode`/`submode` with no swatch, named `name` or else (no name) the first with a text `sample`.
   const plainStyle = (page, mode, submode, name) => page.evaluate(([m, sm, n]) => engine.listTools().find((t) => t.mode === m && t.submode === sm)
     .styles.find((s) => !s.swatch && (n ? s.name === n : Boolean(s.sample))), [mode, submode, name])
   // Makes the tool current, then picks the style: landing on a pin restores the pin's style, so the style is chosen once the tool is current.
@@ -268,7 +260,6 @@ describe('the style mark beside the tool name', () => {
     const pressed = region(page, 'Mode').getByRole('group', { name: 'Style' }).locator('.ui-stylebtn[aria-pressed=true]')
     assert.equal(await settle(() => pressed.getAttribute('aria-label'), style.name), style.name)
   }
-  // Where the style shows beside the tool's name: the Board title chip and the Mouse headline.
   const mouseHeading = (page) => region(page, 'Mouse').getByRole('heading', { level: 3 })
   const places = (page) => [boardLabel(page), mouseHeading(page)]
   const markOf = (place) => place.evaluate((node) => ({
@@ -353,7 +344,6 @@ describe('the Mouse headline at 1366x768', () => {
     const heading = region(page, 'Mouse').getByRole('heading', { level: 3 })
     const lines = () => heading.evaluate((h) => Math.round(h.getBoundingClientRect().height / parseFloat(getComputedStyle(h).lineHeight)))
     assert.equal(await settle(lines, 1), 1)
-    // A card narrower than the name cuts it short, with the whole name as the tooltip.
     await heading.evaluate((h) => { h.style.maxWidth = '60px' })
     assert.equal(await lines(), 1, 'a narrow headline stays on one line')
     assert.equal(await heading.getAttribute('title'), await heading.locator('.ui-hname').textContent())

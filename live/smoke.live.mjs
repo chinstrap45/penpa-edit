@@ -1,4 +1,3 @@
-// Penpa+ opens a solve link in solve mode with the puzzle's clues; `useBrowser` fails it on any page error or console.error.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { AKARI_SOLVE, openPenpa, useBrowser } from './page.mjs'

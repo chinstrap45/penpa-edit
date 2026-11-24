@@ -1,14 +1,11 @@
-// Copy and paste (`pu.copy_handler`, `pu.paste_handler`) on a live page, with stub clipboard events.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'
 
 const browser = useBrowser()
 
-// Runs in the page. Puts a question number in each `source` cell ([dx, dy, t, value], offsets from the `base` cell's
-// [x, y]; `t` is a triangle grid's up or down orientation, 0 elsewhere), selects those cells in `selectionOrder` (indices
-// into `source`), copies, selects the `target` cells (offsets from `base`; the first is the one that pasting must treat
-// as the corner) in reverse order, pastes, and returns the numbers now on the grid as [dx, dy, t, value] from that first target cell.
+// Selects the `target` cells in reverse order; the first target is the corner pasting must use. Cells are
+// [dx, dy, t, value], `t` a triangle grid's up or down orientation, 0 elsewhere.
 function copyPasteInPage ({ gridtype, base, source, selectionOrder, target }) {
   UserSettings.gridtype = gridtype
   pu = make_class(gridtype)

@@ -1,16 +1,14 @@
-// One snapshot of the solve page (#195), what the UI fuzz's crash signals and rules (`rules.mjs`) read after every action:
+// One snapshot of the solve page, what the UI fuzz's crash signals and rules (`rules.mjs`) read after every action:
 // the window, each card's rectangle, heading and background, the Board label and the name of the engine's tool, the Board
 // card's scroll, the pins, Recent, Pinned's undo line, the theme, the dialogs, the undo state and the board, and the page's
 // errors so far. `rules.mjs` says what each field holds. Not a check itself.
 
-// Runs in the page: the snapshot's page half. A heading or label line is `{ text, lines }`, `lines` the count of rows its
-// text is drawn on; a chip is `{ shortcut, label, current }`, `shortcut` null on a chip with no key.
+// Runs in the page.
 function pageStateInPage () {
   const rect = (node) => {
     const { x, y, width, height } = node.getBoundingClientRect()
     return { x, y, width, height }
   }
-  // The rows a node's text sits on: the distinct tops of its text's line boxes, a pixel apart or more.
   const line = (node) => {
     if (!node) return null
     const range = document.createRange()
@@ -26,7 +24,6 @@ function pageStateInPage () {
       current: chip.getAttribute('aria-pressed') === 'true'
     }
   })
-  // The name the solve page gives the engine's tool, as `tool-cards.js` names it: a tool the link does not list by its mode.
   const { chipLabel, toolKey } = window.toolGuide
   const tool = engine.getTool()
   const listed = engine.listTools().find((t) => toolKey(t) === toolKey(tool))
@@ -54,7 +51,6 @@ function pageStateInPage () {
     tool,
     shortcutsEnabled: engine.getSettings().shortcuts_enabled,
     theme: engine.getSettings().theme,
-    // Every dialog, open or closed: a step closes what it opens before the snapshot is read.
     dialogs: [...document.querySelectorAll('wa-dialog')].map((dialog) => ({
       label: dialog.getAttribute('label'),
       background: getComputedStyle(dialog.shadowRoot.querySelector('[part~="dialog"]')).backgroundColor
@@ -64,7 +60,6 @@ function pageStateInPage () {
   }
 }
 
-// The snapshot of `page`, whose page errors and `console.error` lines so far are `errors` (as `openPenpa` collects them).
 export async function readPageState (page, errors) {
   return { ...await page.evaluate(pageStateInPage), errors: [...errors] }
 }

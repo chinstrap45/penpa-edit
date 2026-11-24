@@ -1,4 +1,3 @@
-// The answer check (`pu.check_solution`) on a live page, for an answer the author set as OR categories.
 import assert from 'node:assert/strict'
 import { before, describe, it } from 'node:test'
 import { ANSWER_CELL, makeNumberSolveLink, openPenpa, SAME_ROW_CELL, typeDigitInPage, useBrowser } from './page.mjs'
@@ -7,8 +6,6 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// Runs in the page. Shades one cell as the author's answer, ticks the OR boxes for shading and black squares (the
-// second category stays empty), and returns the solve link's `#` part, the shaded cell's index and the answer made.
 function authorOrAnswerInPage () {
   const cell = pu.centerlist[5]
   pu.pu_a.surface[cell] = 1

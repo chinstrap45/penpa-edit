@@ -1,7 +1,4 @@
-// The top bar's Penpa+ button (#148, #244): the escape hatch to `index.html` on the same puzzle, keeping the solver's progress both
-// ways through the progress store the two pages share; and index.html's Back to new UI button (#364). Served over one origin so the store is shared; the buttons are found
-// by role and accessible name and the board is read as Penpa+ would save it (`board`). The timer is not checked: it is a
-// running clock, and nothing here reads it.
+// Served over one origin so the two pages share the progress store. The timer is not checked: it is a running clock.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { board, DIGIT_CELL, makeNumberSolveLink, MARK_CELL, SHADED_CELL, openPenpa, openSolvePage, setTool, shadeInPage, typeDigitInPage, useBrowser, waitForDesk } from './page.mjs'
@@ -10,7 +7,6 @@ import { settle } from './settle.mjs'
 
 const browser = useBrowser()
 
-// The cell the test fills on index.html, clear of the others.
 const PENPA_CELL = 15
 
 const entered = async (page) => (await board(page)).entered

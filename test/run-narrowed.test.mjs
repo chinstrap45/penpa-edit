@@ -1,5 +1,3 @@
-// The narrowed seam command (`live/run-narrowed.mjs`, #316): the lint, the unit tests, then the live files CI would run for the
-// same change. `--list` names what it would run.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -55,8 +53,6 @@ describe('node live/run-narrowed.mjs --list', () => {
   })
 })
 
-// A scratch repo whose live files record that they ran, and a fake `npm` first on the PATH that records its arguments
-// and exits with $FAKE_NPM_STATUS.
 function runnableRepo () {
   const { dir, git } = scratchRepo()
   for (const file of [ENGINE, UI, PINS]) writeFileSync(join(dir, file), `import { appendFileSync } from 'node:fs'\nappendFileSync(process.env.RAN_LOG, '${file}\\n')\n`)
