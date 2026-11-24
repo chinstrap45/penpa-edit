@@ -1,7 +1,3 @@
-// Pin presets: ready-made sets of pins, one per puzzle genre and filed by genre group, and the sets the solver saves. A searchable list on
-// the Pinned card loads one, replacing the puzzle's pins; the solver stars favourites, which are listed first, and saves or deletes
-// sets of their own. The saved sets and the stars are kept in localStorage for every puzzle. Reaches Penpa+ only through `engine`
-// (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
@@ -11,7 +7,6 @@
   const STORAGE_KEY = 'chinstrap.pinPresets'
   const STARS_KEY = 'chinstrap.pinPresetStars'
   const SAVE_LABEL = 'Save pins…'
-  // Keys that act on the highlighted preset, with Shift held; the buttons' hints name the same chords.
   const STAR_KEY = 'Enter'
   const DELETE_KEY = 'Delete'
   const FAVOURITES = 'Favourites'
@@ -19,7 +14,6 @@
   const THIS_PUZZLE = 'This puzzle'
   const PUZZLE_DEFAULTS = 'Puzzle defaults'
   const PUZZLE_DEFAULTS_NOTE = 'the pins this puzzle\'s link opens with'
-  // How long the line offering an Undo stays, when nothing else clears it.
   const UNDO_VISIBLE_MS = 8000
 
   const STAR_ICON = '<path d="M8 1.8l1.9 4 4.3.6-3.1 3 .8 4.3L8 11.6l-3.9 2.1.8-4.3-3.1-3 4.3-.6z"/>'
@@ -71,7 +65,6 @@
     return { mode, submode: submode === '' ? null : submode, style: null }
   }
 
-  // `{ name, tools }` entries.
   const isListOf = (isValid) => (stored) => Array.isArray(stored) && stored.every(isValid)
   const savedPresets = () => readStored(STORAGE_KEY, isListOf((p) => typeof p?.name === 'string' && Array.isArray(p.tools)), [], 'saved presets')
   const writePresets = (presets) => localStorage.setItem(STORAGE_KEY, JSON.stringify(presets))
@@ -84,7 +77,6 @@
   const builtInKey = (name) => `${BUILT_IN_PREFIX}${name}`
   const savedKey = (name) => `saved:${name}`
 
-  // Every preset: built-ins first, then the saved ones. `tools` are `{ mode, submode, style }` objects.
   function allPresets () {
     return [
       ...BUILT_IN.map(([group, name, keys]) => ({ key: builtInKey(name), group, name, tools: keys.map(toolOfKey), saved: false })),
@@ -92,7 +84,6 @@
     ]
   }
 
-  // A 14 px line icon for a button.
   const icon = (inner) => `<svg ${ICON_ATTRS}>${inner}</svg>`
 
   function entryButton (cls, label, key, svg, onClick) {
@@ -154,7 +145,6 @@
 
     saveName.addEventListener('click', saveFromForm)
     cancelName.addEventListener('click', closeForm)
-    // Enter in the name field saves, unless it confirms an input method's composition; a half-typed name is not a name.
     nameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.isComposing) {
         e.preventDefault()
@@ -169,8 +159,6 @@
         closeForm()
       }
     })
-    // The line offering to undo the last load, delete or replacing save, until the next one, a few seconds, or (for a delete) the
-    // list closing.
     const undoRow = el('div', { class: 'ui-preset-undo', role: 'status' })
     let undoTimer = null
     let clearOnListClose = false
@@ -205,7 +193,6 @@
       picker.redraw()
     }
 
-    // Takes a saved preset out of storage, with its star; returns what undo needs: the preset, where it stood and whether it was starred.
     function removeSaved (name) {
       const all = savedPresets()
       const index = all.findIndex((p) => p.name === name)
@@ -216,7 +203,6 @@
       return { preset: all[index], index, wasStarred: starred.includes(key) }
     }
 
-    // Puts `preset` back among the saved ones at `index`, in place of one of its name.
     function restoreSaved (preset, index) {
       const others = savedPresets().filter((p) => p.name !== preset.name)
       others.splice(index, 0, preset)
@@ -320,7 +306,6 @@
 
     cards.pins.body.append(el('div', { class: 'ui-preset-row' }, [picker.node, save]), nameForm, undoRow)
 
-    // The solver's saved presets, for the Settings dialog to list and delete.
     window.pinPresets = {
       savedNames: () => savedPresets().map((p) => p.name),
       remove: removeSaved

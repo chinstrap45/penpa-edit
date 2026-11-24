@@ -1,6 +1,5 @@
-// The Mode card's tool tree: groups, modes and sub-modes (Symbols and marks one level deeper), each branch opening and closing on
-// its own, with the ARIA tree keys and Shift+Enter for the pin toggle a tool row holds in its `.ui-tpin` slot. The rows are built once and
-// only shown, hidden and marked afterwards, so a rebuild never lands between a mouse press and its release. Knows no `engine`.
+// The rows are built once and only shown, hidden and marked afterwards, so a rebuild never lands between a mouse press and its
+// release. Knows no `engine`.
 (function () {
   'use strict'
 
@@ -16,8 +15,7 @@
   const depth = (node) => 1 + Math.max(0, ...node.children.map(depth))
   const rootOf = (node) => (node.parent ? rootOf(node.parent) : node)
 
-  // A row reads "Plain name (Penpa+ name)": the Penpa+ name loses the "Mode > " its branch shows, and a plain name that is only the
-  // branch's own name gives way to it. The same text is never shown twice.
+  // The Penpa+ name loses the "Mode > " its branch shows, so the same text is never shown twice.
   function rowNames (label, plainName, parent) {
     const same = (a, b) => a.toLowerCase() === b.toLowerCase()
     const prefix = `${parent.label} > `
@@ -48,11 +46,11 @@
           ancestors.push(at.label)
         }
         made.names = rowNames(label, place.plainName, parent)
+        // A radio's sub-mode value is a bare digit nobody saw in Penpa+, so it is no name.
         made.oldNames = [...tool.labels, tool.mode, /^\d*$/.test(tool.submode ?? '') ? null : tool.submode].filter(Boolean)
         const fields = [...ancestors, label, place.plainName, place.description, tool.modeName, ...made.oldNames]
         made.text = fields.join(' ').toLowerCase()
         made.looseText = looseText(fields)
-        // The plain name ranks as a name too, so "shade" still makes Surface the Enter pick.
         const names = [...ancestors, label, place.plainName]
         made.labelText = names.join(' ').toLowerCase()
         made.looseLabelText = looseText(names)
@@ -69,7 +67,6 @@
     return roots.filter((root) => root.children.length)
   }
 
-  // `onBest(id)` hears the id of the row Enter would pick, or null.
   function createModeTree (tools, onPick, onBest) {
     const roots = buildNodes(tools)
     const all = []
@@ -123,11 +120,9 @@
       return node.wrap
     }
     tree.append(...roots.map(render))
-    // The mouse press keeps the focus where it is, so the click that follows is a pick or a fold.
     tree.addEventListener('mousedown', (e) => e.preventDefault())
 
-    // A radio's sub-mode value is a bare digit nobody saw in Penpa+, so it is neither searched nor shown. The hint names the
-    // old name that holds the whole search, so it appears only when the row's own label does not.
+    // The hint shows only when the row's own label does not hold the whole search, so a match on a Penpa+ name is never unexplained.
     function showOldName (node, matched) {
       const hint = node.row.querySelector('.ui-tmatch')
       const holds = (name) => matchesSearch(loose ? looseText([name]) : name.toLowerCase(), words)
@@ -136,8 +131,6 @@
       hint.hidden = !name
     }
 
-    // Shows what the open set and the search say: a leaf shows when it matches; a branch shows when a leaf below does,
-    // and is open while searching, so every match shows under its ancestors.
     function refresh () {
       const searching = words.length > 0
       let shown = 0
@@ -177,7 +170,6 @@
       onBest(best?.row.id ?? null)
     }
 
-    // A leaf's `text` or `labelText`, in the spelling the search is matched in.
     const searched = (leaf, field) => (loose ? leaf[field === 'text' ? 'looseText' : 'looseLabelText'] : leaf[field])
 
     const visibleRows = () => all.filter((node) => !node.row.closest('[hidden]'))
@@ -189,7 +181,6 @@
     }
 
     function toggle (node) {
-      // A search holds every branch with a match open, so a fold would show nothing.
       if (words.length) {
         return
       }
@@ -272,7 +263,6 @@
     return {
       tree,
       levels,
-      // Filters to the tools whose search text holds every word of `text`, loosely when none does; returns how many match.
       search (text) {
         loose = false
         words = searchWords(text)
@@ -284,7 +274,6 @@
         words = looseWords(text)
         return refresh()
       },
-      // Opens the branch holding `tool`, and keeps the rest of the open state.
       openBranchOf (tool) {
         const leaf = all.find((n) => n.tool && toolKey(n.tool) === toolKey(tool))
         for (let at = leaf?.parent; at; at = at.parent) {

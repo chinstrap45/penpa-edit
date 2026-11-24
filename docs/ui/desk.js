@@ -1,6 +1,3 @@
-// The solve page: the top bar and the desk of cards, built once `engine` has the puzzle loaded. Every card moves by its
-// title bar and resizes by any edge or corner; one layout is kept in localStorage, with the Rules card's text size beside
-// it: the places of the cards the solver moved hold for every puzzle, the cards' sizes only for the puzzle they were set on.
 // Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
@@ -14,38 +11,27 @@
   const MIN_COLUMN_WIDTH_PX = 240
   const MIN_BOARD_WIDTH_PX = 300
   const TOP_MARGIN_PX = 12
-  // The finest width the fit pass tells apart when it looks for the narrowest left column that needs no scroll.
   const LEFT_WIDTH_STEP_PX = 8
-  // A card never reaches closer than this to the desk's edge once it has to shrink to stay inside.
   const EDGE_MARGIN_PX = 8
   const LAYOUT_KEY = 'chinstrap-solve-layout-v1'
-  // A press moves or resizes a card only once the pointer has gone this far, so a click on a header changes nothing.
   const DRAG_THRESHOLD_PX = 4
-  // While the window keeps changing size, a fitted layout is fitted again only once it has stopped for this long.
   const REFIT_DELAY_MS = 150
-  // Rules takes at most this share of the left column when Mouse needs the rest for its rows (Chris, 2026-11-17).
+  // (Chris, 2026-11-17)
   const RULES_SHARE = 0.55
-  // The widest a side column grows to with the desk's spare width.
   const SIDE_COLUMN_MAX_PX = 640
-  // The side cards' text grows with a desk wider and taller than this, in step with the tighter of the two, up to
-  // TEXT_SCALE_MAX times its size; a wide but short desk has no height for bigger text.
+  // A wide but short desk has no height for bigger text, so the tighter of width and height sets the scale.
   const TEXT_SCALE_FROM = { w: 1600, h: 900 }
   const TEXT_SCALE_MAX = 1.5
-  // The least room between the top bar's heading and its first control.
   const HEADING_GAP_PX = 12
-  // The smallest a card is dragged to, [width, height].
   const MIN_SIZE = { board: [240, 200], mouse: [260, 140], pins: [240, 110], mode: [280, 170], recent: [240, 56], rules: [200, 80] }
-  // The Rules card's own text size, kept beside the layout and cleared with it. Pixels; the - and + buttons step it.
   const RULES_TEXT_KEY = 'chinstrap-solve-rules-text-v1'
   const RULES_TEXT_RANGE_PX = { min: 10, max: 20, step: 2 }
-  // The cards the solver can close, in the Cards menu's order. Each is kept closed per browser in its own key, set to
-  // CARD_CLOSED, apart from the layout, so Reset layout leaves it closed (#183, #334). Mouse's key is still #183's.
+  // Each card is kept closed in its own key, apart from the layout, so Reset layout leaves it closed.
   const CLOSEABLE_CARDS = ['rules', 'mouse', 'pins', 'mode', 'recent']
   const closedKey = (id) => `chinstrap-solve-${id}-closed-v1`
   const CARD_CLOSED = '1'
-  // Each resize handle by name, with the edges of the card it moves. `desk.css` places and styles each by the same name.
-  // What every resize handle says on hover: a double-click on it makes the axes it resizes automatic again (#252).
   const FIT_TOOLTIP = 'Double-click to fit automatically'
+  // desk.css places and styles each handle by the same name.
   const RESIZE_HANDLES = {
     top: ['top'],
     right: ['right'],
@@ -57,21 +43,15 @@
     'bottom-left': ['bottom', 'left']
   }
 
-  // Variant L's arrangement, which the fitted layout sizes: Rules over Mouse on the left (#181), the Board between,
-  // Pinned, Mode and Recent on the right.
   const LEFT_COLUMN = ['rules', 'mouse']
   const RIGHT_COLUMN = ['pins', 'mode', 'recent']
   const CARD_TITLES = { board: 'Board', mouse: 'Mouse', rules: 'Rules', pins: 'Pinned', mode: 'Mode', recent: 'Recent' }
 
-  // A rules line that starts a list item: its marker, then the text. The marker is its own flex item so a wrapped line
-  // hangs under the text and not under the marker, whatever the marker's width.
   const RULES_MARKER = /^(\s*(?:[-\u2022*]|\d{1,2}[.)])\s+)([\s\S]*)$/
   const RULES_URL = /https?:\/\/[^\s<>"]+/g
-  // Sentence punctuation that ends a URL's surrounding text and not the URL.
   const URL_TRAILING = /[.,;:!?\]'"]+$/
   const countOf = (text, char) => text.split(char).length - 1
 
-  // The URL without the punctuation after it; a closing ")" stays when the URL opened one.
   function trimUrl (url) {
     let trimmed = url
     for (let previous = ''; previous !== trimmed;) {
@@ -84,8 +64,7 @@
     return trimmed
   }
 
-  // Appends `text` to `parent` with each http(s) URL as a link that opens in a new tab. Every node is made with
-  // textContent and setAttribute, so the rules never become HTML.
+  // Every node is made with textContent and setAttribute, so the rules never become HTML.
   function appendWithLinks (parent, text) {
     let last = 0
     for (const match of text.matchAll(RULES_URL)) {
@@ -106,7 +85,6 @@
   const isEmptyRulesCard = (id, node) => id === 'rules' && isRulesEmpty(node)
   const keepsHeight = (id, node) => node.classList.contains('is-sized') && !isEmptyRulesCard(id, node)
 
-  // The Rules card's body: one block per line, and a note when the link carries no rules.
   function showRules (body, rules) {
     const isEmpty = !rules?.trim()
     body.classList.toggle('ui-rules-empty', isEmpty)
@@ -156,8 +134,6 @@
       }
       desk.append(cards[id].node)
     })
-    // A card header's button: `content` is what it shows, `label` its name to screen readers when it differs, and
-    // `hoverLabel` what it shows on hover, the label unless given.
     const headButton = (content, label, hoverLabel = label) => {
       const node = el('wa-button', { appearance: 'filled', variant: 'neutral', size: 's' },
         label ? [el('span', { 'aria-hidden': 'true' }, [content]), el('span', { class: 'ui-sr-only' }, [label])] : [content])
@@ -185,8 +161,6 @@
     return { bar, desk, cards, zoom, rulesText, closeButtons }
   }
 
-  // ---- The kept layout --------------------------------------------------------------------------------------------
-
   // Per card id: `w`, `h` (set once the card was resized; `h` only when its height was set) and `x`, `y`, `vw`, `vh` (set
   // once it was dragged, or by the fitted layout: where it sat, in a desk of `vw` x `vh`). A card with a place keeps its
   // gap to the nearer edges when the desk changes size, so zooming the browser out and back in returns the same layout.
@@ -196,7 +170,6 @@
   function readLayout () {
     // An unreadable layout is only card places, cheap to redo: the desk opens on the fitted one.
     const saved = readStored(LAYOUT_KEY, (stored) => stored !== null && typeof stored === 'object', {}, 'card places')
-    // A card entry this code did not write (another version's, or edited by hand) is left out, as is any other key.
     const isNumbers = (entry) => entry && typeof entry === 'object' && Object.values(entry).every(Number.isFinite)
     const layout = {}
     Object.keys(CARD_TITLES).forEach((id) => {
@@ -212,8 +185,7 @@
   const anchoredLeft = (entry, deskWidth, width) =>
     (entry.x + entry.w / 2 > entry.vw / 2 ? deskWidth - (entry.vw - entry.x - entry.w) - width : entry.x)
 
-  // Whether the solver set a card's width (`hw`), height (`hh`) or place (`placed`) by hand. An entry written before #252
-  // carries no such flag: its size was the solver's, and its place too once it had one.
+  // An entry from an older version carries no such flag: its size was the solver's, and its place too once it had one.
   const isByHand = (entry, flag) => Boolean(entry && !entry.fitted && (entry[flag] ?? (flag !== 'placed' || entry.x !== undefined)))
   const isAutomatic = (entry) => ['hw', 'hh', 'placed'].every((flag) => !isByHand(entry, flag))
 
@@ -225,12 +197,9 @@
   const columnWidthFor = (deskWidth) => Math.max(MIN_COLUMN_WIDTH_PX,
     Math.min(COLUMN_WIDTH_PX, Math.floor((deskWidth - 4 * DESK_MARGIN_PX - MIN_BOARD_WIDTH_PX) / 2)))
 
-  // A card's box on the desk; and whether two boxes (these, or DOMRects) overlap.
   const boxOf = (node) => ({ left: node.offsetLeft, top: node.offsetTop, right: node.offsetLeft + node.offsetWidth, bottom: node.offsetTop + node.offsetHeight })
   const boxesMeet = (p, q) => p.left < q.right && q.left < p.right && p.top < q.bottom && q.top < p.bottom
 
-  // The pairs among the cards `ids` whose `box` (a card id to a box) meet: a map from a key naming the pair to the pair's
-  // two card ids.
   function meetingPairs (ids, box) {
     const pairs = new Map()
     ids.forEach((a, i) => ids.slice(i + 1).forEach((b) => {
@@ -243,7 +212,6 @@
 
   const columnMinWidth = (ids) => Math.max(MIN_COLUMN_WIDTH_PX, ...ids.map((id) => MIN_SIZE[id][0]))
 
-  // The height the Rules card needs to show its whole text at `cardWidth`, measured in a hidden copy of its body.
   function rulesCardHeight ({ node, body }, cardWidth) {
     const probe = el('div', { class: body.className })
     probe.append(...[...body.childNodes].map((child) => child.cloneNode(true)))
@@ -267,11 +235,9 @@
     return natural
   }
 
-  // The resize handle's edges as the axes they resize: 'w' for a left or right edge, 'h' for a top or bottom one.
   const axesOf = (edges) => [...(edges.some((e) => e === 'left' || e === 'right') ? ['w'] : []), ...(edges.some((e) => e === 'top' || e === 'bottom') ? ['h'] : [])]
 
-  // A card's smallest height: MIN_SIZE's, and for Rules at least one line of its text at the size it shows, which the
-  // text scale and its own - and + change. A Rules card with no rules is exactly the one line a reload gives it (#343).
+  // For Rules at least one line of its text at the size it shows; with no rules, exactly the one line a reload gives it.
   function minHeightOf (id, { node, body }) {
     if (id !== 'rules') {
       return MIN_SIZE[id][1]
@@ -286,11 +252,8 @@
     return Math.max(MIN_SIZE.rules[1], Math.ceil(node.offsetHeight - body.clientHeight + oneLine))
   }
 
-  // The desk's cards, kept and laid out: their layout in memory and in localStorage, the fit, the nudges, and the pointer
-  // moves and resizes. `desk` is the desk's element and `cards` the card nodes by id, as `build` made them.
   function createLayout (desk, cards, bar) {
     let saved = {}
-    // The places of the cards the solver moved on another puzzle, put back once the fit has sized the cards for this one.
     let placesKept = null
 
     // The kept layout as this puzzle opens it: whole when its sizes were set on this puzzle, else only the places the solver
@@ -312,8 +275,6 @@
 
     const isMoved = (id) => saved[id]?.x !== undefined
 
-    // Records the card's size, and its place when it was moved, as it is now; `resized` names the axes ('w', 'h') the
-    // solver just dragged and `placed` whether the card itself was dragged.
     function saveCard (id, node, { resized = [], placed = false } = {}) {
       isFitted = false
       const before = saved[id]
@@ -333,27 +294,21 @@
       writeLayout()
     }
 
-    // A card with a place of its own: the layout keeps where it sits, and a window resize keeps its gap to the desk's edges.
     function keepPlace (id, node) {
       saved[id] = { ...saved[id], x: node.offsetLeft, y: node.offsetTop }
     }
-
-    // ---- Placing the cards ------------------------------------------------------------------------------------------
 
     // `mouseCardHeight` and `modeCardHeight`: the Mouse and Mode cards' whole heights that fit every tool they are sized for at
     // a card width. `sizeMouseBody`: sizes the Mouse card's body again, for when it opens. `pinsCardHeightAtTwoRows`: the Pinned
     // card's height with its chips in two rows, or its own height when they already take more. Each set by whoever knows
     // the card's content. Until `mouseCardHeight` is set the desk keeps variant L's fixed layout.
     const fit = { mouseCardHeight: null, modeCardHeight: null, sizeMouseBody: null, pinsCardHeightAtTwoRows: null }
-    // True until the fit pass has run for the desk as it was opened or last reset.
     let fitPending = true
 
-    // Drops the layout in memory, so the next `layout` fits the desk to the window and puzzle.
     function startFit () {
       saved = {}
       fitPending = true
     }
-    // True while the layout is the fitted one and no card has been moved or resized since.
     let isFitted = false
 
     const position = (id, x, y, w) => {
@@ -366,7 +321,6 @@
     const isShown = (id) => !cards[id].node.hidden
     const shownIds = (ids = Object.keys(cards)) => ids.filter((id) => isShown(id))
 
-    // The cards from the top of the column down, each CARD_GAP_PX below the one above it. A closed card takes no room.
     function stack (ids, x, width) {
       let y = TOP_MARGIN_PX
       shownIds(ids).forEach((id) => {
@@ -375,9 +329,6 @@
       })
     }
 
-    // Puts every card at its place for the desk's current size: the fitted layout for a desk with none kept, else each
-    // card's kept size and, if it was moved, its kept place, the default for one never touched. Every card ends inside
-    // the desk, shrunk (to its minimum at most) if need be.
     function layout () {
       const width = desk.clientWidth
       const height = desk.clientHeight
@@ -433,11 +384,7 @@
       return new Map([...pairs].filter(([, [a, b]]) => saved[a].vw === saved[b].vw && saved[a].vh === saved[b].vh))
     }
 
-    // Cards newly put over each other, by a smaller window, places kept from another puzzle or a card that grew, not by the
-    // solver, nudged apart and never refitted (#344): the Board card narrows into the room between the cards beside it, and
-    // each overlap left (or one a too narrow Board leaves) moves the lower of its two cards below the other, shrunk to the room
-    // there is at least, or else squeezes the two apart where they are. What moved is kept, so a reload opens on the same layout. `before` holds the pairs
-    // (`overlappingPairs`' keys) that stay.
+    // Overlaps the solver did not make are nudged apart, never refitted, and what moved is kept; `before` holds the pairs to leave alone.
     function repairOverlaps (before) {
       const isNew = () => [...overlappingPairs()].filter(([key]) => !before.has(key)).map(([, pair]) => pair)
       if (!isNew().length) {
@@ -459,15 +406,13 @@
         Object.assign(board.style, { left: `${left}px`, width: `${right - left}px` })
         nudged.push('board')
       }
-      // A card moves at most once, so this ends.
       const moved = new Set()
       const roomBelow = (id, anchor) => desk.clientHeight - EDGE_MARGIN_PX - (boxOf(cards[anchor].node).bottom + CARD_GAP_PX) - minHeightOf(id, cards[id])
       isNew().forEach(([a, b]) => {
         if (!boxesMeet(boxOf(cards[a].node), boxOf(cards[b].node))) {
           return
         }
-        // The lower card moves below the other, if there is room; the Board only narrows. With no room below for either,
-        // both stay where they are and are squeezed apart (`squeezeApart`); else the overlap stays: the desk is too small.
+        // The Board only narrows; with no room to move either card they are squeezed apart, else the overlap stays (the desk is too small).
         const lowerFirst = cards[a].node.offsetTop > cards[b].node.offsetTop ? [[a, b], [b, a]] : [[b, a], [a, b]]
         const found = lowerFirst.filter(([id]) => id !== 'board' && !moved.has(id)).find(([id, other]) => roomBelow(id, other) >= 0)
         if (found) {
@@ -480,16 +425,13 @@
         }
       })
       nudged.forEach((id) => keepDeskChange(id))
-      // A fitted card's place is kept in memory only; where the solver has a layout kept, it takes the nudge too, so a reload
-      // opens on the nudged cards.
+      // A fitted card's place is kept in memory only; with a layout kept, the nudge is written too.
       if (nudged.length && localStorage.getItem(LAYOUT_KEY) !== null) {
         writeLayout()
       }
     }
 
-    // The `upper` card shrunk to end CARD_GAP_PX above the `lower` one, both keeping the place they have; where that takes
-    // `upper` under its least height, `upper` is at its least and `lower` shrinks from its top (its bottom edge stays) to
-    // the room under it. False, and nothing changed, when `lower` has no room for its least height either.
+    // False, with nothing changed, when `lower` has no room for its least height either.
     function squeezeApart (upper, lower) {
       const [above, below] = [cards[upper], cards[lower]]
       const lowerBox = boxOf(below.node)
@@ -508,7 +450,6 @@
       return true
     }
 
-    // Card `id` CARD_GAP_PX below card `anchor`, shrunk to the room above the desk's bottom.
     function moveClear (id, anchor) {
       const { node } = cards[id]
       const top = boxOf(cards[anchor].node).bottom + CARD_GAP_PX
@@ -519,7 +460,6 @@
       }
     }
 
-    // The places in `places` (card id to `x`, `y`, `vw`, `vh`) given to the fitted cards they name, as places of the solver's.
     function putBack (places) {
       isFitted = false
       shownIds(Object.keys(places)).forEach((id) => {
@@ -536,10 +476,8 @@
       setHeight(cards[id].node, h)
     }
 
-    // The Rules card's height in a left column `width` wide: all the room Mouse leaves when Mouse shows its rows (the tallest
-    // of the tools it is sized for), so neither card leaves a gap at the bottom; where that is less than its text, Rules
-    // keeps up to RULES_SHARE of the column (Chris, 2026-11-17). Mouse keeps at least its minimum. With Mouse closed, the
-    // whole column. A link with no rules leaves Rules one line tall.
+    // Rules takes all the room Mouse leaves when Mouse shows its rows, so neither card leaves a gap; where that is less than its
+    // text, Rules keeps up to RULES_SHARE of the column (Chris, 2026-11-17). With Mouse closed, the whole column.
     function rulesHeightFor (width, columnHeight) {
       if (isRulesEmpty(cards.rules.node)) {
         return rulesCardHeight(cards.rules, width)
@@ -552,12 +490,8 @@
       return clamp(Math.max(room - fit.mouseCardHeight(width), kept), MIN_SIZE.rules[1], room - MIN_SIZE.mouse[1])
     }
 
-    // Pinned at its own height at the top; Mode as tall as its tools need; Recent as tall as its chips (#306), its bottom on
-    // the column's bottom, so the room between Mode and Recent stays empty. Where the column has room, Mode sits at its middle, never higher than under a Pinned card
-    // whose chips take two rows, so a second row of pins moves neither Mode nor Recent (Chris, 2026-11-17); without the
-    // room, the cards stack top-down and Mode gives up height so Recent keeps what it needs, its body scrolling. A closed
-    // card takes no room, and with Pinned closed Mode sits at the column's top: the middle only kept room for Pinned's
-    // second row (#334, ruled 2026-11-18).
+    // Where the column has room, Mode sits at its middle, never higher than under a two-row Pinned card, so a second row of pins
+    // moves neither Mode nor Recent (Chris, 2026-11-17); with Pinned closed Mode sits at the top (ruled 2026-11-18).
     function placeRightColumn (x, width, columnHeight) {
       const bottom = TOP_MARGIN_PX + columnHeight
       const hasPins = isShown('pins')
@@ -585,7 +519,6 @@
       }
     }
 
-    // Rules over Mouse in the left column, Mouse taking what Rules leaves; Rules alone or Mouse alone takes the whole column.
     function placeLeftColumn (x, width, rulesHeight, columnHeight) {
       if (!isShown('rules')) {
         place('mouse', x, TOP_MARGIN_PX, width, columnHeight)
@@ -597,13 +530,9 @@
       }
     }
 
-    // A column's cards the solver has moved or resized none of, one of them at least placed by the fitted layout; a card
-    // closed when the desk was fitted has no entry, and counts as untouched.
     const isColumnFitted = (ids) => ids.some((id) => saved[id]) && ids.every((id) => !saved[id] || saved[id].fitted)
 
-    // Where such a column sits on the desk as it is now: where a shown card of it is, other than `opening`, which still has the
-    // place it had when it closed; else the place the fitted layout gave one of its cards, kept by its nearer edge as
-    // `keepInside` keeps it.
+    // A card being opened still has the place it had when it closed, so it does not say where the column is.
     function columnPlace (ids, opening) {
       const live = shownIds(ids).find((id) => id !== opening)
       if (live) {
@@ -613,8 +542,6 @@
       return { x: anchoredLeft(entry, desk.clientWidth, entry.w), w: entry.w }
     }
 
-    // A card closed or opened (`opening`, when one is) after the solver changed another card: the column `ids`, if the solver
-    // moved or resized none of its cards, is laid out again at the fitted layout's width and place. True when it was.
     function refitColumn (ids, opening = null) {
       if (!isColumnFitted(ids) || !shownIds(ids).length) {
         return false
@@ -630,9 +557,6 @@
       return true
     }
 
-    // A card's automatic height where it sits, on its own: Mode and Mouse as tall as their tools need, Rules its text, and
-    // Board down to the columns' bottom; never past that bottom, nor under the card's minimum. Pinned's
-    // automatic height is no height set at all. A Rules card with no rules is one line tall, as `rulesHeightFor` fits it (#288).
     function automaticHeight (id) {
       const { node } = cards[id]
       const content = { mode: fit.modeCardHeight, mouse: fit.mouseCardHeight, rules: (w) => rulesCardHeight(cards.rules, w) }[id]
@@ -640,8 +564,6 @@
       return Math.max(minHeightOf(id, cards[id]), Math.min(content ? content(node.offsetWidth) : toBottom, toBottom))
     }
 
-    // Recent off the fitted layout is as tall as its chips, growing upward from its bottom edge as far as the card above it
-    // leaves room (#306), the way the fitted layout grows it.
     function setRecentHeight () {
       const { node } = cards.recent
       const box = boxOf(node)
@@ -665,8 +587,6 @@
       }
     }
 
-    // A layout the solver changed, once the tools or the window changed: each column the solver left alone is laid out
-    // again, and every other card whose height is automatic takes it where it sits (#252).
     function fitAutomatic () {
       const refitted = [LEFT_COLUMN, RIGHT_COLUMN].filter((ids) => refitColumn(ids)).flat()
       shownIds().filter((id) => !refitted.includes(id) && saved[id] && !isByHand(saved[id], 'hh')).forEach((id) => {
@@ -679,8 +599,6 @@
       })
     }
 
-    // Gives a card the axes and place the solver set by hand in `kept`, its saved entry, over the fitted layout's; the
-    // rest stay as fitted.
     function putByHand (id, kept) {
       const { node } = cards[id]
       if (isByHand(kept, 'hw')) {
@@ -698,10 +616,8 @@
       saveCard(id, node)
     }
 
-    // A double-click on a resize handle makes the axes it resizes automatic again (#252), the way Figma's "Hug contents"
-    // returns (research/resize-back-to-auto-2026-11.md); once the card has no size the solver set, its place goes back
-    // too. The desk is fitted afresh and only what the solver still holds by hand is put back over it, so a freed axis
-    // takes what a fresh load would give it; with nothing held, the kept layout goes, as on Reset layout.
+    // The desk is fitted afresh and only what the solver still holds by hand is put back over it, so a freed axis takes what a
+    // fresh load gives; with nothing held, the kept layout goes, as on Reset layout.
     function fitAxes (id, axes) {
       const entry = saved[id]
       if (!entry || entry.fitted) {
@@ -720,14 +636,12 @@
       byHand.forEach(([cardId, kept]) => putByHand(cardId, kept))
     }
 
-    // The layout that suits the puzzle on screen (#156). The cap on the Board card leaves the left column its minimum and the
-    // right column its default width, which the ruling keeps; width the board does not need widens the side columns (#199).
-    // Kept in memory, and written only when a card is moved or resized. A zoom the solver set is kept.
+    // The Board's width cap leaves the left column its minimum and the right column its default width; width the board does not
+    // need widens the side columns. Kept in memory, written only when a card is moved or resized.
     function fitCards () {
       const width = desk.clientWidth
       const height = desk.clientHeight
       const columnHeight = height - 2 * TOP_MARGIN_PX
-      // A column with every card closed takes no width, and no gap beside the board (#334).
       const hasLeft = shownIds(LEFT_COLUMN).length > 0
       const hasRight = shownIds(RIGHT_COLUMN).length > 0
       const gapCount = 2 + Number(hasLeft) + Number(hasRight)
@@ -766,15 +680,13 @@
         }
         leftWidth = neededHeight(low) <= columnHeight ? low : high
       }
-      // Width left beside the board widens both side columns alike, up to SIDE_COLUMN_MAX_PX, before it becomes gaps. A
-      // column never narrows here; what the left one cannot take of its half goes to the right one, and back.
+      // Spare width widens both side columns alike, up to SIDE_COLUMN_MAX_PX; what one cannot take of its half goes to the other.
       const sideRoom = width - gapCount * DESK_MARGIN_PX - boardWidth
       const widened = (has, current, target) => (has ? clamp(target, current, Math.max(current, SIDE_COLUMN_MAX_PX)) : 0)
       const leftShare = widened(hasLeft, leftWidth, Math.floor(sideRoom / 2))
       rightWidth = widened(hasRight, rightWidth, sideRoom - leftShare)
       leftWidth = widened(hasLeft, leftWidth, sideRoom - rightWidth)
 
-      // The spare width in a gap on each side of every column, a pixel apart at most, none under DESK_MARGIN_PX.
       const spare = width - boardWidth - leftWidth - rightWidth
       const gapsUpTo = (n) => Math.max(n * DESK_MARGIN_PX, Math.round(n * spare / gapCount))
       const boardGaps = 1 + Number(hasLeft)
@@ -789,8 +701,6 @@
       keepFitted(shownIds())
     }
 
-    // Records the cards `ids` where the fitted layout has them, as places of their own marked `fitted`, which the solver's
-    // first move or resize of that card clears (saveCard writes a new entry).
     function keepFitted (ids) {
       ids.forEach((id) => {
         const node = cards[id].node
@@ -801,16 +711,14 @@
       })
     }
 
-    // A right-column card that changes height after the layout (Pinned with another row of chips) lays the column out
-    // again, while the solver has moved or resized none of its cards (#181). In a column the solver changed, a card the
-    // solver never touched moves down from under the card above it (#199). Never while the solver drags, which would undo
-    // the drag's resize. On a card's `first` size report, a card the solver dragged over this one does not push it down (#369).
+    // A right-column card that changes height lays the column out again while the solver has changed none of its cards; in a
+    // changed column, an untouched card moves down from under the one above. Never while dragging, which would undo the drag's
+    // resize; on a first size report, a card the solver dragged over this one does not push it down.
     function restackRight ({ first = false } = {}) {
       if (isDragging) {
         return
       }
       if (refitColumn(RIGHT_COLUMN)) {
-        // keepInside reads each card's kept place, which the refit kept, so the clamped place is kept again.
         const shown = shownIds(RIGHT_COLUMN)
         shown.forEach((id) => keepInside(id, cards[id].node, desk.clientWidth, desk.clientHeight))
         keepFitted(shown)
@@ -841,8 +749,7 @@
     // Each shown card's height when the cards last changed size, so a card that grows can tell which cards it newly covers.
     const heightsSeen = new Map()
 
-    // A card the desk moved or sized, kept: as fitted while it was, else as the solver's, its flags as they were. One never
-    // saved gets no place of its own, which would read as placed by the solver.
+    // One never saved gets no place of its own, which would read as placed by the solver.
     function keepDeskChange (id) {
       const entry = saved[id]
       if (entry?.fitted) {
@@ -855,11 +762,7 @@
       saveCard(id, cards[id].node)
     }
 
-    // Card `id` grew from the box `was`: each card below it that `was` left clear and that it covers now moves down out from
-    // under it to CARD_GAP_PX below it, and in turn moves what it then covers (#288). That holds for a card the solver
-    // moved or sized too, its size kept, since the growth, not the solver, closed the gap (an exception to #199's rule,
-    // ruled 2026-11-17). A card shrinks only to the room above the desk's bottom; where even its least height has no room,
-    // the grown card stops CARD_GAP_PX above it instead.
+    // A card the solver moved or sized moves too, its size kept: the growth, not the solver, closed the gap (ruled 2026-11-17).
     function clearBelow (id, was) {
       const grown = cards[id].node
       shownIds().filter((other) => other !== id).forEach((other) => {
@@ -912,9 +815,7 @@
       return pairs
     }
 
-    // The cards changed size: each that grew while the solver was not dragging (a pin, a preset's undo line, a tool's
-    // option rows) moves the cards it newly covers out from under it, and a Board it newly reaches narrows away. A card that was closed is placed by the layout as
-    // it opens, so its first height is no growth.
+    // A card that was closed is placed by the layout as it opens, so its first height is no growth.
     function keepGrowthClear () {
       const grown = shownIds().filter((id) => heightsSeen.has(id) && cards[id].node.offsetHeight > heightsSeen.get(id))
         .map((id) => [id, heightsSeen.get(id)])
@@ -941,7 +842,6 @@
       let x = node.offsetLeft
       let y = node.offsetTop
       if (isMoved(id)) {
-        // Anchored to the nearer edge of the desk it was saved in, keeping that edge's gap.
         x = anchoredLeft(entry, deskWidth, node.offsetWidth)
         y = entry.y
         const savedHeight = entry.h ?? node.offsetHeight
@@ -950,11 +850,10 @@
         }
       }
       // A card may be as wide and as tall as the desk, not less its edge margins: a resize drag reaches the desk's edges,
-      // and a card left there must come back from a reload at the same size (#264).
+      // and a card left there must come back from a reload at the same size.
       if (node.offsetWidth > deskWidth) {
         node.style.width = `${Math.max(minWidth, deskWidth)}px`
       }
-      // A card never touched shrinks to the room below its default place; any card shrinks to the desk's size.
       if (!isMoved(id) && y + node.offsetHeight > deskHeight - EDGE_MARGIN_PX) {
         setHeight(node, Math.max(minHeight, deskHeight - EDGE_MARGIN_PX - y))
       }
@@ -965,13 +864,8 @@
       node.style.top = `${Math.max(0, Math.min(y, deskHeight - node.offsetHeight))}px`
     }
 
-    // ---- Moving, resizing and raising ---------------------------------------------------------------------------------
-
-    // True while the solver moves or resizes a card.
     let isDragging = false
 
-    // Runs `onMove(dx, dy)` for a pointer drag begun by `event` on `target`, once it has gone DRAG_THRESHOLD_PX, and
-    // `onEnd(didMove)` when it ends.
     function trackPointer (event, target, onMove, onEnd) {
       isDragging = true
       event.preventDefault()
@@ -1019,7 +913,6 @@
           const from = { x: node.offsetLeft, y: node.offsetTop }
           trackPointer(e, head, (dx, dy) => {
             node.classList.add('is-dragging')
-            // The whole card stays on the desk, EDGE_MARGIN_PX in from its edges where the card leaves room for that.
             const within = (value, room) => Math.max(0, Math.min(Math.max(EDGE_MARGIN_PX, value), room - EDGE_MARGIN_PX))
             node.style.left = `${within(from.x + dx, desk.clientWidth - node.offsetWidth)}px`
             node.style.top = `${within(from.y + dy, desk.clientHeight - node.offsetHeight)}px`
@@ -1039,10 +932,9 @@
             }
             const from = { x: node.offsetLeft, y: node.offsetTop, w: node.offsetWidth, h: node.offsetHeight }
             const minHeight = minHeightOf(id, cards[id])
-            // An empty Rules card's height is not kept (#204), so a resize leaves it its one line.
+            // An empty Rules card's height is not kept, so a resize leaves it its one line.
             const maxHeight = isEmptyRulesCard(id, node) ? minHeight : Infinity
             trackPointer(e, handle, (dx, dy) => {
-              // Every edge stops at the desk's edge; a moving left or top edge keeps the opposite edge where it was.
               if (edges.includes('right')) {
                 node.style.width = `${Math.max(minWidth, Math.min(desk.clientWidth - from.x, from.w + dx))}px`
               }
@@ -1061,7 +953,6 @@
               }
             }, (didMove) => {
               if (didMove) {
-                // A card resized from its left or top edge has a place of its own, kept like a moved card's.
                 if (edges.includes('left') || edges.includes('top')) {
                   keepPlace(id, node)
                 }
@@ -1081,7 +972,6 @@
     if (!fitPending) {
       repairOverlaps(deliberateOverlaps())
     }
-    // The cards laid out again by `step`, and the pairs it newly put over each other nudged apart.
     const nudged = (step) => {
       const before = overlappingPairs()
       step()
@@ -1118,8 +1008,8 @@
       })
     })
     makeMovable(bar)
-    // A card's first report is the size it opened with. Restacking on it under a card the solver dragged over this one would
-    // move the card out from under it, and a reload would not open on the layout it saved (#369).
+    // A card's first report is the size it opened with; restacking on it under a card the solver dragged over this one would move
+    // it out from under, and a reload would not open on the saved layout.
     const reported = new Set()
     const restack = new ResizeObserver((entries) => {
       const first = entries.some(({ target }) => !reported.has(target))
@@ -1130,14 +1020,12 @@
     const growth = new ResizeObserver(() => keepGrowthClear())
     Object.values(cards).forEach(({ node }) => growth.observe(node))
 
-    // Every card back to the layout fitted to the window and puzzle.
     const resetLayout = () => {
       startFit()
       placesKept = null
       localStorage.removeItem(LAYOUT_KEY)
       layout()
     }
-    // Closing or opening a card refits a layout nobody has changed, so the cards left take its room or give it back.
     const setCardClosed = (id, closed) => {
       storeFlag(closedKey(id), CARD_CLOSED, closed)
       const before = overlappingPairs()
@@ -1145,8 +1033,6 @@
       if (id === 'mouse' && !closed) {
         fit.sizeMouseBody?.()
       }
-      // A layout the solver changed keeps its other cards: only the card's own column is fitted again, if the solver
-      // left that column alone.
       if (isFitted) {
         isFitted = false
         startFit()
@@ -1163,10 +1049,6 @@
     return { relayout: layout, resetLayout, fit, fitToTools: fitAutomatic, setCardClosed }
   }
 
-  // ---- The top bar's heading ----------------------------------------------------------------------------------------
-
-  // The title and author sit at the bar's centre; where that would reach the controls, at the bar's left end; and where
-  // they still reach them there, the controls are made smaller (#181). The title is never cut short.
   function placeHeading (bar) {
     const heading = bar.querySelector('.ui-heading')
     const controls = [...bar.children].filter((node) => node !== heading && !node.matches('.ui-spacer') && node.offsetWidth > 0)
@@ -1182,20 +1064,15 @@
     }
   }
 
-  // Places the heading again whenever the bar, the heading or the controls change size. The spacer takes the room the
-  // controls leave, so it changes size with any control, one added later included.
+  // The spacer takes the room the controls leave, so it changes size with any control, one added later included.
   function watchHeading (bar) {
     const resized = new ResizeObserver(() => placeHeading(bar));
     [bar, bar.querySelector('.ui-heading'), bar.querySelector('.ui-spacer')].forEach((node) => resized.observe(node))
   }
 
-  // ---- The Rules card's text size ---------------------------------------------------------------------------------
-
-  // The size before the desk's text scale (desk.css's --ui-rules-text). The default lives in the stylesheet, so the buttons
-  // read it back from the page rather than from a constant.
+  // The default lives in the stylesheet, so the buttons read it back from the page rather than from a constant.
   const rulesTextSize = (body) => parseFloat(getComputedStyle(body).getPropertyValue('--ui-rules-text'))
 
-  // A kept size this code did not write is said in the console and the default is used.
   function showRulesText ({ cards, rulesText }) {
     const { min, max } = RULES_TEXT_RANGE_PX
     const kept = readStored(RULES_TEXT_KEY, (size) => Number.isFinite(size) && size >= min && size <= max, null, `a size from ${min} to ${max}`)
@@ -1229,7 +1106,6 @@
     boardView.mount(desk.cards.board.body)
     const deskLayout = createLayout(desk.desk, desk.cards, desk.bar)
     watchHeading(desk.bar)
-    // Every card back to the layout fitted to the window and puzzle, and the Rules text to its default size.
     const resetLayout = () => {
       boardView.forgetZoom()
       localStorage.removeItem(RULES_TEXT_KEY)

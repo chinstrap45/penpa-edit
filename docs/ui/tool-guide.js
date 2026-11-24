@@ -1,14 +1,10 @@
-// What each tool is for, in words: the group the Mode card files it under, its plain name and description, and what the
-// mouse does with it. The Mouse rows are `research/mouse-card-wording-2026-11.md`, each checked against the board by performing its gesture. Plain data and text, so it needs no `engine`. A tool the table does not know falls back to the engine's name.
+// A tool the table does not know falls back to the engine's name. The Mouse rows are `research/mouse-card-wording-2026-11.md`, each checked by performing its gesture.
 (function () {
   'use strict'
 
-  // The dash a Mouse row shows for nothing.
   const NOTHING = '—'
-  // Where an effect names the 2nd colour, the card draws a dot in it.
   const SECOND_COLOUR_DOT = '{2nd}'
 
-  // The tool groups the Mode card files tools under, by what they put on the board (GLOSSARY.md).
   const TOOL_GROUPS = [
     ['shade', 'Shading and colour'],
     ['lines', 'Lines through cells'],
@@ -59,7 +55,6 @@
     'move/3': ['move', 'Move shapes', 'Drag a shape elsewhere.']
   }
 
-  // Composite sub-mode -> [group, plain name, description]. The plain name is a search term, a chip's tooltip and the first name of the tree's row; Penpa+'s label names the tool elsewhere.
   const COMPOSITE_ENTRIES = {
     blpo: ['shade', 'Shade + dot', 'Left shades a cell, right puts a dot (unshaded).'],
     shaka: ['shade', 'Corner triangles + dot', 'Click places a dot; drag toward a corner, a half-cell triangle.'],
@@ -85,11 +80,9 @@
     arrowS: ['symbols', 'Arrows in cells', 'Places an arrow in a cell.']
   }
 
-  // One tool's identity, for a lookup: its mode and sub-mode.
   const toolKey = (tool) => `${tool.mode}/${tool.submode ?? ''}`
   const findTool = (tools, x) => tools.find((t) => toolKey(t) === toolKey(x))
 
-  // The picker's entry for a tool: where it is filed, its plain name and what it does.
   function describeTool (tool) {
     const known = ENTRIES[toolKey(tool)]
     if (known) {
@@ -109,10 +102,7 @@
     return { group: 'symbols', plainName: tool.name, description: '' }
   }
 
-  // ---- Where the tree files each tool -----------------------------------------------------------------------------
-
-  // Symbols and marks has a level of subgroups, and a symbol that comes in sizes or colours is one entry whose sizes or
-  // colours sit under it (Chris, 2026-11-16). A tool listed under no subgroup goes to the last one.
+  // A symbol in sizes or colours is one entry with them under it (Chris, 2026-11-16). A tool under no subgroup goes to the last one.
   const sizes = (name, prefix, suffixes) => [name, suffixes.map((suffix) => `symbol/${prefix}_${suffix}`)]
   const blackGreyWhite = (name, prefix) => [name, ['B', 'G', 'W'].map((suffix) => `symbol/${prefix}_${suffix}`)]
   const alone = (...keys) => keys.map((key) => [null, [key]])
@@ -149,16 +139,12 @@
     ]]
   ]
 
-  // 'mode/sub-mode' -> where the tree puts a symbol: [subgroup, symbol entry (null: the tool stands alone), rank].
   const SYMBOL_PLACES = new Map()
   SYMBOL_SUBGROUPS.forEach(([subgroup, entries]) => entries.forEach(([entry, variants]) => variants.forEach((key) => {
     SYMBOL_PLACES.set(key, [subgroup, entry, SYMBOL_PLACES.size])
   })))
   const LAST_SUBGROUP = SYMBOL_SUBGROUPS[SYMBOL_SUBGROUPS.length - 1][0]
 
-  // The tree's place for a tool: its group, the branches between the group and the tool (a mode, or a subgroup and a
-  // symbol), its own label, and a rank that orders tools within their group. Modes that name each tool on their own
-  // stand alone one level under their group, and so does a mode with no sub-modes.
   function placeTool (tool) {
     const { group, plainName, description } = describeTool(tool)
     const label = chipLabel(tool)
@@ -192,7 +178,6 @@
   // An effect says what appears on the board; the dot token in one is drawn in the 2nd colour (`SECOND_COLOUR_DOT`).
   const CYCLE_END = 'clear'
   const clearing = (noun) => `starting on ${noun}: clear it`
-  // Rows the number, digit and colour-selection tools share: they select cells, and a digit types into the selection.
   const SQUARE_ONLY = 'square grids only'
   const REMOVE_DRAG = ['Ctrl/Shift + drag', 'from a selected cell: those cells leave the selection']
   const selectRows = (what, double) => [
@@ -200,8 +185,6 @@
     ['Alt + drag', `rectangle of cells selected (${SQUARE_ONLY})`],
     ['Double click', `every cell with the same ${what} selected${double ? `; ${double}` : ''}`]
   ]
-  // `extra` rows go after the click that adds a cell, `after` rows after the shared ones; `double` adds what a double
-  // click does on a cell holding this tool's own marks, when they are not what it matches.
   const selecting = (what, digit, { extra = [], after = [], double } = {}) => {
     const [click, ...rest] = selectRows(what, double)
     return { left: 'only that cell selected', right: NOTHING, drag: 'many cells selected', digit, more: [click, ...extra, ...rest, ...after] }
@@ -221,7 +204,6 @@
   })
   const thermoRows = (click, drag) => ({ left: click, right: NOTHING, drag: `${drag}; drag back to undo a step`, more: [] })
   const move = (what) => ({ left: NOTHING, right: NOTHING, drag: `${what} you entered, moved to an empty cell`, more: [] })
-  // The flick tools: `keys` are the nine values the drag directions give, in the order of a keypad (NW N NE, W centre E, SW S SE).
   const ARROWS = ['↖', '↑', '↗', '←', '', '→', '↙', '↓', '↘']
   const flick = (centre, what, keys) => ({
     left: `${centre} in the cell → ${CYCLE_END}`,
@@ -432,7 +414,6 @@
     }
   }
 
-  // Picker names for Shape tools whose Penpa+ name reads badly (`research/mouse-card-wording-2026-11.md`).
   const SHAPE_NAMES = {
     cross: 'Cross arms',
     arrow_cross: 'Arrow cross',
@@ -469,11 +450,8 @@
     angleloop: 'Angle loop'
   }
 
-  // The name every card gives the tool's sub-mode.
   const submodeLabel = (tool) => (tool.mode === 'symbol' && SHAPE_NAMES[tool.submode]) || tool.submodeName
 
-  // What Left click, Right click, Drag and Digit do with the tool (`digit` is absent for a tool that types nothing), plus extra rows as
-  // [gesture, effect]; a flick tool's `keypad` lists its drag directions' keys.
   function mouseRows (tool) {
     if (tool.mode === 'symbol') {
       return ON_OFF_SHAPES.includes(tool.submode) ? SHAPE_ROWS.onOff : SHAPE_ROWS.variants
@@ -481,12 +459,10 @@
     return ROWS[toolKey(tool)] ?? { left: NOTHING, right: NOTHING, drag: NOTHING, more: [] }
   }
 
-  // A sub-mode that names its tool on its own stands alone in a chip; a generic one ("Normal") gets its mode first.
   const SELF_NAMING_MODES = ['combi', 'special', 'symbol']
 
   const capitalised = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 
-  // The one name every card gives a tool of `listTools()`: the Mode field, the Board label, the Mouse headline, the chips and the flash.
   function chipLabel (tool) {
     if (!tool.submodeName) {
       return tool.modeName
@@ -494,7 +470,6 @@
     return SELF_NAMING_MODES.includes(tool.mode) ? submodeLabel(tool) : `${tool.modeName} > ${capitalised(tool.submodeName)}`
   }
 
-  // The attributes giving a chip its tooltip: the tool's plain name from `ENTRIES` or `COMPOSITE_ENTRIES` ("Shade cells" for Surface), none for a tool they do not list.
   const tooltipAttrs = (tool) => {
     const plainName = tool.mode === 'combi' ? COMPOSITE_ENTRIES[tool.submode]?.[1] : ENTRIES[toolKey(tool)]?.[1]
     return plainName ? { title: plainName } : {}

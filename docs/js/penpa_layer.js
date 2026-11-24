@@ -1,5 +1,5 @@
 // Puts Penpa+'s stylesheets in the cascade layer `penpa`, below everything else, and reverts that layer for the UI root,
-// so Penpa+'s broad selectors (`*`, `body`, `.button`) never reach the UI's controls (variant O of the prototype).
+// so Penpa+'s broad selectors (`*`, `body`, `.button`) never reach the UI's controls.
 // A <style> first in <head> re-imports each of Penpa+'s <link>s into the layer, and the links are disabled once the
 // imports have loaded, so the page is never unstyled. `@layer penpa;` comes first so every other layer, Web Awesome's
 // included, ranks above it.

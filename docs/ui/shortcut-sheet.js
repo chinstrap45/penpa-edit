@@ -1,4 +1,3 @@
-// The keyboard shortcut sheet: `?` on the board, or the button in Settings > Keys, opens a dialog listing the keys the page answers.
 // Its rows come from `window.uiKeys.describe`, which the files that own keys call, so no list is kept here.
 // Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {

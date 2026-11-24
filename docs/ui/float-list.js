@@ -1,9 +1,7 @@
-// Floats a picker's list over the page: below its field when there is room, else above it, with its height capped to the room
-// and scrolling inside, so opening it never resizes the card it belongs to. Knows no `engine`.
+// Floating the list over the page, not in the card, means opening it never resizes the card. Knows no `engine`.
 (function () {
   'use strict'
 
-  // How far the list keeps from its field, and from the window's edges and the top bar.
   const FIELD_GAP = 4
   const EDGE_GAP = 8
 
@@ -24,7 +22,6 @@
       const below = bottomLimit - at.bottom - FIELD_GAP
       const above = at.top - FIELD_GAP - topLimit
       const goesBelow = natural <= below || below >= above
-      // A field scrolled out of the window still gets a list inside it.
       const height = Math.max(0, Math.min(natural, goesBelow ? below : above, bottomLimit - topLimit))
       const top = goesBelow ? at.bottom + FIELD_GAP : at.top - FIELD_GAP - height
       const width = Math.min(at.width, window.innerWidth - 2 * EDGE_GAP)

@@ -1,20 +1,15 @@
-// The top bar's controls: undo, redo, the trial buttons, Restart, the timer, Pause and the Penpa+ button, the cover a paused board wears (and what it
-// switches off), and the dialog that says the puzzle is solved. The theme is chosen in the Settings dialog (#181); this file
-// still applies it to the page.
 // Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
   const { confirmDialog, el, iconButton, onDeskReady, setDark, textButton } = window.uiKit
 
-  // Penpa+'s pause toggle (main.js), which a paused board still answers.
   const PAUSE_KEY = 'F4'
   const UNDO_KEY = 'Ctrl+Z'
   const REDO_KEY = 'Ctrl+Y'
   const SECONDS_PER_MINUTE = 60
   const SECONDS_PER_HOUR = 3600
 
-  // 16x16 line icons in currentColor, from variant L of the prototype.
   const ICONS = {
     undo: '<path d="M3.5 6.5h6.5a3.5 3.5 0 0 1 0 7H7"/><path d="M6.5 3.5l-3 3 3 3"/>',
     redo: '<path d="M12.5 6.5H6a3.5 3.5 0 0 0 0 7h3"/><path d="M9.5 3.5l3 3-3 3"/>',
@@ -25,7 +20,6 @@
 
   const twoDigits = (n) => String(n).padStart(2, '0')
 
-  // 83 seconds is "01:23"; an hour or more adds the hours.
   function clockText (seconds) {
     const whole = Math.floor(seconds)
     const hours = Math.floor(whole / SECONDS_PER_HOUR)
@@ -39,8 +33,8 @@
     const undo = iconButton(ICONS.undo, 'Undo', () => engine.undo(), UNDO_KEY)
     const redo = iconButton(ICONS.redo, 'Redo', () => engine.redo(), REDO_KEY)
 
-    // Trial mode (#258): each stage is the history's length when its Try was pressed, innermost last. Kept in memory only,
-    // so a reload keeps the entries and drops the stages.
+    // Each trial stage is the history's length when its Try was pressed, innermost last; kept in memory only, so a reload
+    // keeps the entries and drops the stages.
     const stages = []
     const tryButton = textButton('Try', 'Start a trial: what you enter next can be kept or discarded in one click', () => {
       stages.push(engine.getState().historyLength)
@@ -53,12 +47,10 @@
     const keepAll = textButton('Keep all', 'End every trial and keep everything', () => keepStages(stages.length))
     const discardAll = textButton('Discard all', 'Undo everything entered since the first trial began, and end every trial',
       () => discardStages(stages.length))
-    // Keep all and Discard all would repeat Keep and Discard with one stage on.
     const allButtons = el('span', { class: 'ui-trial-all' }, [keepAll.node, discardAll.node])
     const trial = el('span', { class: 'ui-trial' }, [trialDepth, keep.node, discard.node, allButtons])
     const trialButtons = [tryButton, keep, discard, keepAll, discardAll]
 
-    // Ends the `count` innermost stages, keeping their entries.
     function keepStages (count) {
       stages.length -= count
       renderHistory()
@@ -76,7 +68,6 @@
       keepStages(count)
     }
 
-    // An undo by hand past a stage's start, to before its Try, ends that stage.
     function endStagesUndone () {
       const { historyLength } = engine.getState()
       while (stages.length && stages.at(-1) > historyLength) {
@@ -92,9 +83,8 @@
     ])
     const pause = iconButton(ICONS.pause, 'Pause', () => (engine.getTimer().covered ? engine.startTimer() : engine.pauseTimer()), PAUSE_KEY)
 
-    // index.html reads the progress back from the store by the same link, so the link and a finished save carry it. Saving on
-    // unload alone loses the race with the navigation, and with no save the progress would be gone from both pages. The
-    // link is marked so index.html does not forward it straight back here (#376).
+    // index.html reads the progress back by the same link, so the save must finish first: saving on unload alone loses the
+    // race with the navigation. The link is marked so index.html does not forward it straight back here.
     const goToPenpa = () => { location.href = `index.html${withPenpaMark(location.search + location.hash)}` }
     const openInPenpa = textButton('Penpa+', 'Open this puzzle in Penpa+', async () => {
       if (await engine.saveProgress()) {
@@ -116,7 +106,6 @@
 
     const clock = el('span', { class: 'ui-timer', role: 'timer', 'aria-label': 'Time' })
 
-    // The Restart question is the UI's own dialog; Penpa+'s popup library stays out of the solve page.
     const restartDialog = confirmDialog({
       label: 'Restart the puzzle?',
       text: 'This clears everything you entered and the undo history, and restarts the timer. The givens stay.',
@@ -128,7 +117,6 @@
       }
     })
 
-    // Over the whole Board card while paused, so no click reaches the board; it is opaque so a pause hides the puzzle.
     // The top bar's Resume is an icon, so the cover that names "Resume" has a button of its own.
     const coverResume = el('wa-button', { variant: 'brand' }, ['Resume'])
     coverResume.addEventListener('click', () => engine.startTimer())
@@ -139,7 +127,7 @@
     ])
     cards.board.node.append(cover)
 
-    // The solved message: the UI's own dialog, never Penpa+'s popup. Its words are the setter's, shown as text.
+    // The setter's words, shown as text.
     const solvedTitle = el('div', { class: 'ui-solved-title' })
     const solvedMessage = el('div', { class: 'ui-solved-message' })
     const solvedDialog = el('wa-dialog', { label: 'Puzzle solved' }, [
@@ -154,16 +142,14 @@
       solvedDialog.open = true
     })
 
-    // While the board is paused, only Resume, Settings and Penpa+ work: the pins, Mode and Recent are inert.
     const pausedOff = [cards.pins.body, cards.mode.body, cards.recent.body]
 
     bar.append(undo.node, redo.node, tryButton.node, trial, restartButton.node, clock, pause.node, openInPenpa.node)
     bar.after(restartDialog, notSavedDialog, solvedDialog)
 
     function renderTimer () {
-      // Only the solver's own pause covers the board: a solve stops the clock and leaves the board usable (#119).
+      // Only the solver's own pause covers the board: a solve stops the clock and leaves the board usable.
       const { seconds, covered, solved } = engine.getTimer()
-      // A solved clock is stopped for good: a check mark and its own colour keep it from looking stuck.
       clock.textContent = solved ? `\u2713 ${clockText(seconds)}` : clockText(seconds)
       clock.classList.toggle('is-solved', solved)
       if (cover.hidden === covered) {
@@ -173,11 +159,9 @@
         renderHistory()
       }
       pause.show(covered ? ICONS.resume : ICONS.pause, covered ? 'Resume' : 'Pause')
-      // A solved clock is stopped for good, so there is nothing to pause.
       pause.node.toggleAttribute('disabled', solved && !covered)
     }
 
-    // The board cannot change while paused, so neither can the history nor the trials.
     function renderHistory () {
       const { canUndo, canRedo } = engine.getState()
       const { covered } = engine.getTimer()

@@ -1,6 +1,4 @@
-// The Settings dialog: the settings that matter for solving, in four groups, each change saved at once, and the page's own
-// (Page: theme, board coordinates, layout and the welcome's replay; Pins: saved presets). Conflict detection off for this puzzle only is kept here, per puzzle, because
-// Penpa+ forgets it on the next puzzle. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
+// Conflict detection off for this puzzle only is kept here, per puzzle, because Penpa+ forgets it on the next puzzle. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
@@ -14,16 +12,12 @@
   const PER_PUZZLE_FLAG = '1'
   const PER_PUZZLE_TAG = 'This puzzle only'
 
-  // An evenly spaced 8-tooth gear around a hub, generated (8 teeth, radii 4.9 and 6.5) so no tooth sits off the circle.
   const GEAR_ICON = '<circle cx="8" cy="8" r="2.1"/><path d="M6.27 3.41 L6.58 1.66 L9.42 1.66 L9.73 3.41 L10.02 3.54 L11.48 2.51 L13.49 4.52 L12.46 5.98 L12.59 6.27 L14.34 6.58 L14.34 9.42 L12.59 9.73 L12.46 10.02 L13.49 11.48 L11.48 13.49 L10.02 12.46 L9.73 12.59 L9.42 14.34 L6.58 14.34 L6.27 12.59 L5.98 12.46 L4.52 13.49 L2.51 11.48 L3.54 10.02 L3.41 9.73 L1.66 9.42 L1.66 6.58 L3.41 6.27 L3.54 5.98 L2.51 4.52 L4.52 2.51 L5.98 3.54Z"/>'
 
-  // The row that holds the Clear saved progress button, in the group its rows are listed in.
   const CLEAR_PROGRESS_ROW = ['clear saved progress']
 
-  // The row that holds the Keyboard shortcuts button, in the group its rows are listed in.
   const SHEET_ROW = ['keyboard shortcuts']
 
-  // One line under a setting whose name is Penpa+'s own jargon.
   const HELP = {
     secondcolor: 'The colour Surface uses for its second shading style.',
     custom_colors_on: 'Adds your own colours to the colour pickers.',
@@ -33,7 +27,6 @@
 
   const capitalised = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 
-  // A select is `[name, label, [[value, option label], ...]]` and a switch `[name, label]`.
   const GROUPS = [
     ['Board look', [
       ['sudoku_centre_size', 'Sudoku centre marks', [[1, 'Dynamic'], [2, 'Large'], [3, 'Small']]],
@@ -136,14 +129,12 @@
     const clearRow = el('div', { class: 'ui-setting' }, [clear, cleared])
     const specialRows = new Map([[CLEAR_PROGRESS_ROW, clearRow], [SHEET_ROW, sheetRow]])
 
-    // ---- The desk's own settings, kept by the UI in localStorage --------------------------------------------------
-
     const theme = el('wa-select', { label: 'Theme', size: 's' },
       THEMES.map(([value, text]) => el('wa-option', { value }, [text])))
     theme.addEventListener('change', () => engine.setTheme(theme.value))
 
     const coordinatesSwitch = el('wa-switch', {}, ['Show board coordinates'])
-    // A sub-option of the coordinates (#348): it is there while they are shown, and kept apart from the switch above.
+    // A sub-option of the coordinates: it stays visible but is disabled while they are off.
     const gridOnlySwitch = el('wa-switch', {}, ['Number the grid only'])
     gridOnlySwitch.addEventListener('change', () => setGridNumberedOnly(gridOnlySwitch.checked))
     coordinatesSwitch.addEventListener('change', () => {
