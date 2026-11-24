@@ -295,7 +295,7 @@ const OWNED_PATHS = [
   'docs/identity.js', 'docs/js/header_text.js', 'docs/js/recorder.js', 'docs/js/engine_bridge.js', 'docs/js/penpa_layer.js', 'docs/js/progress_autosave.js', 'docs/js/chinstrap_button.js', 'docs/js/solve_forward.js', 'docs/solve.html', 'docs/gallery.html', 'docs/gallery.js', 'docs/gallery-puzzles.js', 'docs/ui/',
   'test/ui-boundary.test.mjs',
   'test/snapshots.test.mjs', 'test/constraints.test.mjs', 'test/header-text.test.mjs', 'test/canonical-state.test.mjs', 'test/ui-fuzz-rules.test.mjs', 'test/ui-fuzz-nightly.test.mjs',
-  'test/userscript.test.mjs', 'test/upstream-merge.test.mjs', 'test/package-scripts.test.mjs', 'test/stub-gh.mjs', 'test/run-live.test.mjs',
+  'test/userscript.test.mjs', 'test/upstream-merge.test.mjs', 'test/build-solve.test.mjs', 'test/package-scripts.test.mjs', 'test/stub-gh.mjs', 'test/run-live.test.mjs',
   'test/nightly-seam.test.mjs', 'test/ui-corpus-issue.test.mjs', 'test/lint.test.mjs', 'test/redirect-urls.mjs', 'test/run-narrowed.test.mjs', 'test/ci-concurrency.test.mjs', 'test/live-scratch.mjs',
   '.github/workflows/', '.github/actions/', '.github/scripts/'
 ]
