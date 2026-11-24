@@ -36,16 +36,16 @@ export const EDITS = [
   },
   {
     name: 'tool_calls.js, which engine_bridge.js and progress_autosave.js read at load, moves before them',
-    find: '            "./js/tool_calls.js", // caneff: the Puzzle calls that change the tool, shared with the autosave and recorder.js (#422)\n',
+    find: '            "./js/tool_calls.js", // caneff: the one list of the Puzzle calls that change the tool (#422)\n',
     replace: ''
   },
   {
     name: 'engine bridge, autosave and layer scripts',
     find: '            "./js/general.js",\n',
     replace: `            "./js/general.js",
-            "./js/tool_calls.js", // caneff: the Puzzle calls that change the tool, shared with the autosave and recorder.js (#422)
+            "./js/tool_calls.js", // caneff: the one list of the Puzzle calls that change the tool (#422)
             "./js/engine_bridge.js",
-            "./js/progress_autosave.js", // defines saveProgressNow and saves after each edit and tool change (#162, #263)
+            "./js/progress_autosave.js", // defines saveProgressNow and saves after each edit and tool change
             "./js/penpa_layer.js",
 `
   },
@@ -53,7 +53,7 @@ export const EDITS = [
     name: 'solve_forward mark',
     find: '            "./js/translate.js",\n',
     replace: `            "./js/translate.js",
-            "./js/solve_forward.js", // the mark the Penpa+ button adds, so index.html does not forward its link back (#376)
+            "./js/solve_forward.js", // the mark the Penpa+ button adds, so index.html does not forward its link back
 `
   },
   {
