@@ -3,6 +3,7 @@
   'use strict'
 
   const { confirmDialog, el, iconButton, onDeskReady, storeFlag } = window.uiKit
+  const { areCoordinatesWanted, setCoordinatesWanted, isGridNumberedOnly, setGridNumberedOnly } = window.boardView
 
   const CONFLICT_ON = 1
   const CONFLICT_OFF_THIS_PUZZLE = 2
@@ -66,7 +67,7 @@
 
   const perPuzzleKey = () => PER_PUZZLE_PREFIX + engine.getOriginalPuzzleId()
 
-  onDeskReady(({ bar, resetLayout, areCoordinatesWanted, setCoordinatesWanted, isGridNumberedOnly, setGridNumberedOnly }) => {
+  onDeskReady(({ bar, resetLayout }) => {
     // Penpa+ turns "off for this puzzle" back on whenever it loads a puzzle, so each visit puts it back for the puzzle that has it.
     if (localStorage.getItem(perPuzzleKey()) === PER_PUZZLE_FLAG && engine.getSettings()[CONFLICT_SETTING] === CONFLICT_ON) {
       engine.setSetting(CONFLICT_SETTING, CONFLICT_OFF_THIS_PUZZLE)

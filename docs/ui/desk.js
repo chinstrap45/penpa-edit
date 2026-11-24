@@ -16,7 +16,7 @@
   const LAYOUT_KEY = 'chinstrap-solve-layout-v1'
   const DRAG_THRESHOLD_PX = 4
   const REFIT_DELAY_MS = 150
-  // (Chris, 2026-11-17)
+  // The most of the left column Rules keeps when Mouse needs the room (Chris, 2026-11-17).
   const RULES_SHARE = 0.55
   const SIDE_COLUMN_MAX_PX = 640
   // A wide but short desk has no height for bigger text, so the tighter of width and height sets the scale.
@@ -542,17 +542,15 @@
       return { x: anchoredLeft(entry, desk.clientWidth, entry.w), w: entry.w }
     }
 
-    function refitColumn (ids, opening = null) {
+    const leftColumn = { ids: LEFT_COLUMN, place: (x, w, h) => placeLeftColumn(x, w, isShown('rules') ? rulesHeightFor(w, h) : 0, h) }
+    const rightColumn = { ids: RIGHT_COLUMN, place: placeRightColumn }
+
+    function refitColumn ({ ids, place }, opening = null) {
       if (!isColumnFitted(ids) || !shownIds(ids).length) {
         return false
       }
-      const columnHeight = desk.clientHeight - 2 * TOP_MARGIN_PX
       const { x, w } = columnPlace(ids, opening)
-      if (ids === LEFT_COLUMN) {
-        placeLeftColumn(x, w, isShown('rules') ? rulesHeightFor(w, columnHeight) : 0, columnHeight)
-      } else {
-        placeRightColumn(x, w, columnHeight)
-      }
+      place(x, w, desk.clientHeight - 2 * TOP_MARGIN_PX)
       keepFitted(shownIds(ids))
       return true
     }
@@ -588,7 +586,7 @@
     }
 
     function fitAutomatic () {
-      const refitted = [LEFT_COLUMN, RIGHT_COLUMN].filter((ids) => refitColumn(ids)).flat()
+      const refitted = [leftColumn, rightColumn].filter((column) => refitColumn(column)).flatMap((column) => column.ids)
       shownIds().filter((id) => !refitted.includes(id) && saved[id] && !isByHand(saved[id], 'hh')).forEach((id) => {
         setAutomaticHeight(id)
         if (saved[id].fitted) {
@@ -718,7 +716,7 @@
       if (isDragging) {
         return
       }
-      if (refitColumn(RIGHT_COLUMN)) {
+      if (refitColumn(rightColumn)) {
         const shown = shownIds(RIGHT_COLUMN)
         shown.forEach((id) => keepInside(id, cards[id].node, desk.clientWidth, desk.clientHeight))
         keepFitted(shown)
@@ -1037,16 +1035,22 @@
         isFitted = false
         startFit()
       } else {
-        refitColumn(LEFT_COLUMN.includes(id) ? LEFT_COLUMN : RIGHT_COLUMN, closed ? null : id)
+        refitColumn(LEFT_COLUMN.includes(id) ? leftColumn : rightColumn, closed ? null : id)
       }
       layout()
       // A card opened into a column with no fitted place to give it (every card of it closed before the solver changed
       // the layout) comes back at the default place, which can be over the Board: mended as a window resize mends it.
       repairOverlaps(before)
     }
-    // The tools Mode and Mouse are sized for changed. Only the side columns' heights depend on them, so the board is not
-    // fitted again: a solver stepping through tools outside the pins would redraw it at every step.
-    return { relayout: layout, resetLayout, fit, fitToTools: fitAutomatic, setCardClosed }
+    return {
+      relayout: layout,
+      resetLayout,
+      fit,
+      // The tools Mode and Mouse are sized for changed. Only the side columns' heights depend on them, so the board is not
+      // fitted again: a solver stepping through tools outside the pins would redraw it at every step.
+      fitToTools: fitAutomatic,
+      setCardClosed
+    }
   }
 
   function placeHeading (bar) {
@@ -1094,10 +1098,9 @@
 
   const isCardClosed = (id) => localStorage.getItem(closedKey(id)) === CARD_CLOSED
 
-  // Resolves to `{ bar, cards, closeButtons, relayout, resetLayout, fit, fitToTools, closeableCards, isCardClosed, setCardClosed,
-  // areCoordinatesWanted, setCoordinatesWanted, isGridNumberedOnly, setGridNumberedOnly, fitBoard }` once
-  // the desk is built, for the files that fill the bar and the cards. `closeableCards` is `[id, title]` per card the solver can
-  // close, in the Cards menu's order, and `closeButtons` each one's header ×, by id. `fitBoard()` fits the board to its card, as Fit does.
+  // Resolves to `{ bar, cards, closeButtons, relayout, resetLayout, fit, fitToTools, closeableCards, isCardClosed, setCardClosed }`
+  // once the desk is built, and `window.boardView` mounted, for the files that fill the bar and the cards. `closeableCards` is
+  // `[id, title]` per card the solver can close, in the Cards menu's order, and `closeButtons` each one's header ×, by id.
   window.deskReady = engine.ready.then(() => {
     const desk = build(engine.getInfo())
     CLOSEABLE_CARDS.forEach((id) => {
@@ -1126,12 +1129,7 @@
       fitToTools: deskLayout.fitToTools,
       closeableCards: CLOSEABLE_CARDS.map((id) => [id, CARD_TITLES[id]]),
       isCardClosed,
-      setCardClosed: deskLayout.setCardClosed,
-      areCoordinatesWanted: boardView.areCoordinatesWanted,
-      setCoordinatesWanted: boardView.setCoordinatesWanted,
-      isGridNumberedOnly: boardView.isGridNumberedOnly,
-      setGridNumberedOnly: boardView.setGridNumberedOnly,
-      fitBoard: boardView.fitBoard
+      setCardClosed: deskLayout.setCardClosed
     }
   })
   // A failed load needs no second report: main.js shows its error dialog. Anything else that stopped the desk is thrown

@@ -3,6 +3,7 @@
   'use strict'
 
   const { el, iconButton, onDeskReady } = window.uiKit
+  const { fitBoard } = window.boardView
 
   const TITLE = 'Change size'
   const ICON = '<rect x="4.5" y="4.5" width="7" height="7"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/>'
@@ -17,7 +18,7 @@
   const kindOf = (change) => (change > 0 ? 'add' : 'remove')
   const refusalOf = (changes, side, change) => changes.sides[side][kindOf(change)]
 
-  onDeskReady(({ cards, fitBoard }) => {
+  onDeskReady(({ cards }) => {
     const size = el('div', { class: 'ui-size-board' })
     const status = el('p', { class: 'ui-size-note', role: 'status' })
     const buttons = []

@@ -13,7 +13,7 @@ describe('the engine while the solve UI redraws itself', () => {
 
   it('stays quiet with board coordinates on', async () => {
     const { page } = opened
-    await page.evaluate(async () => (await window.deskReady).setCoordinatesWanted(true))
+    await page.evaluate(async () => { await window.deskReady; window.boardView.setCoordinatesWanted(true) })
     assert.ok(await page.locator('.ui-grid-coordinate').count() > 0, 'the coordinates are drawn')
     await assertQuiet(page)
   })
