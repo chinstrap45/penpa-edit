@@ -76,7 +76,6 @@
   const RIGHT_COLUMN = ['pins', 'mode', 'recent']
   const CARD_TITLES = { board: 'Board', mouse: 'Mouse', rules: 'Rules', pins: 'Pinned', mode: 'Mode', recent: 'Recent' }
 
-
   // A rules line that starts a list item: its marker, then the text. The marker is its own flex item so a wrapped line
   // hangs under the text and not under the marker, whatever the marker's width.
   const RULES_MARKER = /^(\s*(?:[-\u2022*]|\d{1,2}[.)])\s+)([\s\S]*)$/
