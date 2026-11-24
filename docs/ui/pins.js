@@ -176,7 +176,8 @@
       return (allows(overflowY) && node.scrollHeight > node.clientHeight) || (allows(overflowX) && node.scrollWidth > node.clientWidth)
     }
     document.addEventListener('wheel', (e) => {
-      if (!pins.length || e.ctrlKey || e.deltaY === 0 || window.uiKeys.dialogIsOpen() || e.composedPath().some((node) => node instanceof Element && canScroll(node))) {
+      const overScroller = e.composedPath().some((node) => node instanceof Element && canScroll(node))
+      if (!pins.length || e.ctrlKey || e.deltaY === 0 || window.uiKeys.popupIsOpen() || overScroller) {
         return
       }
       e.preventDefault()
