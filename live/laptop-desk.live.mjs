@@ -121,7 +121,7 @@ describe('the top bar on a laptop screen', () => {
   }
 
   // The fixture's title is short; centring only overlaps the controls at 1366 with a heading this long.
-  const LONG_HEADING = { ...LONG_RULES_PUZZLE, title: 'Long rules (lorem ipsum, outside clues)', author: 'Placeholder' }
+  const LONG_HEADING = { ...LONG_RULES_PUZZLE, title: 'Long rules (lorem ipsum)', author: 'Placeholder' }
 
   it('centres the title and author when there is room, and moves them to the left end when centring would overlap', async () => {
     const page = await open(LONG_HEADING, WIDE)
