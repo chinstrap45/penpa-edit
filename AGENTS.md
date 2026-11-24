@@ -106,7 +106,9 @@ Before you write or review code: read `CODING_STANDARDS.md`.
   with the command that replays it (naming its puzzle), and a run that checked no list printed as "gave no verdict" with exit 1.
 - **Playwright** is an approved dev dependency (Chris, 2026-11-09).
 - **fast-check** is an approved dev dependency, for the solve.html UI fuzz (#195) (Chris, 2026-11-16).
-- **standard** and **shellcheck** are approved dev dependencies, for the lint (#396) (Chris, 2026-11-23).
+- **standard** is an approved dev dependency, for the lint (#396) (Chris, 2026-11-23). **shellcheck** is the system's, on PATH
+  (`sudo apt-get install shellcheck`; GitHub's ubuntu runners ship it): a tool a check needs is installed, never downloaded
+  while the check runs (Chris, 2026-11-24, #416).
 - **axe-core** is an approved dev dependency, for the solve page's WCAG AA contrast check (Chris, 2026-11-22).
 - **CI runs on GitHub Actions here**, an exception to the local-CI rule: the repo is public, so Actions minutes are free, and
   the nightly upstream merge (#3) must run unattended (Chris, 2026-11-09).

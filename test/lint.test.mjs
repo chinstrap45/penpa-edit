@@ -24,13 +24,11 @@ function scratch (files, owned) {
   return dir
 }
 
-// Links the repo's installed tools in, all of them or only those named.
-function withTools (dir, tools = ['standard', 'shellcheck']) {
+// Links the repo's installed StandardJS in; shellcheck is the system's, found on PATH.
+function withTools (dir) {
   mkdirSync(join(dir, 'node_modules/.bin'), { recursive: true })
-  for (const tool of tools) {
-    symlinkSync(join(ROOT, 'node_modules', tool), join(dir, 'node_modules', tool))
-    symlinkSync(join(ROOT, 'node_modules/.bin', tool), join(dir, 'node_modules/.bin', tool))
-  }
+  symlinkSync(join(ROOT, 'node_modules/standard'), join(dir, 'node_modules/standard'))
+  symlinkSync(join(ROOT, 'node_modules/.bin/standard'), join(dir, 'node_modules/.bin/standard'))
   return dir
 }
 
@@ -131,10 +129,10 @@ describe('runLint', () => {
     assert.match(runLint(dir).join('\n'), /standard is not installed/)
   })
 
-  it('fails when shellcheck is not installed, and still reports StandardJS findings', () => {
-    const dir = withTools(scratch({ 'live/a.mjs': BAD_JS, 'live/ok.sh': CLEAN_SH }, ['live/**']), ['standard'])
-    const out = runLint(dir).join('\n')
-    assert.match(out, /shellcheck is not installed/)
+  it('fails when shellcheck is not on PATH, names the install command, and still reports StandardJS findings', () => {
+    const dir = withTools(scratch({ 'live/a.mjs': BAD_JS, 'live/ok.sh': CLEAN_SH }, ['live/**']))
+    const out = runLint(dir, { ...process.env, PATH: join(dir, 'no-such-dir') }).join('\n')
+    assert.match(out, /shellcheck is not installed on PATH: run sudo apt-get install shellcheck/)
     assert.match(out, /Extra semicolon/)
   })
 

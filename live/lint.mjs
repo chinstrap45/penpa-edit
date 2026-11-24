@@ -1,5 +1,7 @@
 // The lint (#396): StandardJS over the JavaScript and shellcheck (error severity) over the shell scripts that
 // `.gitattributes` marks `merge=ours`, so an upstream merge never meets a style change of ours.
+// StandardJS comes from `node_modules`; shellcheck is the system's, found on PATH (`sudo apt-get install shellcheck`; GitHub's
+// ubuntu runners ship it), never a copy downloaded while the lint runs (Chris, 2026-11-24, #416).
 // Usage: node live/lint.mjs   (from the repo root; exits non-zero on a finding, a missing tool or an empty scope)
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
@@ -68,8 +70,9 @@ function standard (root, files) {
   return failures
 }
 
-function shellcheck (root, files) {
-  const out = spawnSync(bin(root, 'shellcheck'), ['--severity=error', ...files], { cwd: root, encoding: 'utf8' })
+function shellcheck (root, files, env) {
+  const out = spawnSync('shellcheck', ['--severity=error', ...files], { cwd: root, env, encoding: 'utf8' })
+  if (out.error?.code === 'ENOENT') throw new Error('shellcheck is not installed on PATH: run sudo apt-get install shellcheck')
   return out.error || out.status !== 0 ? [out.error?.message ?? out.stdout + out.stderr] : []
 }
 
@@ -82,14 +85,14 @@ const attempt = (run) => {
   }
 }
 
-// Returns the lines to print for a failure; an empty list is a pass.
-export function runLint (root) {
+// Returns the lines to print for a failure; an empty list is a pass. `env` is shellcheck's environment, its PATH where it is looked up.
+export function runLint (root, env = process.env) {
   const scope = attempt(() => lintScope(root))
   if (Array.isArray(scope)) return [`lint scope unreadable: ${scope[0]}`]
   if (!scope.js.length || !scope.shell.length) {
     return [`lint scope is empty (${scope.js.length} JavaScript files, ${scope.shell.length} shell scripts): .gitattributes marks nothing`]
   }
-  return [...attempt(() => standard(root, scope.js)), ...attempt(() => shellcheck(root, scope.shell))]
+  return [...attempt(() => standard(root, scope.js)), ...attempt(() => shellcheck(root, scope.shell, env))]
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
