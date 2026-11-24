@@ -88,7 +88,6 @@ export const didNotRunIssue = (why, { runUrl } = {}) => ({
   ].join('\n')
 })
 
-// `hunt` loops until a run passes or the night's time is spent; a title already reported tonight is not filed again.
 export async function nightly ({ runFuzz, fileIssue, newSeed, now = Date.now, runUrl }) {
   const start = now()
   const reported = new Set()

@@ -212,8 +212,6 @@ export const THEME_KEY = 'chinstrap-solve-theme-v1'
 export const WELCOME_KEY = 'chinstrap-solve-tour-v1'
 export const WELCOME_SEEN = 'seen'
 
-// Indices in `pu.centerlist` of the given of `makeNumberSolveLink`'s puzzle, of the cell its answer fills and of an
-// empty cell in the given's row.
 export const GIVEN_CELL = 0
 export const ANSWER_CELL = 1
 export const SAME_ROW_CELL = 2
@@ -504,7 +502,6 @@ export const storedEntries = (page) => page.evaluate(() => JSON.stringify(Object
 // The text the solver has typed into Number mode cells, in cell order.
 export const typedDigits = async (page) => Object.values((await board(page)).entered.number ?? {}).map(([digit]) => digit)
 
-// Runs in the page: WCAG's contrast ratio of two [r, g, b, a] colours, the second under the first's own alpha.
 export function contrastHelpersInPage () {
   const channel = (c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4 }
   const luminance = ([r, g, b]) => 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)

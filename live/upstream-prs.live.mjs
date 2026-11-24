@@ -138,7 +138,7 @@ describe('long links and Load URL (PR 229)', () => {
     await context.close()
   })
 
-  // Loads one number's link through Load URL, written `shape` ways, and returns the clue count it arrives with.
+  // Loads one number's link, built by `makeUrl`, through Load URL; returns a reader of the clue count it arrives with.
   const loadedClues = async (page, makeUrl) => {
     await page.evaluate(() => {
       pu.mode.qa = 'pu_q'

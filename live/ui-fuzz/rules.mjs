@@ -34,7 +34,6 @@ const PLACING_KINDS = ['card drag', 'card resize', 'interrupted drag']
 const RESET_LAYOUT = 'reset layout'
 // The card whose chips last for the visit only (docs/ui/recent.js): a reload empties it, so its height follows.
 const RECENT_CARD = 'Recent'
-// The card whose height follows the current tool's option rows (docs/ui/tool-cards.js) until #252 fixes it.
 const MODE_CARD = 'Mode'
 // The card that shows a preset's undo line for the visit only (docs/ui/pin-presets.js): a reload drops it.
 const PINNED_CARD = 'Pinned'
@@ -169,10 +168,8 @@ export const RULES = [
     check: ({ now, before, action }) => {
       if (action?.kind !== 'reload') return []
       // A card whose content lasts the visit only may change height on a reload, and each card stacked under it in its
-      // column must move by exactly as much: Recent's chips go (its bottom stays where it was), and so does Pinned's undo line (`presetUndo`). A reload can
-      // also bring back another tool than the one in use (#263: it is kept only when Penpa+'s unawaited save on unload wins),
-      // and the Mode card's height follows the tool (#252). The tool is #263's to check, not this rule's: when it changed,
-      // Mode may change height too.
+      // column must move by exactly as much: Recent's chips go (its bottom stays where it was), and so does Pinned's undo line
+      // (`presetUndo`). A reload can bring back another tool than the one in use, and the Mode card's height follows the tool.
       const toolChanged = before.tool.mode !== now.tool.mode || before.tool.submode !== now.tool.submode
       const mayChange = { [RECENT_CARD]: true, [PINNED_CARD]: before.presetUndo, [MODE_CARD]: toolChanged }
       const grew = (name) => {
