@@ -84,13 +84,36 @@ describe('a saved value the Pinned card did not write', () => {
   before(async () => { opened = await openSolve(['Line Normal', 'Sudoku Corner']) })
   after(async () => { await opened?.context.close() })
 
-  // Each is short of what the card writes: a `nextId`, a whole number id, a mode, a list of pins.
+  // Each is short of what the card writes: a mode, a list of pins.
   const BAD_VALUES = [
-    { pins: [{ id: 0, mode: 'line', submode: '1', style: null }] },
-    { nextId: 1, pins: [{ id: 'a', mode: 'line', submode: '1', style: null }] },
-    { nextId: 1, pins: [{ id: 0, submode: '1', style: null }] },
-    { nextId: 1, pins: 'line' }
+    { pins: [{ submode: '1', style: null }] },
+    { pins: [{ mode: 5, submode: '1', style: null }] },
+    { pins: 'line' }
   ]
+  const savedPinKey = (page) => page.evaluate(() => {
+    const keys = Object.keys(localStorage).filter((key) => localStorage.getItem(key).includes('"pins"'))
+    if (keys.length !== 1) throw new Error(`expected one saved pin set, found ${keys.length}`)
+    return keys[0]
+  })
+
+  it('is saved with no id or nextId', async () => {
+    const { page } = opened
+    const saved = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((k) => localStorage.getItem(k).includes('"pins"'))
+      return JSON.parse(localStorage.getItem(key))
+    })
+    assert.deepEqual(Object.keys(saved).sort(), ['colours', 'pins'])
+    assert.deepEqual(saved.pins.flatMap((p) => Object.keys(p)).filter((k) => !['mode', 'submode', 'style'].includes(k)), [])
+  })
+
+  it('still loads a save that holds id and nextId, with the same pins', async () => {
+    const { page } = opened
+    const key = await savedPinKey(page)
+    await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ nextId: 7, pins: [{ id: 3, mode: 'line', submode: '1', style: null }] })), key)
+    await page.reload()
+    await waitForDesk(page)
+    assert.deepEqual(await settle(() => chipNames(page), ['Line > Normal']), ['Line > Normal'])
+  })
   for (const value of BAD_VALUES) {
     it(`is read as none, so the Tab set seeds again, and the console says so: ${JSON.stringify(value)}`, async () => {
       const { page } = opened

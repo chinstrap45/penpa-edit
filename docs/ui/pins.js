@@ -5,7 +5,7 @@
 (function () {
   'use strict'
 
-  const { chipLabel, tooltipAttrs, toolKey } = window.toolGuide
+  const { chipLabel, tooltipAttrs, toolKey, findTool } = window.toolGuide
   const { el, iconButton, luminance, onDeskReady, readStored, visibleBox } = window.uiKit
 
   const STORAGE_PREFIX = 'chinstrap.pins:'
@@ -65,22 +65,20 @@
   onDeskReady(({ cards, fit }) => {
     const tools = engine.listTools()
     const storageKey = STORAGE_PREFIX + engine.getOriginalPuzzleId()
-    const toolOf = (pin) => tools.find((t) => toolKey(t) === toolKey(pin))
+    const toolOf = (pin) => findTool(tools, pin)
 
     // ---- The pins, kept ---------------------------------------------------------------------------------------------
 
     // What an earlier visit saved: pins in the shape `save` writes, or null for none, in which case the Tab set seeds them again.
-    const isSavedState = (saved) => Array.isArray(saved?.pins) && Number.isInteger(saved.nextId) &&
-      saved.pins.every((p) => Number.isInteger(p.id) && typeof p.mode === 'string')
+    const isSavedState = (saved) => Array.isArray(saved?.pins) && saved.pins.every((p) => typeof p.mode === 'string')
     const savedState = () => readStored(storageKey, isSavedState, null, 'pins')
 
     function seededState () {
-      const pins = engine.tabSet().map((tool, id) => ({ id, mode: tool.mode, submode: tool.submode, style: null }))
-      return { nextId: pins.length, pins }
+      return { pins: engine.tabSet().map((tool) => ({ mode: tool.mode, submode: tool.submode, style: null })) }
     }
 
     // A pin for a tool the link no longer offers is dropped.
-    let { nextId, pins, colours } = savedState() ?? seededState()
+    let { pins, colours } = savedState() ?? seededState()
     pins = pins.filter(toolOf)
     // Each tool's colour number, kept with the pins and outliving them. A saved value that is not a whole number of 0 or more is dropped,
     // and the tool gets a colour number again.
@@ -105,9 +103,15 @@
 
     function save () {
       assignColours()
-      localStorage.setItem(storageKey, JSON.stringify({ nextId, pins, colours: validColours }))
+      localStorage.setItem(storageKey, JSON.stringify({ pins, colours: validColours }))
     }
     save()
+
+    // Saves the pins and draws them again.
+    function commit () {
+      save()
+      render()
+    }
 
     // ---- Moving between pins ----------------------------------------------------------------------------------------
 
@@ -246,8 +250,7 @@
       pins = pins.filter((p) => p !== pin)
       pins.splice(pins.indexOf(target) + (before ? 0 : 1), 0, pin)
       cursor = pins.indexOf(cursorPin)
-      save()
-      render()
+      commit()
     }
 
     function chip (pin, slot, current) {
@@ -265,8 +268,7 @@
       main.addEventListener('click', choose)
       unpin.addEventListener('click', () => {
         pins = pins.filter((p) => p !== pin)
-        save()
-        render()
+        commit()
         unpin.blur()
       })
       const node = el('div', { class: `ui-chip${current ? ' is-current' : ''}`, style: `--ui-pin-colour:${pinColour(pin)}`, draggable: 'true' }, [main, unpin])
@@ -309,10 +311,9 @@
       if (index >= 0) {
         pins.splice(index, 1)
       } else {
-        pins.push({ id: nextId++, mode: tool.mode, submode: tool.submode, style: tool.style ?? null })
+        pins.push({ mode: tool.mode, submode: tool.submode, style: tool.style ?? null })
       }
-      save()
-      render()
+      commit()
     }
 
     const pinIcon = (filled) => '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" stroke="currentColor" stroke-width="1.5" ' +
@@ -411,7 +412,7 @@
       const index = pinIndexOf(current)
       const landed = lastKey !== null && toolKey(current) !== lastKey
       lastKey = toolKey(current)
-      const tool = tools.find((t) => toolKey(t) === lastKey)
+      const tool = findTool(tools, current)
       if (landed && tool) {
         flashTool(tool, index >= 0 ? pinColour(pins[index]) : NEUTRAL_COLOUR)
       }
@@ -458,9 +459,8 @@
       onChange: (listener) => pinListeners.push(listener),
       snapshot: () => pins.map(({ mode, submode, style }) => ({ mode, submode, style })),
       replace (entries) {
-        pins = entries.filter(toolOf).map(({ mode, submode, style }) => ({ id: nextId++, mode, submode, style: style ?? null }))
-        save()
-        render()
+        pins = entries.filter(toolOf).map(({ mode, submode, style }) => ({ mode, submode, style: style ?? null }))
+        commit()
       },
       // The pins the link's Tab set seeds, as on the puzzle's first visit.
       reseed () {

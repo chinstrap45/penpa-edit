@@ -87,6 +87,7 @@
 
   // One tool's identity, for a lookup: its mode and sub-mode.
   const toolKey = (tool) => `${tool.mode}/${tool.submode ?? ''}`
+  const findTool = (tools, x) => tools.find((t) => toolKey(t) === toolKey(x))
 
   // The picker's entry for a tool: where it is filed, its plain name and what it does.
   function describeTool (tool) {
@@ -499,5 +500,5 @@
     return plainName ? { title: plainName } : {}
   }
 
-  window.toolGuide = { tooltipAttrs, TOOL_GROUPS, NOTHING, AS_A_CLICK, SECOND_COLOUR_DOT, placeTool, looseText, searchWords, looseWords, matchesSearch, mouseRows, toolKey, chipLabel }
+  window.toolGuide = { tooltipAttrs, TOOL_GROUPS, NOTHING, AS_A_CLICK, SECOND_COLOUR_DOT, placeTool, looseText, searchWords, looseWords, matchesSearch, mouseRows, toolKey, findTool, chipLabel }
 })()

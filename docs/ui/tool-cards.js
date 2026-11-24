@@ -7,7 +7,7 @@
   const MULTICOLOR_MODE = 'multicolor'
   const SWATCHES_IN_TWO_ROWS = 12
   const TWO_ROWS = 2
-  const { NOTHING, AS_A_CLICK, SECOND_COLOUR_DOT, mouseRows, toolKey, chipLabel } = window.toolGuide
+  const { NOTHING, AS_A_CLICK, SECOND_COLOUR_DOT, mouseRows, toolKey, findTool, chipLabel } = window.toolGuide
   const { el, luminance, onDeskReady } = window.uiKit
 
   // Space the Mouse card's body keeps below the tallest content, for the borders.
@@ -222,7 +222,7 @@
     const modeHeights = new Map()
 
     function showCurrent () {
-      const current = tools.find((t) => toolKey(t) === toolKey(engine.getTool()))
+      const current = findTool(tools, engine.getTool())
       input.value = current ? chipLabel(current) : ''
     }
 
@@ -369,7 +369,7 @@
   onDeskReady(({ cards, relayout, fit, fitToTools }) => {
     const tools = engine.listTools()
     // A tool the link does not list (Penpa+ was put in a hidden mode) is drawn with its mode's name alone.
-    const toolFor = (current) => tools.find((t) => toolKey(t) === toolKey(current)) ??
+    const toolFor = (current) => findTool(tools, current) ??
             { mode: current.mode, modeName: current.mode, submode: current.submode, submodeName: null, name: current.mode, labels: [], styles: [] }
 
     const titleBarName = el('span', { class: 'ui-tool-name', 'data-testid': 'board-tool-name' })
