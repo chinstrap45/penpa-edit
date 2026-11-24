@@ -122,3 +122,23 @@ describe('the check', () => {
     assert.deepEqual(findViolations(text, ids), [])
   })
 })
+
+describe('window.uiKit', () => {
+  const UI_KIT_FILE = 'docs/ui/ui-kit.js'
+  const jsFiles = uiFiles(UI_DIR).filter((file) => file.endsWith('.js')).map((file) => relative(ROOT, file))
+  const read = (file) => readFileSync(join(ROOT, file), 'utf8')
+
+  it('is defined by ui-kit.js alone', () => {
+    assert.deepEqual(jsFiles.filter((file) => /window\.uiKit\s*=/.test(read(file))), [UI_KIT_FILE])
+  })
+
+  it('is loaded by solve.html before every UI file that reads it', () => {
+    const order = [...read('docs/solve.html').matchAll(/"\.\/(ui\/[\w-]+\.js)"/g)].map((m) => `docs/${m[1]}`)
+    const kitAt = order.indexOf(UI_KIT_FILE)
+    assert.notEqual(kitAt, -1, `${UI_KIT_FILE} is loaded`)
+    const readers = jsFiles.filter((file) => file !== UI_KIT_FILE && /\buiKit\b/.test(read(file)))
+    assert.notEqual(readers.length, 0, 'some UI file reads uiKit')
+    const late = readers.filter((file) => !(order.indexOf(file) > kitAt))
+    assert.deepEqual(late, [])
+  })
+})
