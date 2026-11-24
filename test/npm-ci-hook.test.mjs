@@ -3,7 +3,7 @@
 // Why: workers link the primary checkout's `node_modules`, and `npm ci` through the link empties the primary's.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, it } from 'node:test'
@@ -38,6 +38,15 @@ function decide (command, cwd, { stdin } = {}) {
 }
 
 describe('the npm ci hook', () => {
+  it('denies when it cannot tell whether node_modules is a link, never reading that as no link', (t) => {
+    const locked = join(ROOT, 'locked')
+    mkdirSync(join(locked, 'node_modules'), { recursive: true })
+    chmodSync(locked, 0)
+    t.after(() => chmodSync(locked, 0o700))
+    if (process.getuid?.() === 0) return t.skip('root reads a mode 000 directory')
+    assert.equal(decide('npm ci', locked).decision, 'deny')
+  })
+
   for (const command of ['npm ci', 'npm clean-install', 'npm ic', 'FOO=1 npm ci', 'npx npm ci', 'npm ci --ignore-scripts', 'echo hi && npm ci']) {
     it(`denies in a directory whose node_modules is a symlink: ${command}`, () => {
       assert.equal(decide(command, linked).decision, 'deny')
