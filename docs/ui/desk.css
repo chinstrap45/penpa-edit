@@ -148,8 +148,6 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-rules-line a { color: #2f5bb2; }
 /* A link with no rules: a note on one line. */
 .ui-card-rules .ui-body.ui-rules-empty { min-height: 0; padding: 6px 12px; font-style: italic; color: #5a5d66; }
-.ui-card-mouse { border: 2px solid #3b6fd4; box-shadow: 0 4px 16px rgba(30, 70, 160, .2); }
-.ui-card-mouse .ui-head { background: #3b6fd4; color: #fff; border-bottom-color: #2f5bb2; border-radius: 7px 7px 0 0; }
 
 /* The board's title bar: the current tool's name, after the card's title, drawn like the current chip: white on the tool's colour (pins.js). */
 .ui-tool-name { margin-left: auto; font-size: 15px; line-height: 1.2; font-weight: 700; letter-spacing: 0; text-transform: none; color: #fff;
@@ -167,9 +165,9 @@ body.engine-mounted, body.engine-no-puzzle { overflow: hidden; background: #e7e4
 .ui-mark { display: inline-block; margin-right: 5px; vertical-align: -.2em; line-height: 0; }
 .ui-mark svg { width: 1.1em; height: 1.1em; }
 .ui-mrows { display: grid; gap: 4px; }
-.ui-mrow { display: grid; grid-template-columns: calc(86px * var(--ui-text-scale, 1)) 1fr; gap: 8px; align-items: baseline; padding: 5px 8px; border-radius: 6px; background: #eef3fd; font-size: calc(14px * var(--ui-text-scale, 1)); }
-.ui-mrow.is-more { background: transparent; font-size: calc(12.5px * var(--ui-text-scale, 1)); padding: 2px 8px; color: #555; }
-.ui-mg { font-weight: 700; color: #2f5bb2; }
+.ui-mrow { display: grid; grid-template-columns: calc(86px * var(--ui-text-scale, 1)) 1fr; gap: 8px; align-items: baseline; padding: 5px 8px; font-size: calc(14px * var(--ui-text-scale, 1)); }
+.ui-mrow.is-more { font-size: calc(12.5px * var(--ui-text-scale, 1)); padding: 2px 8px; color: #555; }
+.ui-mg { font-weight: 700; }
 .ui-mrow.is-more .ui-mg { font-weight: 600; color: #5d6985; }
 .ui-keypad { display: grid; grid-template-columns: repeat(3, max-content); gap: 2px 12px; margin-top: 4px; font-family: monospace; }
 .ui-mrow .ui-dot { width: 10px; height: 10px; margin: 0 0 0 4px; vertical-align: -1px; }
@@ -307,9 +305,7 @@ body.engine-mounted:has(.ui-dark), body.engine-no-puzzle:has(.ui-dark) { backgro
 .ui-dark .ui-paused { background: #2b2f38; color: #e3e6eb; }
 .ui-dark .ui-paused-hint { color: #a9b0bd; }
 .ui-dark .ui-headline { color: #e3eaff; }
-.ui-dark .ui-mrow { background: #26324a; }
-.ui-dark .ui-mg { color: #9fbdff; }
-.ui-dark .ui-mrow.is-more { background: transparent; color: #c3c8d2; }
+.ui-dark .ui-mrow.is-more { color: #c3c8d2; }
 .ui-dark .ui-mrow.is-more .ui-mg { color: #a5b2cc; }
 .ui-dark .ui-search { background: #1b1e24; color: #e3e6eb; border-color: #4a5060; }
 .ui-dark .ui-list { background: #262a32; border-color: #4a5060; }
