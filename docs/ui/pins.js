@@ -1,3 +1,4 @@
+// Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
@@ -91,7 +92,6 @@
     }
     save()
 
-    // Saves the pins and draws them again.
     function commit () {
       save()
       render()

@@ -1,3 +1,4 @@
+// Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
