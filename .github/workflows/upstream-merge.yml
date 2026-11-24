@@ -1,7 +1,7 @@
 name: Upstream merge
 
 # Merges upstream Penpa+ into master with a merge commit (docs/solve.html rebuilt from index.html by
-# live/build-solve.mjs inside it, #431) and pushes only when both test suites pass on the merged
+# live/build-solve.mjs inside it, #431) and pushes only when the lint and both test suites pass on the merged
 # tree and it changes no recording's expected file (each such change is Chris's to rule on, #33); master:/docs is what
 # Pages serves, so the push publishes. A conflict, a red run, a changed expected file or a refused push pushes nothing
 # and files one issue, or comments on it while it is open. Each upstream commit that touched a file we own
@@ -53,11 +53,12 @@ jobs:
         uses: ./.github/actions/setup-tests
       - id: tests
         if: steps.merge.outputs.merged == 'true'
-        name: npm test && npm run test:live
+        name: npm run lint && npm test && npm run test:live
         shell: bash
         run: |
           status=0
-          npm test 2>&1 | tee "$TEST_LOG" || status=1
+          npm run lint 2>&1 | tee "$TEST_LOG" || status=1
+          npm test 2>&1 | tee -a "$TEST_LOG" || status=1
           npm run test:live 2>&1 | tee -a "$TEST_LOG" || status=1
           exit "$status"
       - id: expected
@@ -79,7 +80,7 @@ jobs:
           git push --force origin HEAD:refs/heads/upstream-merge-candidate
           if [[ $TESTS == success ]]; then
             gh api "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=test -f target_url="$run_url" \
-              -f description="npm test and test:live passed on ${sha:0:12} in nightly run $GITHUB_RUN_ID" >/dev/null
+              -f description="npm run lint, npm test and test:live passed on ${sha:0:12} in nightly run $GITHUB_RUN_ID" >/dev/null
           fi
           if [[ $EXPECTED == success ]]; then
             gh api "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context=expected-files -f target_url="$run_url" \
@@ -106,7 +107,7 @@ jobs:
             if [[ '${{ steps.merge.outcome }}' == failure ]]; then
               echo 'The merge of upstream/master failed; nothing was pushed.'
             elif [[ '${{ steps.tests.outcome }}' == failure ]]; then
-              echo 'The merged tree failed `npm test && npm run test:live`; nothing was pushed.'
+              echo 'The merged tree failed `npm run lint && npm test && npm run test:live`; nothing was pushed.'
               echo
               echo '## Failing tests'
               echo
