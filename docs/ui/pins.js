@@ -6,7 +6,7 @@
   'use strict'
 
   const { chipLabel, tooltipAttrs, toolKey } = window.toolGuide
-  const { el, iconButton, luminance, onDeskReady, visibleBox } = window.uiKit
+  const { el, iconButton, luminance, onDeskReady, readStored, visibleBox } = window.uiKit
 
   const STORAGE_PREFIX = 'chinstrap.pins:'
   // Z, X, C and V jump to pins 1 to 4, and label those chips.
@@ -69,29 +69,10 @@
 
     // ---- The pins, kept ---------------------------------------------------------------------------------------------
 
-    // What an earlier visit saved: pins in the shape `save` writes, or null for none. A saved value that is unreadable,
-    // or that this code did not write (another version's, or edited by hand), cannot be shown as pins: the Tab set seeds
-    // them again and replaces it, which the console says, so the loss is never silent.
-    function savedState () {
-      const raw = localStorage.getItem(storageKey)
-      if (raw === null) {
-        return null
-      }
-      let saved
-      try {
-        saved = JSON.parse(raw)
-      } catch (e) {
-        console.warn(`${storageKey} is unreadable (${e.message}); the Tab set seeds the pins and replaces it.`)
-        return null
-      }
-      const valid = Array.isArray(saved?.pins) && Number.isInteger(saved.nextId) &&
-                saved.pins.every((p) => Number.isInteger(p.id) && typeof p.mode === 'string')
-      if (!valid) {
-        console.warn(`${storageKey} does not hold pins as this page saves them; the Tab set seeds the pins and replaces it.`)
-        return null
-      }
-      return saved
-    }
+    // What an earlier visit saved: pins in the shape `save` writes, or null for none, in which case the Tab set seeds them again.
+    const isSavedState = (saved) => Array.isArray(saved?.pins) && Number.isInteger(saved.nextId) &&
+      saved.pins.every((p) => Number.isInteger(p.id) && typeof p.mode === 'string')
+    const savedState = () => readStored(storageKey, isSavedState, null, 'pins')
 
     function seededState () {
       const pins = engine.tabSet().map((tool, id) => ({ id, mode: tool.mode, submode: tool.submode, style: null }))
