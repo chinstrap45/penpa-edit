@@ -41,6 +41,7 @@ export const DRAG_REACH = 1.5
 const RIGHT_BUTTON = 0.25
 const CTRL_HELD = 0.1
 const LEAVES_CANVAS = 0.1
+// The pointer leaving the canvas, as `onOut` in `main.js` calls the engine.
 const OUT_STEP = { kind: 'pointer', action: 'out', button: null, ctrl: false, x: 0, y: 0, num: 0 }
 
 // mulberry32

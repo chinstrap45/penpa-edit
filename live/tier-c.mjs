@@ -161,6 +161,7 @@ export function generateSolve (puzzle, seed) {
   return steps
 }
 
+// Runs under the replay's paused clock, so the engine state a run ends on is the same on every run.
 async function runSteps (browser, { name, source, steps, check = async () => null }) {
   const { context, page, errors } = await openPenpa(browser, source, { setup: pauseClock })
   try {

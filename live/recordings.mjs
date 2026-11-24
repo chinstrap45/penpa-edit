@@ -16,12 +16,12 @@ export function recordingText ({ header, final, steps }) {
     ',\n"steps": [\n' + steps.map((s) => JSON.stringify(s)).join(',\n') + '\n]}\n'
 }
 
-// Writes the steps file of recording `id` under `root` (its folder made if need be), from the recording or from its
-// file text as the recorder wrote it; returns the file's path.
+// Writes the steps file of recording `id` under `root` (its folder made if need be) in the recorder's layout; returns
+// the file's path.
 export async function writeRecording (id, recording, root = RECORDINGS) {
   const file = new URL(id + STEPS_SUFFIX, root)
   await mkdir(dirname(fileURLToPath(file)), { recursive: true })
-  await writeFile(file, typeof recording === 'string' ? recording : recordingText(recording))
+  await writeFile(file, recordingText(recording))
   return fileURLToPath(file)
 }
 

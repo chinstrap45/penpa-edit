@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { AKARI_SOLVE, animationsDone, openPenpa, openSolvePage, useBrowser, openSettings } from './page.mjs'
+import { AKARI_SOLVE, animationsDone, openPenpa, openSolvePage, useBrowser, openSettings, closeSettings } from './page.mjs'
 
 const browser = useBrowser()
 
@@ -45,8 +45,7 @@ describe('a Penpa+ popup', () => {
       await animationsDone(page)
       await openSettings(page)
       const want = await page.evaluate(pageDialogStyleInPage, STYLE_PROPS)
-      await page.keyboard.press('Escape')
-      await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
+      await closeSettings(page)
       const got = await page.evaluate(popupStyleInPage, STYLE_PROPS)
       assert.deepEqual(got.panel, want.panel)
       assert.deepEqual(got.button, want.button)

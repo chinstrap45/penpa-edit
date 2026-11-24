@@ -1,7 +1,7 @@
 // Change size on solve.html: a removal that would take a given or an entry with it is refused, as is any change on a grid that is not square.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { ANSWER_CELL, boardAgainstCard, cardBodyButtons, chipName, DIGIT_CELL, linkFromNewBoard, makeNumberSolveLink, newBoardSolveLink, openSolvePage, setTool, typedDigits, typeDigitInPage, useBrowser, openSettings, waitForDesk, cellSize } from './page.mjs'
+import { ANSWER_CELL, boardAgainstCard, cardBodyButtons, chipName, DIGIT_CELL, linkFromNewBoard, makeNumberSolveLink, newBoardSolveLink, openSolvePage, setTool, typedDigits, typeDigitInPage, useBrowser, openSettings, closeSettings, waitForDesk, cellSize } from './page.mjs'
 import { clickCell } from './replay.mjs'
 import { settle } from './settle.mjs'
 
@@ -288,8 +288,7 @@ describe('a resize keeps what the solver set on the puzzle', () => {
     await page.getByRole('button', { name: 'Unpin Line > Normal' }).click()
     await (await openSettings(page)).getByRole('combobox', { name: 'Conflict detection' }).click()
     await page.getByRole('option', { name: 'Off for this puzzle' }).click()
-    await page.keyboard.press('Escape')
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
+    await closeSettings(page)
     const handle = await rules(page).getByTestId('resize-bottom-right').boundingBox()
     const from = { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }
     await page.mouse.move(from.x, from.y)

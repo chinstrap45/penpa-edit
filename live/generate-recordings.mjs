@@ -157,12 +157,9 @@ async function record (browser, query, act, header) {
     // The recorder wraps `pu` on the first input event, so the first mode change must come after one.
     await page.mouse.move(1, 1)
     await act(page)
-    const { text, recording } = await downloadRecording(page)
+    const { recording } = await downloadRecording(page)
     recording.header = { ...recording.header, commit: COMMIT, ...header }
-    // The recorder writes the header alone on the first line.
-    const lines = text.split('\n')
-    lines[0] = '{"header": ' + JSON.stringify(recording.header) + ','
-    return { text: lines.join('\n'), recording }
+    return recording
   } finally {
     await context.close()
   }
@@ -327,16 +324,15 @@ try {
   for (const item of plan) {
     const { id } = item
     const started = Date.now()
-    let made
+    let recording
     try {
-      made = await recordOnFirst(browser, item)
+      recording = await recordOnFirst(browser, item)
     } catch (e) {
       refused.push(`${id}: could not be recorded: ${e.message.split('\n')[0]}`)
       console.log(`${id}: NOT RECORDED`)
       continue
     }
-    const { text, recording } = made
-    await writeRecording(id, text)
+    await writeRecording(id, recording)
     const { checkpoints, report } = await replay(browser, recording, { id, fullRoundTrips: true })
     if (report) {
       refused.push(report)
