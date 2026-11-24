@@ -63,6 +63,7 @@ export const EDITS = [
 `,
     replace: `            "./ui/vendor/webawesome/webawesome.iife.js",
             "./ui/ui-kit.js",
+            "./ui/board-view.js",
             "./ui/desk.js",
             "./ui/tool-guide.js",
             "./ui/float-list.js",

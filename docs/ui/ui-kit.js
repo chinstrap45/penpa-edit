@@ -4,6 +4,8 @@
 (function () {
   'use strict'
 
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+
   function el (tag, attrs = {}, children = []) {
     const node = document.createElement(tag)
     Object.entries(attrs).forEach(([name, value]) => node.setAttribute(name, value))
@@ -126,5 +128,5 @@
     }
   }
 
-  window.uiKit = { el, addTooltip, iconButton, textButton, onDeskReady, confirmDialog, setDark, luminance, visibleBox, readStored, storeFlag }
+  window.uiKit = { clamp, el, addTooltip, iconButton, textButton, onDeskReady, confirmDialog, setDark, luminance, visibleBox, readStored, storeFlag }
 })()
