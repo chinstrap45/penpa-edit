@@ -47,13 +47,13 @@ const FAILED = [
   'replay: npm run fuzz:ui -- --seed 77 --path 3:4@abc'
 ].join('\n')
 
-test('a failure is read as its puzzle, seed, error, steps and replay command', () => {
+test('a failure is read as its puzzle, seed, error, actions and replay command', () => {
   assert.deepEqual(parseFuzzOutput(FAILED), {
     failed: true,
     puzzle: 'Classic',
     seed: 77,
     error: 'rule broken after step 2 (pin key): pin-keys-select-their-pin: pressing Z left no pin current',
-    steps: ['open the Pinned card', 'pin key Z'],
+    actions: ['open the Pinned card', 'pin key Z'],
     replay: 'npm run fuzz:ui -- --seed 77 --path 3:4@abc'
   })
 })

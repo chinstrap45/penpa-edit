@@ -8,7 +8,7 @@ const browser = useBrowser()
 
 const STYLE_PROPS = ['fontFamily', 'backgroundColor', 'color', 'borderRadius']
 
-// Runs in the page. The computed values of a Penpa popup (the answer check's kind: a title, a text and a confirm button).
+// Runs in the page. The computed values of a Penpa+ popup (the answer check's kind: a title, a text and a confirm button).
 async function popupStyleInPage (props) {
   const read = (node, keys = props) => Object.fromEntries(keys.map((p) => [p, getComputedStyle(node)[p]]))
   Swal.fire({ title: 'Congratulations!', text: 'You solved it.', icon: 'success' })
@@ -39,7 +39,7 @@ async function pageDialogStyleInPage (props) {
   }
 }
 
-describe('a Penpa popup', () => {
+describe('a Penpa+ popup', () => {
   for (const theme of ['light', 'dark']) {
     it(`on solve.html has the page dialog's font, colours and button, in the ${theme} theme`, async () => {
       const { context, page } = await openSolvePage(browser(), AKARI_SOLVE)
