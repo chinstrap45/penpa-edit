@@ -13,7 +13,8 @@ function readLookInPage (name) {
   const style = (node, props) => Object.fromEntries(props.map((p) => [p, getComputedStyle(node)[p]]))
   return {
     card: style(card, ['borderTopWidth', 'borderTopColor', 'backgroundColor', 'boxShadow']),
-    head: style(card.querySelector('.ui-head'), ['backgroundColor', 'color', 'borderBottomColor'])
+    head: style(card.querySelector('.ui-head'), ['backgroundColor', 'color', 'borderBottomColor']),
+    body: style(card.querySelector('.ui-body'), ['backgroundColor'])
   }
 }
 
@@ -22,7 +23,7 @@ describe('the Mouse card looks like its neighbours', () => {
   afterEach(async () => { await opened?.context.close() })
 
   for (const theme of ['light', 'dark']) {
-    it(`draws the frame, the title bar and the rows like the Rules card's, in the ${theme} theme`, async () => {
+    it(`draws the frame, the title bar and the body like the Rules card's, and the rows with no fill, in the ${theme} theme`, async () => {
       opened = await openSolvePage(browser(), await newBoardSolveLink(browser(), undefined, 'Put a digit in every cell.'))
       const { page } = opened
       await page.evaluate((t) => engine.setTheme(t), theme)
@@ -37,7 +38,7 @@ describe('the Mouse card looks like its neighbours', () => {
         label: { weight: getComputedStyle(row.querySelector('.ui-mg')).fontWeight, color: getComputedStyle(row.querySelector('.ui-mg')).color },
         text: getComputedStyle(row).color
       })))
-      assert.equal(rows.length > 0, true, 'the card has rows')
+      assert.notEqual(rows.length, 0, 'the card has rows')
       for (const row of rows) {
         assert.equal(row.fill, 'rgba(0, 0, 0, 0)', 'a row has no fill')
         if (!row.more) {
