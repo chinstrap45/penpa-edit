@@ -3,14 +3,14 @@
 (function () {
   'use strict'
 
-  const { chipLabel, tooltipAttrs, toolKey } = window.toolGuide
+  const { chipLabel, tooltipAttrs, toolKey, findTool } = window.toolGuide
   const { el, onDeskReady } = window.uiKit
 
   const MAX_ENTRIES = 5
 
   onDeskReady(({ cards, fitToTools }) => {
     const tools = engine.listTools()
-    const toolOf = (entry) => tools.find((t) => toolKey(t) === toolKey(entry))
+    const toolOf = (entry) => findTool(tools, entry)
 
     // Each entry is a tool and the style it was last used with, the newest first: every tool used, since a pinned one comes
     // back here when unpinned.

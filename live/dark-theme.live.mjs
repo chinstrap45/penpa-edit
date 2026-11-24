@@ -171,8 +171,8 @@ describe('pin colours', () => {
       await page.evaluate(() => {
         const keys = Object.keys(localStorage).filter((key) => localStorage.getItem(key).includes('"pins"'))
         if (keys.length !== 1) throw new Error(`expected one saved pin set, found ${keys.length}`)
-        const pins = engine.listTools().slice(0, 24).map(({ mode, submode }, id) => ({ id, mode, submode, style: null }))
-        localStorage.setItem(keys[0], JSON.stringify({ nextId: pins.length, pins }))
+        const pins = engine.listTools().slice(0, 24).map(({ mode, submode }) => ({ mode, submode, style: null }))
+        localStorage.setItem(keys[0], JSON.stringify({ pins }))
       })
       await page.reload()
       await waitForDesk(page)
