@@ -51,7 +51,7 @@ describe('solve.html on a solve link', () => {
   it('shows the title and author in the top bar and the rules in the Rules card, as text', async () => {
     const { page } = opened
     assert.equal(await page.getByRole('heading', { name: TITLE, level: 1 }).textContent(), TITLE)
-    assert.equal(await page.getByText(AUTHOR, { exact: false }).first().textContent().then((t) => t.includes(AUTHOR)), true)
+    assert.equal(await page.locator('.ui-bar').getByText(AUTHOR, { exact: false }).count(), 1, 'the author is in the top bar')
     const rules = page.getByRole('region', { name: 'Rules' })
     assert.equal(await rules.getByText('Shade a<b cells.').count(), 1)
     assert.equal(await rules.locator('b').count(), 0, 'no element is made from the text')
