@@ -318,7 +318,7 @@ function readRecentInPage () {
   return { h: Math.round(box.height), bottom: Math.round(box.bottom), needs: Math.ceil(needs), hidden: body.scrollHeight - body.clientHeight, chips: card.querySelectorAll('.ui-chip').length }
 }
 
-describe('the Recent card\'s automatic height', () => {
+describe('the Recent card\'s automatic height (#306)', () => {
   let opened
   afterEach(async () => { await opened?.context.close() })
 

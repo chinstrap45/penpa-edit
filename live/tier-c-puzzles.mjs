@@ -322,10 +322,9 @@ export function answerLinkInPage ({ writes, boxes }) {
   return url.slice(url.indexOf('#'))
 }
 
-// The puzzles whose kept recording is a solve of only some of their cells, and how many it leaves open: the rest are
-// given. The engine replay in full mode round-trips a duplicate link at every checkpoint, so a recording's cost grows faster than
-// its length, and a full 9x9 or killer solve went past the seam's 60-second test limit on CI (#34, controller's
-// ruling). The answer-aimed fuzz still solves these puzzles whole.
+// The puzzles whose kept recording solves only some cells, the rest given: full mode round-trips at every checkpoint, so
+// cost grows faster than length, and a full 9x9 or killer solve passed the seam's 60-second test limit on CI. The
+// answer-aimed fuzz still solves them whole.
 export const KEPT_OPEN_CELLS = { 'sudoku-9x9': 20, killer: 20 }
 const OPEN_SEED = 1
 
@@ -363,7 +362,7 @@ function newBoardInPage (size) {
   create_newboard()
 }
 
-// An answer in two OR categories (C1's kind, #13), both filled: the author shades OR_CELLS and puts a black square in
+// An answer in two OR categories, both filled: the author shades OR_CELLS and puts a black square in
 // each, so a solver who does either solves.
 async function buildOrShading (page) {
   await page.evaluate(newBoardInPage, OR_SIZE)
