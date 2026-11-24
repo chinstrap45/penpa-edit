@@ -77,14 +77,10 @@ describe('the engine driver', () => {
     assert.equal(checkpoints.at(-1).state, state)
   })
 
-  it('checks the board the link loads before the first step', async () => {
+  it('checks the board the link loads before the first step', async (t) => {
     const { context, page } = await openRecordingPage(browser(), query)
-    let loaded
-    try {
-      loaded = await page.evaluate(readEngineState).then(canonicalState)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const loaded = await page.evaluate(readEngineState).then(canonicalState)
     const { checkpoints } = await replay(browser(), { header: { source: query }, steps: [{ kind: 'undo' }] })
     assert.deepEqual(checkpoints[0], { step: 0, state: loaded })
   })

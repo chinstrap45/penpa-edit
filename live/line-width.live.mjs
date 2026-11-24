@@ -85,61 +85,49 @@ describe('line widths on solve.html', () => {
     link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, { title: '', author: '', rules: '', size: 9 })
   })
 
-  it(`draw a solver's line at its own width up to ${NORMAL} px a cell and twice as wide at ${ZOOMED} px`, async () => {
+  it(`draw a solver's line at its own width up to ${NORMAL} px a cell and twice as wide at ${ZOOMED} px`, async (t) => {
     const { context, page } = await openSolvePage(browser(), link, { served: true })
-    try {
-      const solverLine = { from: MIDDLE_CELL, to: RIGHT_OF_MIDDLE, style: SOLVER_LINE }
-      const small = await widthAt(page, SMALL, ACROSS_SOLVER_LINE, solverLine)
-      const normal = await widthAt(page, NORMAL, ACROSS_SOLVER_LINE, solverLine)
-      const zoomed = await widthAt(page, ZOOMED, ACROSS_SOLVER_LINE, solverLine)
-      assert.ok(Math.abs(small - SOLVER_LINE_PX) <= 0.5, `${small} px at ${SMALL} px a cell, want about ${SOLVER_LINE_PX}`)
-      assert.ok(Math.abs(normal - SOLVER_LINE_PX) <= 0.5, `${normal} px at ${NORMAL} px a cell, want about ${SOLVER_LINE_PX}`)
-      assert.ok(Math.abs(zoomed / normal - SOLVER_LINE_GROWTH) <= GROWTH_TOLERANCE,
-        `${zoomed} px at ${ZOOMED} px a cell against ${normal} px at ${NORMAL}: want about ${SOLVER_LINE_GROWTH} times`)
-    } finally {
-      await context.close()
+    t.after(() => context.close())
+    const solverLine = { from: MIDDLE_CELL, to: RIGHT_OF_MIDDLE, style: SOLVER_LINE }
+    const small = await widthAt(page, SMALL, ACROSS_SOLVER_LINE, solverLine)
+    const normal = await widthAt(page, NORMAL, ACROSS_SOLVER_LINE, solverLine)
+    const zoomed = await widthAt(page, ZOOMED, ACROSS_SOLVER_LINE, solverLine)
+    assert.ok(Math.abs(small - SOLVER_LINE_PX) <= 0.5, `${small} px at ${SMALL} px a cell, want about ${SOLVER_LINE_PX}`)
+    assert.ok(Math.abs(normal - SOLVER_LINE_PX) <= 0.5, `${normal} px at ${NORMAL} px a cell, want about ${SOLVER_LINE_PX}`)
+    assert.ok(Math.abs(zoomed / normal - SOLVER_LINE_GROWTH) <= GROWTH_TOLERANCE,
+      `${zoomed} px at ${ZOOMED} px a cell against ${normal} px at ${NORMAL}: want about ${SOLVER_LINE_GROWTH} times`)
+  })
+
+  it(`draw the grid and the outer frame half as much wider at ${ZOOMED} px a cell, and as before at ${SMALL}`, async (t) => {
+    const { context, page } = await openSolvePage(browser(), link, { served: true })
+    t.after(() => context.close())
+    for (const [name, where] of [['grid line', ACROSS_GRID_LINE], ['outer frame', ACROSS_FRAME]]) {
+      const small = await widthAt(page, SMALL, where)
+      const normal = await widthAt(page, NORMAL, where)
+      const zoomed = await widthAt(page, ZOOMED, where)
+      assert.equal(small, normal, `the ${name} at ${SMALL} px a cell against ${NORMAL}`)
+      assert.ok(Math.abs(zoomed / normal - FRAME_GROWTH) <= GROWTH_TOLERANCE,
+        `the ${name}: ${zoomed} px at ${ZOOMED} px a cell against ${normal} px at ${NORMAL}: want about ${FRAME_GROWTH} times`)
     }
   })
 
-  it(`draw the grid and the outer frame half as much wider at ${ZOOMED} px a cell, and as before at ${SMALL}`, async () => {
+  it('scales only the board, and a width Penpa+ already sizes by the cell only once', async (t) => {
     const { context, page } = await openSolvePage(browser(), link, { served: true })
-    try {
-      for (const [name, where] of [['grid line', ACROSS_GRID_LINE], ['outer frame', ACROSS_FRAME]]) {
-        const small = await widthAt(page, SMALL, where)
-        const normal = await widthAt(page, NORMAL, where)
-        const zoomed = await widthAt(page, ZOOMED, where)
-        assert.equal(small, normal, `the ${name} at ${SMALL} px a cell against ${NORMAL}`)
-        assert.ok(Math.abs(zoomed / normal - FRAME_GROWTH) <= GROWTH_TOLERANCE,
-          `the ${name}: ${zoomed} px at ${ZOOMED} px a cell against ${normal} px at ${NORMAL}: want about ${FRAME_GROWTH} times`)
-      }
-    } finally {
-      await context.close()
-    }
-  })
-
-  it('scales only the board, and a width Penpa+ already sizes by the cell only once', async () => {
-    const { context, page } = await openSolvePage(browser(), link, { served: true })
-    try {
-      assert.deepEqual(await page.evaluate(setterWidthsInPage, { px: ZOOMED, style: SOLVER_LINE }),
-        { cellSize: ZOOMED, board: SOLVER_LINE_PX * ZOOMED / NORMAL, scratch: SOLVER_LINE_PX })
-      for (const style of CELL_SIZED_STYLES) {
-        assert.deepEqual(await page.evaluate(setterWidthsInPage, { px: ZOOMED, style }),
-          { cellSize: ZOOMED, board: CELL_SIZED_PX_AT_ZOOMED, scratch: CELL_SIZED_PX_AT_ZOOMED }, `style ${style}`)
-      }
-    } finally {
-      await context.close()
+    t.after(() => context.close())
+    assert.deepEqual(await page.evaluate(setterWidthsInPage, { px: ZOOMED, style: SOLVER_LINE }),
+      { cellSize: ZOOMED, board: SOLVER_LINE_PX * ZOOMED / NORMAL, scratch: SOLVER_LINE_PX })
+    for (const style of CELL_SIZED_STYLES) {
+      assert.deepEqual(await page.evaluate(setterWidthsInPage, { px: ZOOMED, style }),
+        { cellSize: ZOOMED, board: CELL_SIZED_PX_AT_ZOOMED, scratch: CELL_SIZED_PX_AT_ZOOMED }, `style ${style}`)
     }
   })
 })
 
 describe("Penpa+'s own page", () => {
-  it(`keeps the solver line at its own width at ${ZOOMED} px a cell`, async () => {
+  it(`keeps the solver line at its own width at ${ZOOMED} px a cell`, async (t) => {
     const { context, page } = await openPenpa(browser())
-    try {
-      assert.deepEqual(await page.evaluate(setterWidthsInPage, { px: ZOOMED, style: SOLVER_LINE }),
-        { cellSize: ZOOMED, board: SOLVER_LINE_PX, scratch: SOLVER_LINE_PX })
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.deepEqual(await page.evaluate(setterWidthsInPage, { px: ZOOMED, style: SOLVER_LINE }),
+      { cellSize: ZOOMED, board: SOLVER_LINE_PX, scratch: SOLVER_LINE_PX })
   })
 })

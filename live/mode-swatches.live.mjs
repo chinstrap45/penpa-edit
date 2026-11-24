@@ -67,7 +67,7 @@ describe('the Mode card swatches', () => {
 })
 
 describe('a saved dark theme whose stylesheet is slow to arrive (#247)', () => {
-  it('still draws every colour style of Surface and Number as a swatch, never as its name', async () => {
+  it('still draws every colour style of Surface and Number as a swatch, never as its name', async (t) => {
     const link = await newBoardSolveLink(browser(), ['Surface', 'Number'])
     // The dark stylesheet is held until the page has read its tools, as a slow network holds it on the live site; until it
     // arrives Penpa+'s colour variables are undefined, so its legacy style labels have no background.
@@ -83,19 +83,16 @@ describe('a saved dark theme whose stylesheet is slow to arrive (#247)', () => {
         })
       }
     })
-    try {
-      const { page } = opened
-      // Each colour style of `mode` as [name, the type of its swatch], in the order the tool lists them.
-      const colourStyles = (mode) => page.evaluate(([mode, names]) => engine.listTools().find((t) => t.mode === mode).styles
-        .filter((s) => names.includes(s.name)).map((s) => [s.name, typeof s.swatch]), [mode, COLOURS[mode]])
-      for (const [mode, names] of Object.entries(COLOURS)) {
-        assert.deepEqual(await colourStyles(mode), names.map((name) => [name, 'string']), `${mode}: every colour style has a swatch`)
-      }
-      await setTool(page, { mode: 'surface' })
-      const buttons = await settle(() => page.evaluate(() => [...document.querySelectorAll('.ui-stylebtn')].map((b) => b.querySelector('.ui-swatch') ? 'swatch' : b.textContent.trim())), null)
-      assert.deepEqual(buttons, COLOURS.surface.map(() => 'swatch'), 'every Surface button is a swatch')
-    } finally {
-      await opened.context.close()
+    t.after(() => opened.context.close())
+    const { page } = opened
+    // Each colour style of `mode` as [name, the type of its swatch], in the order the tool lists them.
+    const colourStyles = (mode) => page.evaluate(([mode, names]) => engine.listTools().find((t) => t.mode === mode).styles
+      .filter((s) => names.includes(s.name)).map((s) => [s.name, typeof s.swatch]), [mode, COLOURS[mode]])
+    for (const [mode, names] of Object.entries(COLOURS)) {
+      assert.deepEqual(await colourStyles(mode), names.map((name) => [name, 'string']), `${mode}: every colour style has a swatch`)
     }
+    await setTool(page, { mode: 'surface' })
+    const buttons = await settle(() => page.evaluate(() => [...document.querySelectorAll('.ui-stylebtn')].map((b) => b.querySelector('.ui-swatch') ? 'swatch' : b.textContent.trim())), null)
+    assert.deepEqual(buttons, COLOURS.surface.map(() => 'swatch'), 'every Surface button is a swatch')
   })
 })

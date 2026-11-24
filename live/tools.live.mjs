@@ -458,7 +458,7 @@ describe('Number orientation', () => {
     }
   })
 
-  it('offers nothing, and no empty group, on a grid with no directions', async () => {
+  it('offers nothing, and no empty group, on a grid with no directions', async (t) => {
     const link = await linkFromNewBoard(browser(), () => {
       document.getElementById('nb_size1').value = 3
       document.getElementById('nb_size2').value = 3
@@ -468,15 +468,12 @@ describe('Number orientation', () => {
       return url.slice(url.indexOf('#'))
     })
     const hex = await openSolvePage(browser(), link)
-    try {
-      await setTool(hex.page, { mode: 'number', submode: '1' })
-      assert.deepEqual(await hex.page.evaluate(() => engine.listOrientations()), [])
-      assert.equal(await hex.page.evaluate(() => engine.getOrientation()), null)
-      await hex.page.getByRole('region', { name: 'Mode' }).getByRole('combobox', { name: 'Tool' }).waitFor()
-      assert.equal(await hex.page.getByRole('region', { name: 'Mode' }).getByText('Orientation', { exact: true }).count(), 0)
-    } finally {
-      await hex.context.close()
-    }
+    t.after(() => hex.context.close())
+    await setTool(hex.page, { mode: 'number', submode: '1' })
+    assert.deepEqual(await hex.page.evaluate(() => engine.listOrientations()), [])
+    assert.equal(await hex.page.evaluate(() => engine.getOrientation()), null)
+    await hex.page.getByRole('region', { name: 'Mode' }).getByRole('combobox', { name: 'Tool' }).waitFor()
+    assert.equal(await hex.page.getByRole('region', { name: 'Mode' }).getByText('Orientation', { exact: true }).count(), 0)
   })
 
   it('follows an orientation set from outside, and the engine refuses a bad one', async () => {
@@ -741,15 +738,12 @@ describe('the Mouse card reads at a glance (#203)', () => {
 })
 
 describe('a mode solve mode hides', () => {
-  it('is still the tool in use, and the cards draw it without an error', async () => {
+  it('is still the tool in use, and the cards draw it without an error', async (t) => {
     const opened = await openSolve()
-    try {
-      await opened.page.evaluate(() => pu.mode_set('board'))
-      assert.equal((await currentTool(opened.page)).mode, 'board')
-      const headline = opened.page.getByRole('region', { name: 'Mouse' }).getByRole('heading', { level: 3 })
-      assert.equal(await settle(() => headline.textContent(), 'board'), 'board')
-    } finally {
-      await opened.context.close()
-    }
+    t.after(() => opened.context.close())
+    await opened.page.evaluate(() => pu.mode_set('board'))
+    assert.equal((await currentTool(opened.page)).mode, 'board')
+    const headline = opened.page.getByRole('region', { name: 'Mouse' }).getByRole('heading', { level: 3 })
+    assert.equal(await settle(() => headline.textContent(), 'board'), 'board')
   })
 })

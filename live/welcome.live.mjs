@@ -33,85 +33,70 @@ async function replayFromSettings (page) {
 }
 
 describe('the welcome dialog on a first visit', () => {
-  it('says what differs from Penpa+, in the approved words', async () => {
+  it('says what differs from Penpa+, in the approved words', async (t) => {
     const { context, page } = await openFirstVisit()
-    try {
-      await welcome(page).waitFor()
-      const lines = await welcomeBox(page).locator('li').allTextContents()
-      assert.deepEqual(lines.map((line) => line.trim()), [
-        'Drag a card by its title, resize it from any edge, close it with ×. Your layout is kept.',
-        'Pin tools in Pinned. Z X C V pick the first four; Tab, Shift+Tab or the mouse wheel anywhere without a scroll bar steps through them. Recent keeps your last tools.',
-        'Mode lists every tool this grid has.',
-        'Try starts a trial. Keep or Discard it later.',
-        'Penpa+ opens this puzzle in Penpa+; its Back to new UI button brings you back.'
-      ])
-      assert.match(await welcomeBox(page).textContent(), /What's different from Penpa\+:/)
-      assert.equal(await startButton(page).count(), 1)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await welcome(page).waitFor()
+    const lines = await welcomeBox(page).locator('li').allTextContents()
+    assert.deepEqual(lines.map((line) => line.trim()), [
+      'Drag a card by its title, resize it from any edge, close it with ×. Your layout is kept.',
+      'Pin tools in Pinned. Z X C V pick the first four; Tab, Shift+Tab or the mouse wheel anywhere without a scroll bar steps through them. Recent keeps your last tools.',
+      'Mode lists every tool this grid has.',
+      'Try starts a trial. Keep or Discard it later.',
+      'Penpa+ opens this puzzle in Penpa+; its Back to new UI button brings you back.'
+    ])
+    assert.match(await welcomeBox(page).textContent(), /What's different from Penpa\+:/)
+    assert.equal(await startButton(page).count(), 1)
   })
 
-  it('is marked seen as it opens, so a reload does not bring it back', async () => {
+  it('is marked seen as it opens, so a reload does not bring it back', async (t) => {
     const { context, page } = await openFirstVisit()
-    try {
-      await welcome(page).waitFor()
-      assert.equal(await storedWelcome(page), WELCOME_SEEN)
-      await page.reload()
-      assert.equal(await welcomeShownAfterLoad(page), 0, 'the welcome shows on the first visit only')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await welcome(page).waitFor()
+    assert.equal(await storedWelcome(page), WELCOME_SEEN)
+    await page.reload()
+    assert.equal(await welcomeShownAfterLoad(page), 0, 'the welcome shows on the first visit only')
   })
 
-  it('Start solving closes it for good', async () => {
+  it('Start solving closes it for good', async (t) => {
     const { context, page } = await openFirstVisit()
-    try {
-      await startButton(page).click()
-      await welcomeBox(page).waitFor({ state: 'detached' })
-      await page.reload()
-      assert.equal(await welcomeShownAfterLoad(page), 0)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await startButton(page).click()
+    await welcomeBox(page).waitFor({ state: 'detached' })
+    await page.reload()
+    assert.equal(await welcomeShownAfterLoad(page), 0)
   })
 
-  it('Escape closes it and does not reach the board: the selection stays, and a digit typed while it is up is not entered', async () => {
+  it('Escape closes it and does not reach the board: the selection stays, and a digit typed while it is up is not entered', async (t) => {
     const { context, page } = await openFirstVisit()
-    try {
-      await welcome(page).waitFor()
-      await page.keyboard.press('Escape')
-      await welcomeBox(page).waitFor({ state: 'detached' })
+    t.after(() => context.close())
+    await welcome(page).waitFor()
+    await page.keyboard.press('Escape')
+    await welcomeBox(page).waitFor({ state: 'detached' })
 
-      // With the Number tool, a selected cell is where a digit would go. Select it, replay, and press Escape on the dialog.
-      await setTool(page, { mode: 'number', submode: '1' })
-      await clickCell(page, DIGIT_CELL)
-      await replayFromSettings(page)
-      await page.keyboard.press('1')
-      await page.keyboard.press('Escape')
-      await welcomeBox(page).waitFor({ state: 'detached' })
-      assert.deepEqual(await typedDigits(page), [], 'the board took no digit while the dialog was up')
-      await page.keyboard.press('1')
-      assert.deepEqual(await settle(() => typedDigits(page), ['1']), ['1'], 'with the dialog gone the same key enters it on the still-selected cell')
-    } finally {
-      await context.close()
-    }
+    // With the Number tool, a selected cell is where a digit would go. Select it, replay, and press Escape on the dialog.
+    await setTool(page, { mode: 'number', submode: '1' })
+    await clickCell(page, DIGIT_CELL)
+    await replayFromSettings(page)
+    await page.keyboard.press('1')
+    await page.keyboard.press('Escape')
+    await welcomeBox(page).waitFor({ state: 'detached' })
+    assert.deepEqual(await typedDigits(page), [], 'the board took no digit while the dialog was up')
+    await page.keyboard.press('1')
+    assert.deepEqual(await settle(() => typedDigits(page), ['1']), ['1'], 'with the dialog gone the same key enters it on the still-selected cell')
   })
 })
 
 describe('Settings', () => {
-  it('replays the welcome for a visitor who has seen it', async () => {
+  it('replays the welcome for a visitor who has seen it', async (t) => {
     const { context, page } = await openSolvePage(browser(), await makeNumberSolveLink(browser()))
-    try {
-      // The harness closed the first visit's welcome; a visitor who has seen it is not shown it again.
-      await welcomeBox(page).waitFor({ state: 'detached' })
-      await page.reload()
-      assert.equal(await welcomeShownAfterLoad(page), 0, 'a visitor who has seen it is not shown it')
-      await replayFromSettings(page)
-      await page.keyboard.press('Escape')
-      await welcomeBox(page).waitFor({ state: 'detached' })
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    // The harness closed the first visit's welcome; a visitor who has seen it is not shown it again.
+    await welcomeBox(page).waitFor({ state: 'detached' })
+    await page.reload()
+    assert.equal(await welcomeShownAfterLoad(page), 0, 'a visitor who has seen it is not shown it')
+    await replayFromSettings(page)
+    await page.keyboard.press('Escape')
+    await welcomeBox(page).waitFor({ state: 'detached' })
   })
 })

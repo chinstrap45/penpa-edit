@@ -13,7 +13,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const browser = useBrowser()
 
 describe(`the page reach of ${ENGINE_PAGE}`, () => {
-  it('holds every file the page loads as it boots a puzzle and switches theme', async () => {
+  it('holds every file the page loads as it boots a puzzle and switches theme', async (t) => {
     const asked = new Set()
     const { context, page } = await openPenpa(browser(), AKARI_SOLVE, {
       served: true,
@@ -22,15 +22,12 @@ describe(`the page reach of ${ENGINE_PAGE}`, () => {
         if (url.origin === PENPA_ORIGIN) asked.add('docs' + (url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname)))
       })
     })
-    try {
-      await waitForSettingsLoaded(page)
-      const dark = page.waitForResponse((response) => response.url().includes('/css/dark_theme.css'))
-      await page.evaluate(() => { UserSettings.color_theme = THEME_DARK })
-      await dark
-      await page.waitForLoadState('networkidle')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await waitForSettingsLoaded(page)
+    const dark = page.waitForResponse((response) => response.url().includes('/css/dark_theme.css'))
+    await page.evaluate(() => { UserSettings.color_theme = THEME_DARK })
+    await dark
+    await page.waitForLoadState('networkidle')
     assert.ok(asked.has('docs/js/class_p.js') && asked.has('docs/css/dark_theme.css'), 'the page loaded its scripts and the dark theme (the premise)')
     const reach = pageReach(ROOT, ENGINE_PAGE)
     assert.deepEqual([...asked].filter((path) => !reach.has(path)).sort(), [], 'every file the page loaded is reached')
