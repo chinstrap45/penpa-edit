@@ -146,8 +146,8 @@ describe('loading a built-in preset', () => {
     const { page } = opened
     assert.equal(await settle(() => chipCount(page), 5), 5)
     await choosePreset(page, 'Classic sudoku')
-    assert.equal(await settle(() => chipCount(page), 3), 3)
-    assert.deepEqual(await walkPins(page, 3), ['sudoku/1', 'sudoku/2', 'sudoku/3'])
+    assert.equal(await settle(() => chipCount(page), 4), 4)
+    assert.deepEqual(await walkPins(page, 4), ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/'])
   })
 })
 
@@ -179,7 +179,7 @@ describe('typing in the preset field', () => {
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('Enter')
     await closed(page)
-    await assertTabCyclesPins(page, ['sudoku/1', 'sudoku/2', 'sudoku/3', 'line/1', 'line/4'])
+    await assertTabCyclesPins(page, ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/', 'combi/linex'])
   })
 
   it('closes on Escape and loads nothing', async () => {
@@ -250,7 +250,7 @@ describe('typing in the preset field', () => {
   it('picks with the mouse and hands the keyboard back to the board', async () => {
     const { page } = opened
     await choosePreset(page, 'Classic sudoku')
-    await assertTabCyclesPins(page, ['sudoku/1', 'sudoku/2', 'sudoku/3'])
+    await assertTabCyclesPins(page, ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/'])
   })
 })
 

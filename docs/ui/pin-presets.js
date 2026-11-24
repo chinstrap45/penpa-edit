@@ -26,7 +26,7 @@
   const TRASH_ICON = '<path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.5 6.5v4.5M9.5 6.5v4.5"/>'
   const ICON_ATTRS = 'width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"'
 
-  const SUDOKU = ['sudoku/1', 'sudoku/2', 'sudoku/3']
+  const SUDOKU = ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/']
   const NUMBERS = ['number/1', 'number/5', 'number/7']
   const BLOCKS = ['combi/blpo']
 
@@ -35,7 +35,7 @@
   // dots, arrows): a Sudoku variant needs only the entry modes, so it is Classic sudoku. A tool a puzzle's grid lacks is left out on load.
   const BUILT_IN = [
     ['Number placement', 'Classic sudoku', SUDOKU],
-    ['Number placement', 'Sudoku with lines and marks', [...SUDOKU, 'line/1', 'line/4']],
+    ['Number placement', 'Sudoku with lines and marks', [...SUDOKU, 'combi/linex']],
     ['Number placement', 'Kakuro', NUMBERS],
     ['Number placement', 'Skyscrapers', NUMBERS],
     ['Number placement', 'Nonogram', ['surface/', 'combi/blpo', 'number/5']],
