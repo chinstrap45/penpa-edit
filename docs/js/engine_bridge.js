@@ -507,8 +507,7 @@
 
   // The Puzzle methods whose calls can change what the UI shows. Hooked on the prototype, so a `pu` that load() replaces
   // stays hooked, and a wrapper on the instance (recorder.js) calls through to the hook.
-  const HOOKED_PUZZLE_METHODS = ['redraw', 'mode_set', 'submode_check', 'stylemode_check', 'subcombimode', 'subsymbolmode',
-    'set_orientation']
+  const HOOKED_PUZZLE_METHODS = ['redraw', ...TOOL_CALLS]
   const changeHandlers = new Set()
   let changeQueued = false
   function queueChange () {
