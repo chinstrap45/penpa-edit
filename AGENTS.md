@@ -27,8 +27,7 @@ only stops naming Swaroop or upstream as its owner, with no self-promotion (Chri
   written by `node live/generate-gallery.mjs` from `live/gallery-puzzles.mjs`, which a live test checks it matches; `docs/ui/` is the solve
   UI, Web Awesome's bundle vendored in it; `docs/js/chinstrap_button.js` is index.html's ChinStrap button back to `solve.html` (#364);
   `docs/js/solve_forward.js` forwards a desktop solve link from index.html to `solve.html`, and the mark the Penpa+ button adds so it does
-  not (#376); `docs/js/puzzlink_import.js` wraps puzzlink's decode so a failed import keeps the board (#18), and is the one owned
-  script the lint skips (`NOT_LINTED` in `live/lint.mjs`: a classic script in upstream's style, calling other scripts' globals).
+  not (#376); `docs/js/puzzlink_import.js` wraps puzzlink's decode so a failed import keeps the board (#18).
 - **`GLOSSARY.md`**: the vocabulary.
 - **Phones and tablets**: no change of ours is checked, styled or demonstrated at a phone or tablet size, and no ticket asks for it.
   Upstream's own phone support is left as it is. The one exception is routing: a phone-sized screen is checked to stay on
