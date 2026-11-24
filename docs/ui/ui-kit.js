@@ -95,5 +95,36 @@
     return { left, top, right: left + node.clientWidth, bottom: top + node.clientHeight }
   }
 
-  window.uiKit = { el, addTooltip, iconButton, textButton, onDeskReady, confirmDialog, setDark, luminance, visibleBox }
+  // What an earlier visit stored under `key`, parsed as JSON: `fallback` for none. A value that is unreadable, or that `isValid`
+  // refuses (another version's, or edited by hand), also gives `fallback`, with a console warning naming `what` it should hold,
+  // so the loss is never silent.
+  function readStored (key, isValid, fallback, what) {
+    const raw = localStorage.getItem(key)
+    if (raw === null) {
+      return fallback
+    }
+    let stored
+    try {
+      stored = JSON.parse(raw)
+    } catch (e) {
+      console.warn(`${key} is unreadable (${e.message}); ${what} are not read from it, and the next write replaces it.`)
+      return fallback
+    }
+    if (!isValid(stored)) {
+      console.warn(`${key} does not hold ${what} as this page saves them; none is read from it, and the next write replaces it.`)
+      return fallback
+    }
+    return stored
+  }
+
+  // A flag kept as `value` under `key` while `on`, and absent while not.
+  function storeFlag (key, value, on) {
+    if (on) {
+      localStorage.setItem(key, value)
+    } else {
+      localStorage.removeItem(key)
+    }
+  }
+
+  window.uiKit = { el, addTooltip, iconButton, textButton, onDeskReady, confirmDialog, setDark, luminance, visibleBox, readStored, storeFlag }
 })()

@@ -5,7 +5,7 @@
 (function () {
   'use strict'
 
-  const { el, addTooltip, visibleBox } = window.uiKit
+  const { el, addTooltip, readStored, storeFlag, visibleBox } = window.uiKit
 
   const CARD_GAP_PX = 10
   const DESK_MARGIN_PX = 14
@@ -206,24 +206,17 @@
   // `placed` 1 once the solver dragged the card by its header.
   // `puzzle` beside the cards names the puzzle the sizes were set on (`engine.getOriginalPuzzleId()`).
   function readLayout () {
-    let saved
-    try {
-      saved = JSON.parse(localStorage.getItem(LAYOUT_KEY))
-    } catch (e) {
-      // An unreadable layout is only card places, cheap to redo: the desk opens on the fitted one, and the next card
-      // moved or resized replaces it. Said in the console, so the loss is never silent.
-      console.warn(`${LAYOUT_KEY} is unreadable (${e.message}); the fitted layout is used, and the next change replaces it.`)
-      return { layout: {}, puzzle: undefined }
-    }
+    // An unreadable layout is only card places, cheap to redo: the desk opens on the fitted one.
+    const saved = readStored(LAYOUT_KEY, (stored) => stored !== null && typeof stored === 'object', {}, 'card places')
     // A card entry this code did not write (another version's, or edited by hand) is left out, as is any other key.
     const isNumbers = (entry) => entry && typeof entry === 'object' && Object.values(entry).every(Number.isFinite)
     const layout = {}
     Object.keys(CARD_TITLES).forEach((id) => {
-      if (isNumbers(saved?.[id])) {
+      if (isNumbers(saved[id])) {
         layout[id] = saved[id]
       }
     })
-    return { layout, puzzle: saved?.puzzle }
+    return { layout, puzzle: saved.puzzle }
   }
 
   let saved = {}
@@ -1228,11 +1221,7 @@
   }
 
   function setGridNumberedOnly (boardBody, only) {
-    if (only) {
-      localStorage.removeItem(GRID_NUMBERING_KEY)
-    } else {
-      localStorage.setItem(GRID_NUMBERING_KEY, GRID_NUMBERING_ALL)
-    }
+    storeFlag(GRID_NUMBERING_KEY, GRID_NUMBERING_ALL, !only)
     drawCoordinates()
     if (!isZoomed) {
       fitBoard(boardBody)
@@ -1240,11 +1229,7 @@
   }
 
   function setCoordinatesWanted (boardBody, shown) {
-    if (shown) {
-      localStorage.setItem(COORDINATES_KEY, COORDINATES_SHOWN)
-    } else {
-      localStorage.removeItem(COORDINATES_KEY)
-    }
+    storeFlag(COORDINATES_KEY, COORDINATES_SHOWN, shown)
     drawCoordinates()
     if (!isZoomed) {
       fitBoard(boardBody)
@@ -1345,13 +1330,8 @@
   // A kept size this code did not write is said in the console and the default is used.
   function showRulesText ({ cards, rulesText }) {
     const { min, max } = RULES_TEXT_RANGE_PX
-    const raw = localStorage.getItem(RULES_TEXT_KEY)
-    const kept = raw === null ? null : Number(raw)
-    const isUsable = kept !== null && Number.isFinite(kept) && kept >= min && kept <= max
-    if (raw !== null && !isUsable) {
-      console.warn(`${RULES_TEXT_KEY} is ${JSON.stringify(raw)}, not a size from ${min} to ${max}; the default size is used.`)
-    }
-    cards.rules.body.style.setProperty('--ui-rules-text', isUsable ? `${kept}px` : '')
+    const kept = readStored(RULES_TEXT_KEY, (size) => Number.isFinite(size) && size >= min && size <= max, null, `a size from ${min} to ${max}`)
+    cards.rules.body.style.setProperty('--ui-rules-text', kept === null ? '' : `${kept}px`)
     const shown = rulesTextSize(cards.rules.body)
     const hasNoRules = isRulesEmpty(cards.rules.node)
     // Hidden, not just disabled: a link with no rules has no text to size, and a disabled button fails the contrast check.
@@ -1456,11 +1436,7 @@
     const fitToTools = () => fitAutomatic(desk.desk, desk.cards)
     // Closing or opening a card refits a layout nobody has changed, so the cards left take its room or give it back.
     const setCardClosed = (id, closed) => {
-      if (closed) {
-        localStorage.setItem(closedKey(id), CARD_CLOSED)
-      } else {
-        localStorage.removeItem(closedKey(id))
-      }
+      storeFlag(closedKey(id), CARD_CLOSED, closed)
       const before = overlappingPairs(desk.cards)
       desk.cards[id].node.hidden = closed
       if (id === 'mouse' && !closed) {

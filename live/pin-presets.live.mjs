@@ -415,6 +415,33 @@ describe('saving a preset', () => {
   })
 })
 
+describe('a saved preset value this page did not write', () => {
+  let opened
+  before(async () => { opened = await openSolve(await link(['Line Normal'])) })
+  after(async () => { await opened?.context.close() })
+
+  const DAMAGED = [['no JSON', '{"name":'], ['an entry with no tools', JSON.stringify([{ name: 'Broken' }])]]
+  for (const [what, stored] of DAMAGED) {
+    it(`offers no saved preset and says so in the console: ${what}`, async () => {
+      const { page } = opened
+      const warnings = []
+      const onConsole = (m) => { if (m.type() === 'warning') warnings.push(m.text()) }
+      page.on('console', onConsole)
+      try {
+        await page.evaluate((value) => localStorage.setItem('chinstrap.pinPresets', value), stored)
+        await page.reload()
+        await waitForDesk(page)
+        await openList(page)
+        assert.equal(await presetList(page).getByRole('button', { name: /^Delete preset/ }).count(), 0, 'no saved preset is offered')
+        await page.keyboard.press('Escape')
+        assert.equal(warnings.some((w) => w.includes('chinstrap.pinPresets') && /unreadable|does not hold saved presets/.test(w)), true, `the console names the key: ${warnings}`)
+      } finally {
+        page.off('console', onConsole)
+      }
+    })
+  }
+})
+
 describe('deleting a saved preset', () => {
   let opened
   before(async () => {

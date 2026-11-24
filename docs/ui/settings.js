@@ -4,7 +4,7 @@
 (function () {
   'use strict'
 
-  const { confirmDialog, el, iconButton, onDeskReady } = window.uiKit
+  const { confirmDialog, el, iconButton, onDeskReady, storeFlag } = window.uiKit
 
   const CONFLICT_ON = 1
   const CONFLICT_OFF_THIS_PUZZLE = 2
@@ -87,11 +87,7 @@
     function save (name, value) {
       engine.setSetting(name, value)
       if (name === CONFLICT_SETTING) {
-        if (value === CONFLICT_OFF_THIS_PUZZLE) {
-          localStorage.setItem(perPuzzleKey(), PER_PUZZLE_FLAG)
-        } else {
-          localStorage.removeItem(perPuzzleKey())
-        }
+        storeFlag(perPuzzleKey(), PER_PUZZLE_FLAG, value === CONFLICT_OFF_THIS_PUZZLE)
         tag.hidden = value !== CONFLICT_OFF_THIS_PUZZLE
       }
     }

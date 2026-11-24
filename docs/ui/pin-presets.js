@@ -5,7 +5,7 @@
 (function () {
   'use strict'
 
-  const { el, onDeskReady } = window.uiKit
+  const { el, onDeskReady, readStored } = window.uiKit
   const { toolKey } = window.toolGuide
 
   const STORAGE_KEY = 'chinstrap.pinPresets'
@@ -71,33 +71,13 @@
     return { mode, submode: submode === '' ? null : submode, style: null }
   }
 
-  // What an earlier visit stored under `key`: the array it wrote, or [] for none. A stored value that is unreadable, or that this
-  // code did not write, offers nothing; the next write replaces it, which the console says, so the loss is never silent.
-  function storedList (key, isValid, what) {
-    const raw = localStorage.getItem(key)
-    if (raw === null) {
-      return []
-    }
-    let stored
-    try {
-      stored = JSON.parse(raw)
-    } catch (e) {
-      console.warn(`${key} is unreadable (${e.message}); no ${what} is offered, and the next write replaces it.`)
-      return []
-    }
-    if (!Array.isArray(stored) || !stored.every(isValid)) {
-      console.warn(`${key} does not hold ${what} as this page saves them; none is offered, and the next write replaces it.`)
-      return []
-    }
-    return stored
-  }
-
   // `{ name, tools }` entries.
-  const savedPresets = () => storedList(STORAGE_KEY, (p) => typeof p?.name === 'string' && Array.isArray(p.tools), 'saved preset')
+  const isListOf = (isValid) => (stored) => Array.isArray(stored) && stored.every(isValid)
+  const savedPresets = () => readStored(STORAGE_KEY, isListOf((p) => typeof p?.name === 'string' && Array.isArray(p.tools)), [], 'saved presets')
   const writePresets = (presets) => localStorage.setItem(STORAGE_KEY, JSON.stringify(presets))
   // Preset keys: `builtInKey(name)` or `savedKey(name)`.
   // A star on a built-in preset this page no longer lists is left out, so the next write drops it from storage.
-  const starredKeys = () => storedList(STARS_KEY, (key) => typeof key === 'string', 'favourite')
+  const starredKeys = () => readStored(STARS_KEY, isListOf((key) => typeof key === 'string'), [], 'favourites')
     .filter((key) => !key.startsWith(BUILT_IN_PREFIX) || BUILT_IN.some(([, name]) => builtInKey(name) === key))
   const writeStars = (keys) => localStorage.setItem(STARS_KEY, JSON.stringify(keys))
   const BUILT_IN_PREFIX = 'built-in:'
