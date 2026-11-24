@@ -1,7 +1,9 @@
 // Builds `docs/solve.html` from `docs/index.html` plus our parts (#431), so an upstream change to `index.html` reaches
 // the solve page at the next nightly upstream merge, which runs this script. Each edit names the exact text it
 // replaces, and that text must occur once in `index.html`: when upstream moves it, the build fails and says which edit,
-// rather than shipping a page that silently lacks our part.
+// rather than shipping a page that silently lacks our part. To change our part of the page, change EDITS and rerun
+// this script; `test/build-solve.test.mjs` fails when the committed file differs from the build, and the nightly merge's
+// build failing pushes nothing and files the issue (`.github/scripts/upstream-merge.sh`).
 // Usage: node live/build-solve.mjs   (from the repo root; writes docs/solve.html)
 import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
