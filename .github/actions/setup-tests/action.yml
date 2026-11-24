@@ -9,5 +9,20 @@ runs:
         cache: npm
     - shell: bash
       run: npm ci
+    - id: playwright-version
+      shell: bash
+      # A bare assignment, so a lockfile with no playwright entry fails the step instead of writing an empty version.
+      run: |
+        version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+    - id: playwright-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+    - if: steps.playwright-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: npx playwright install chromium
+    # The cache restores the browser, not the apt packages it needs.
     - shell: bash
-      run: npx playwright install --with-deps chromium
+      run: npx playwright install-deps chromium

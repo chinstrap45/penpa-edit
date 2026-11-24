@@ -42,6 +42,7 @@ test/run-narrowed.test.mjs merge=ours
 test/live-scratch.mjs merge=ours
 test/nightly-seam.test.mjs merge=ours
 test/ci-concurrency.test.mjs merge=ours
+test/setup-tests-action.test.mjs merge=ours
 test/redirect-urls.mjs merge=ours
 .github/workflows/** merge=ours
 .github/actions/** merge=ours
