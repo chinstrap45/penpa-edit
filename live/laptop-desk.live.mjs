@@ -120,8 +120,11 @@ describe('the top bar on a laptop screen', () => {
     return steady(page, readBarInPage)
   }
 
+  // The fixture's title is short; centring only overlaps the controls at 1366 with a heading this long.
+  const LONG_HEADING = { ...LONG_RULES_PUZZLE, title: 'Long rules (lorem ipsum, outside clues)', author: 'Placeholder' }
+
   it('centres the title and author when there is room, and moves them to the left end when centring would overlap', async () => {
-    const page = await open(LONG_RULES_PUZZLE, WIDE)
+    const page = await open(LONG_HEADING, WIDE)
     const wide = await barAt(page, WIDE)
     assert.equal(near(wide.heading.x + wide.heading.w / 2, wide.bar.x + wide.bar.w / 2), true, `centred at ${WIDE.width}: ${JSON.stringify(wide.heading)}`)
     assert.deepEqual(overlapping(wide), [])
@@ -136,7 +139,7 @@ describe('the top bar on a laptop screen', () => {
   })
 
   it('moves the heading clear of a control added to the bar after it was placed', async () => {
-    const page = await open(LONG_RULES_PUZZLE, WIDE)
+    const page = await open(LONG_HEADING, WIDE)
     const before = await barAt(page, WIDE)
     assert.equal(near(before.heading.x + before.heading.w / 2, before.bar.x + before.bar.w / 2), true, 'centred to start with')
     await page.evaluate(() => {
@@ -151,7 +154,7 @@ describe('the top bar on a laptop screen', () => {
 
   for (const viewport of LAPTOPS) {
     it(`keeps every control clear of the whole title and author at ${viewport.width}x${viewport.height}`, async () => {
-      const page = await open(LONG_RULES_PUZZLE, viewport)
+      const page = await open(LONG_HEADING, viewport)
       const read = await barAt(page, viewport)
       assert.deepEqual(overlapping(read), [])
       assert.equal(read.titleCut, false, 'the title is whole')
@@ -159,7 +162,7 @@ describe('the top bar on a laptop screen', () => {
   }
 
   it('makes the buttons smaller only when the title still overlaps them at the left end', async () => {
-    const page = await open(LONG_RULES_PUZZLE, LAPTOPS[0])
+    const page = await open(LONG_HEADING, LAPTOPS[0])
     // The title grows one narrow letter at a time until the bar goes compact, so the title is the longest the left end takes beside full-size buttons whatever the font.
     const grown = await page.evaluate(async () => {
       const bar = document.querySelector('.ui-bar')
