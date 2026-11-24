@@ -98,6 +98,44 @@ describe('a solve link opened on index.html', () => {
   })
 })
 
+// Penpa+ reads a link's settings from its query, or from its `#` data when it has no query, so a link with both is a solve
+// only when its query says so. The forward and the Back to new UI button must agree on that (#430): a link the page is
+// forwarded away from needs no button, and one it stays on as a solve needs it.
+describe('a link with both a query and `#` data opened on index.html', () => {
+  let hashLink
+  before(async () => { hashLink = await makeNumberSolveLink(browser()) })
+
+  const hasButton = (page) => page.evaluate(() => Boolean(document.querySelector('#top_button #chinstrap')))
+
+  it('is no solve when only its `#` data says so: no forward, no button', async () => {
+    const { context, page } = await openIndex(`?x=1${hashLink}`)
+    try {
+      assert.equal(pathOf(page), '/index.html', 'the page stays')
+      assert.equal(await hasButton(page), false, 'and has no button back')
+    } finally {
+      await context.close()
+    }
+  })
+
+  it('is a solve when its query says so: forwarded, and kept on index.html by the mark with the button', async () => {
+    const query = `?${hashLink.slice(1)}`
+    const forwarded = await openIndex(`${query}#m=edit`)
+    try {
+      await waitForDesk(forwarded.page)
+      assert.equal(pathOf(forwarded.page), '/solve.html', 'the query alone decides the forward')
+    } finally {
+      await forwarded.context.close()
+    }
+    const kept = await openIndex(`${query}&${PENPA_MARK}#m=edit`)
+    try {
+      assert.equal(pathOf(kept.page), '/index.html', 'the mark in the query keeps the page')
+      assert.equal(await hasButton(kept.page), true, 'a page held as a solve has the button')
+    } finally {
+      await kept.context.close()
+    }
+  })
+})
+
 describe('an edit link opened on index.html', () => {
   it('stays on index.html on a desktop screen', async () => {
     const link = await makeNumberSolveLink(browser())

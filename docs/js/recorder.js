@@ -27,8 +27,6 @@ function readEngineState () {
   const RECORDER_VERSION = 2
   const FILE_NAME = 'recording.steps.json'
   const KEY_CALLS = ['key_number', 'key_space', 'key_shiftspace', 'key_backspace', 'key_arrow']
-  // `subsymbolmode` and `subcombimode` keep the Shape or Composite tool where other modes keep their sub-mode.
-  const MODE_CALLS = ['mode_set', 'submode_check', 'stylemode_check', 'subsymbolmode', 'subcombimode', 'set_orientation']
   // The modes in which Alt starts a rectangle selection on a square grid (`handle_rect_mousedown` in class_p.js).
   const RECT_SELECT_MODES = ['sudoku', 'number', 'surface', 'multicolor']
   // A solver's input arrives by one of these. Listening in the capture phase on `window` wraps a new `pu` before
@@ -87,7 +85,7 @@ function readEngineState () {
       before: (p, [x, y, num, ctrl = false]) => ({ kind: 'pointer', action: 'double', button: 'left', ctrl, x, y, num })
     })
     for (const call of KEY_CALLS) wrap(pu, call, { before: (p, args) => ({ kind: 'key', call, args }) })
-    for (const call of MODE_CALLS) wrap(pu, call, { after: modeStep })
+    for (const call of TOOL_CALLS) wrap(pu, call, { after: modeStep })
     // `undo(true)` and `redo(true)` are Penpa+'s own replay stepping through the log.
     wrap(pu, 'undo', { before: (p, [replay]) => replay ? null : { kind: 'undo' } })
     wrap(pu, 'redo', { before: (p, [replay]) => replay ? null : { kind: 'redo' } })
