@@ -424,6 +424,19 @@ describe('the upstream-merge workflow', () => {
     assert.match(workflow, /upstream-merge\.sh upstream\/master "\$REPORT" "\$OWNED_COMMITS"/)
     assert.match(workflow, /- if: \$\{\{ !cancelled\(\) \}\}\n\s+name: File a triage issue[^\n]*\n(?:\s+[^\n]*\n)*?\s+run: bash \.github\/scripts\/file-upstream-triage\.sh "\$OWNED_COMMITS"/)
   })
+
+  it('runs the lint, then the unit and live suites, each status kept and each output appended to the log the issue reads', () => {
+    const step = workflow.match(/- id: tests\n(?:\s+[^\n]*\n)*?\s+run: \|\n((?:\s+[^\n]*\n)+)/)[1]
+    const commands = step.split('\n').map((line) => line.trim()).filter((line) => /^npm /.test(line))
+    assert.deepEqual(commands, [
+      'npm run lint 2>&1 | tee "$TEST_LOG" || status=1',
+      'npm test 2>&1 | tee -a "$TEST_LOG" || status=1',
+      'npm run test:live 2>&1 | tee -a "$TEST_LOG" || status=1'
+    ])
+    assert.match(step, /exit "\$status"/)
+    assert.match(workflow, /context=test[^\n]*\n\s+-f description="npm run lint, npm test and test:live passed/)
+    assert.match(workflow, /failed `npm run lint && npm test && npm run test:live`/)
+  })
 })
 
 function failingTests (log) {
