@@ -1,6 +1,4 @@
-// The helpers the solve UI files share (`window.uiKit`): element and button builders, the confirm dialog, the dark switch and
-// the colour helper. Loaded before every file that reads it. Reaches Penpa+ only through `engine`
-// (test/ui-boundary.test.mjs fails otherwise).
+// Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
@@ -49,7 +47,6 @@
     return { node, show }
   }
 
-  // A button showing `text`, with `tooltip` on hover.
   function textButton (text, tooltip, onClick) {
     const node = el('wa-button', { appearance: 'filled', variant: 'neutral', size: 's' }, [text])
     node.addEventListener('click', onClick)

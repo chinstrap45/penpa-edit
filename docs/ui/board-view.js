@@ -1,6 +1,4 @@
-// The board in its card: its cell size (fit to the card, or zoomed by the - and + buttons), the cursor following, and the
-// board coordinates. Loaded before desk.js, which mounts it into the Board card. Reaches Penpa+ only through `engine`
-// (test/ui-boundary.test.mjs fails otherwise).
+// Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
@@ -11,12 +9,10 @@
   const FIT_PASSES = 3
   // The board's container is 1 px wider than its canvas on every side, and it is the container that scrolls the card.
   const BOARD_FRAME_PX = 2
-  // The step of the board card's - and + buttons, in pixels per cell.
   const ZOOM_STEP_PX = 4
-  // Set to COORDINATES_SHOWN when the solver turned on the board coordinates (#249, #250). The key keeps #249's name, so a setting made then holds.
+  // The key keeps its first name, so a setting made then holds.
   const COORDINATES_KEY = 'chinstrap-solve-grid-numbers-v1'
   const COORDINATES_SHOWN = '1'
-  // Set to GRID_NUMBERING_ALL when the solver turned "Number the grid only" off (#348); it is on until then.
   const GRID_NUMBERING_KEY = 'chinstrap-solve-number-grid-only-v1'
   const GRID_NUMBERING_ALL = 'all'
 
@@ -49,7 +45,7 @@
   // (it is labelled on all four sides then), else one.
   const coordinatesRoom = () => coordinatesGutter() * (isGridNumberedOnly() ? 2 : 1)
 
-  // A band is about this many cells wide (#250), so a band is one to two cells wide whatever the grid's shape.
+  // So a band is one to two cells wide whatever the grid's shape.
   const BAND_CELLS = 1.5
   const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   // A, B, ... Z, AA, AB, ...: a grid wider than 26 bands runs on as a spreadsheet's columns do.
@@ -59,13 +55,11 @@
   const numbered = (ats) => ats.map((at, i) => ({ at, text: i + 1, band: false }))
   const lettered = (ats) => ats.map((at, i) => ({ at, text: bandName(i), band: true }))
 
-  // The middles of the equal bands a grid that is not square (#250) is cut into across the grid's bounding box, along one axis.
   function bandMiddles (from, to, area) {
     const count = Math.round((to - from) / (BAND_CELLS * area.cellWidth))
     return Array.from({ length: count }, (_, i) => from + ((i + 0.5) * (to - from)) / count)
   }
 
-  // The labels of a grid that is not square (#250): letters over equal bands across the grid's bounding box, numbers down it, each at its band's middle.
   function bandLabels (area) {
     return {
       columns: lettered(bandMiddles(area.left, area.right, area)),
@@ -73,7 +67,6 @@
     }
   }
 
-  // The labels of a grid of horizontal rows (#350): numbers down, one at each row's y, and letters across as `bandLabels` draws them.
   function rowLabels (rows, area) {
     return { columns: lettered(bandMiddles(area.left, area.right, area)), rows: numbered(rows) }
   }
@@ -233,8 +226,6 @@
     boardBox.parentElement.addEventListener('scroll', stickCoordinates)
   }
 
-  // Wires the Board card's - + Fit buttons (`zoom`) and keeps the board fitted, followed and numbered as the puzzle and the
-  // card change. `card` is the Board card's node.
   function watch (zoom, card) {
     zoomButtons = zoom
     zoom.out.addEventListener('click', () => zoomBoard(-1))

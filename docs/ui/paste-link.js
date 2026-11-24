@@ -1,4 +1,3 @@
-// The page a bare solve.html shows: a box for a Penpa+ link, which opens solve.html on that link's puzzle data (from its `?` or its `#`), kept in the `#`.
 // Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
@@ -7,11 +6,9 @@
     return
   }
 
-  // The hosts that serve Penpa+ under /penpa-edit/; the userscript sends the first to the second. The last is the fork's
-  // address before the move, kept so a link shared then still opens (spec #373: old links keep working).
+  // The last is the fork's address before the move, kept so a link shared then still opens.
   const PENPA_ORIGINS = ['https://swaroopg92.github.io', 'https://chinstrap45.github.io', 'https://caneff.github.io']
   const PENPA_PATH = '/penpa-edit/'
-  // Parameters with a puzzle in them: `p=` among them, the test boot applies to a query.
   const HAS_PUZZLE = /(^|&)p=/
 
   // The `#...` that opens `text`'s puzzle on this page, or null. The `?` wins when it has `p=`, then the `#`: boot's order.
@@ -20,7 +17,7 @@
     try {
       url = new URL(text.trim())
     } catch (error) {
-      return null // not a URL at all: the caller shows the error
+      return null
     }
     const isPenpa = PENPA_ORIGINS.includes(url.origin) && url.pathname.startsWith(PENPA_PATH)
     if (!isPenpa) {

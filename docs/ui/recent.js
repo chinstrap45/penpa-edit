@@ -1,5 +1,4 @@
-// The Recent card: the last five tools the solver used that are not pinned, newest first, as pin chips without a shortcut key or ×, each with a pin toggle from `window.pinBoard` (pins.js). Kept for this visit
-// only, and outside the Tab cycle. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
+// Kept for this visit only, and outside the Tab cycle. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
@@ -12,8 +11,7 @@
     const tools = engine.listTools()
     const toolOf = (entry) => findTool(tools, entry)
 
-    // Each entry is a tool and the style it was last used with, the newest first: every tool used, since a pinned one comes
-    // back here when unpinned.
+    // Every tool used is kept, since a pinned one comes back here when unpinned.
     let entries = []
     let drawn = ''
 
@@ -45,14 +43,13 @@
     function render () {
       noteCurrentTool()
       const currentKey = toolKey(engine.getTool())
-      // Pinned by `isPinned`'s identity, the mode and sub-mode, so a pin on `Surface` hides it whatever style it was used with.
       const shown = entries.filter((entry) => !window.pinBoard.isPinned(entry)).slice(0, MAX_ENTRIES)
       const signature = JSON.stringify([shown, currentKey])
       if (signature !== drawn) {
         const isFirstDraw = drawn === ''
         drawn = signature
         strip.replaceChildren(...shown.map((entry) => chip(entry, toolKey(entry) === currentKey)))
-        // Recent is as tall as its chips (#306), so the desk fits it again; the first draw comes before the tool cards
+        // Recent is as tall as its chips, so the desk fits it again; the first draw comes before the tool cards
         // give the desk their sizes, and the desk's first layout fits it.
         if (!isFirstDraw) {
           fitToTools()
