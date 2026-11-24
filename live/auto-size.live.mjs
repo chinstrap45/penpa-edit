@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import { CARD_GAP_PX, MODE_MIN_HEIGHT_PX, MOUSE_SLACK_PX, SLACK_PX, steady } from './desk-layout.mjs'
-import { ICEBREAKER, afterChange, linkFromNewBoard, newBoardSolveLink, openSolvePage, setTool, waitForTool, puzzleSolveLinkInPage, resetLayoutInSettings, solveLinkOfImport, useBrowser, waitForDesk } from './page.mjs'
+import { LONG_RULES_PUZZLE, afterChange, linkFromNewBoard, newBoardSolveLink, openSolvePage, setTool, waitForTool, puzzleSolveLinkInPage, resetLayoutInSettings, solveLinkOfImport, useBrowser, waitForDesk } from './page.mjs'
 import { choosePreset } from './pin-card.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
 
@@ -15,8 +15,8 @@ const LAPTOP = { width: 1366, height: 768 }
 const FULL_HD = { width: 1920, height: 1080 }
 const HUGE = { width: 2560, height: 1440 }
 const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
-// The pins the ticket steps through on Icebreaker, by their chip names.
-const ICEBREAKER_PINS = ['Surface', 'Line > Normal', 'Line x']
+// The pins the ticket steps through on Long rules, by their chip names.
+const LONG_RULES_PINS = ['Surface', 'Line > Normal', 'Line x']
 // Line > Normal, and Number > Normal, whose Style and Orientation rows need more than the Mode card's smallest height.
 const TALL_PINS = ['Line > Normal', 'Number > Normal']
 // A window too short for Mode at the right column's middle once Pinned holds one row: Mode sits under where two rows
@@ -64,19 +64,19 @@ describe('the Mode card while stepping through the pins', () => {
     return reads
   }
 
-  it('keeps one height, and Recent one top, on Icebreaker at 1366x768', async () => {
-    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, ICEBREAKER)
+  it('keeps one height, and Recent one top, on Long rules at 1366x768', async () => {
+    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE)
     opened = await openSolvePage(browser(), link, { contextOptions: { viewport: LAPTOP } })
     const { page } = opened
     // Fitted while the pin with the fewest Mode rows is current, so a card sized for the current tool alone is too short.
-    await page.evaluate(pinByNameInPage, { names: ICEBREAKER_PINS, current: 'Line > Normal' })
+    await page.evaluate(pinByNameInPage, { names: LONG_RULES_PINS, current: 'Line > Normal' })
     await resetLayoutInSettings(page)
     const reads = await stepThroughPins(page)
     assert.deepEqual(reads.map(({ mode, recentTop }) => ({ mode, recentTop })), reads.map(() => ({ mode: { ...reads[0].mode, overflow: 0 }, recentTop: reads[0].recentTop })), JSON.stringify(reads))
   })
 
   it('grows to its tallest pin as the pins change, and keeps that height on a shorter pin', async () => {
-    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, ICEBREAKER)
+    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE)
     opened = await openSolvePage(browser(), link, { contextOptions: { viewport: LAPTOP } })
     const { page } = opened
     // No Reset layout, and a Pinned card that keeps its height: the change of pins alone resizes Mode.
@@ -103,7 +103,7 @@ describe('the side columns end at the desk\'s bottom', () => {
   afterEach(async () => { await opened?.context.close() })
 
   const puzzles = {
-    Icebreaker: (b) => linkFromNewBoard(b, puzzleSolveLinkInPage, ICEBREAKER),
+    'Long rules': (b) => linkFromNewBoard(b, puzzleSolveLinkInPage, LONG_RULES_PUZZLE),
     'sudoku-9x9': (b) => solveLinkOfImport(b, IMPORTS['sudoku-9x9'])
   }
   for (const [name, linkOf] of Object.entries(puzzles)) {
@@ -150,7 +150,7 @@ describe('the Mode card on a tall desk', () => {
   afterEach(async () => { await opened?.context.close() })
 
   it('sits at the column\'s middle, so pins wrapping to a second row move neither Mode nor Recent', async () => {
-    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, ICEBREAKER)
+    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE)
     opened = await openSolvePage(browser(), link, { contextOptions: { viewport: HUGE } })
     const { page } = opened
     const before = await steady(page, readCardsInPage, CARDS)
@@ -163,7 +163,7 @@ describe('the Mode card on a tall desk', () => {
   })
 
   it('sits under where two rows of pins would end on a short desk, so the second row still moves nothing', async () => {
-    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, ICEBREAKER)
+    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE)
     opened = await openSolvePage(browser(), link, { contextOptions: { viewport: SHORT } })
     const { page } = opened
     await page.evaluate(pinByNameInPage, { names: ['Surface'] })
@@ -203,7 +203,7 @@ describe('the Mouse card while stepping through the pins', () => {
   }
 
   const cases = [
-    { name: 'Icebreaker at 2560x1440', viewport: HUGE, link: (b) => linkFromNewBoard(b, puzzleSolveLinkInPage, ICEBREAKER), hasRules: true },
+    { name: 'Long rules at 2560x1440', viewport: HUGE, link: (b) => linkFromNewBoard(b, puzzleSolveLinkInPage, LONG_RULES_PUZZLE), hasRules: true },
     { name: 'the Classic sudoku preset at 1920x1080', viewport: FULL_HD, link: (b) => solveLinkOfImport(b, IMPORTS['sudoku-9x9']), preset: 'Classic sudoku' }
   ]
   for (const { name, viewport, link, preset, hasRules } of cases) {
@@ -227,9 +227,9 @@ describe('a double-click on a dragged edge', () => {
   afterEach(async () => { await opened?.context.close() })
 
   async function open () {
-    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, ICEBREAKER)
+    const link = await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE)
     opened = await openSolvePage(browser(), link, { contextOptions: { viewport: LAPTOP } })
-    await opened.page.evaluate(pinByNameInPage, { names: ICEBREAKER_PINS })
+    await opened.page.evaluate(pinByNameInPage, { names: LONG_RULES_PINS })
     return opened.page
   }
   const cards = (page) => steady(page, readCardsInPage, CARDS)
@@ -249,7 +249,7 @@ describe('a double-click on a dragged edge', () => {
     const dragged = (await cards(page)).Mode
     assert.equal(Math.abs(dragged.h - (auto.h + 40)) <= SLACK_PX, true, `dragged from ${auto.h} to ${dragged.h}`)
     // Number > Normal, not pinned, needs a taller card than the dragged one.
-    await page.evaluate(pinByNameInPage, { names: ICEBREAKER_PINS, current: 'Number > Normal' })
+    await page.evaluate(pinByNameInPage, { names: LONG_RULES_PINS, current: 'Number > Normal' })
     assert.equal((await cards(page)).Mode.h, dragged.h, 'a hand-set height ignores the current tool')
     await handleOf(page, 'Mode', 'bottom').dblclick()
     const fitted = (await cards(page)).Mode
@@ -293,7 +293,7 @@ describe('a layout the solver changed', () => {
   afterEach(async () => { await opened?.context.close() })
 
   it('keeps the side columns down to the desk\'s bottom when the window grows taller', async () => {
-    opened = await openSolvePage(browser(), await linkFromNewBoard(browser(), puzzleSolveLinkInPage, ICEBREAKER), { contextOptions: { viewport: FULL_HD } })
+    opened = await openSolvePage(browser(), await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE), { contextOptions: { viewport: FULL_HD } })
     const { page } = opened
     await steady(page, readCardsInPage, CARDS)
     // Only the Board card's width is the solver's.
@@ -307,12 +307,12 @@ describe('a layout the solver changed', () => {
   })
 
   it('sizes a Mode card placed on another puzzle for this puzzle\'s pins', async () => {
-    opened = await openSolvePage(browser(), await linkFromNewBoard(browser(), puzzleSolveLinkInPage, ICEBREAKER), { contextOptions: { viewport: LAPTOP } })
+    opened = await openSolvePage(browser(), await linkFromNewBoard(browser(), puzzleSolveLinkInPage, LONG_RULES_PUZZLE), { contextOptions: { viewport: LAPTOP } })
     // Up, into the room between Pinned and Mode, where it lies over no other card on either puzzle.
     await dragFrom(opened.page, await headPoint(opened.page, 'Mode'), 0, -20)
     // Another puzzle in the same browser, which keeps the Mode card's place.
     const page = await opened.context.newPage()
-    await page.goto(opened.page.url().replace(/#.*/, '') + await linkFromNewBoard(browser(), puzzleSolveLinkInPage, { ...ICEBREAKER, size: 8 }))
+    await page.goto(opened.page.url().replace(/#.*/, '') + await linkFromNewBoard(browser(), puzzleSolveLinkInPage, { ...LONG_RULES_PUZZLE, size: 8 }))
     await waitForDesk(page)
     const opening = await steady(page, readCardsInPage, CARDS)
     const columnMiddle = (opening.Pinned.y + opening.Recent.bottom) / 2
