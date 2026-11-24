@@ -5,12 +5,12 @@
 // and refuses a history it cannot convert or whose last board is not solved.
 import assert from 'node:assert/strict'
 import { before, describe, it } from 'node:test'
-import { openPenpa, useBrowser } from './page.mjs'
+import { openPenpa, useBrowser, withPage } from './page.mjs'
 import { listRecordings, readRecording } from './recordings.mjs'
 import { engineDriver, replay } from './replay.mjs'
 import { settle } from './settle.mjs'
 import { answerRun, convertReplayLink, generateSolve, RECORDING_SEED, TIER_C_FAMILY, TIER_C_SEEDS } from './tier-c.mjs'
-import { boardLoaded, buildPuzzle, puzzleFromRecording, TIER_C_PUZZLES, withPage } from './tier-c-puzzles.mjs'
+import { boardLoaded, buildPuzzle, puzzleFromRecording, TIER_C_PUZZLES } from './tier-c-puzzles.mjs'
 
 const browser = useBrowser()
 

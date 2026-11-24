@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { useBrowser } from './page.mjs'
 import { CARD_GAP_PX } from './desk-layout.mjs'
-import { CARDS, HANDLES, MOVES, scriptedList } from './ui-fuzz/actions.mjs'
+import { dragAction as drag, resizeAction as resize, scriptedList } from './ui-fuzz/actions.mjs'
 import { runScript } from './ui-fuzz/engine.mjs'
 import { uiFuzzPuzzles } from './ui-fuzz/puzzles.mjs'
 import { openTarget } from './ui-fuzz/target.mjs'
@@ -13,12 +13,6 @@ import { openTarget } from './ui-fuzz/target.mjs'
 const browser = useBrowser()
 const puzzles = await uiFuzzPuzzles()
 
-// An action's argument as its tables (live/ui-fuzz/actions.mjs) index it: a card by name, a handle, a move in pixels.
-const card = (name) => CARDS.indexOf(name)
-const handle = (name) => HANDLES.indexOf(name)
-const by = (px) => MOVES.indexOf(px)
-const drag = (name, dx, dy) => ['card drag', [card(name), by(dx), by(dy)]]
-const resize = (name, edge, dx, dy) => ['card resize', [card(name), handle(edge), by(dx), by(dy)]]
 // The preset list's first entry, Puzzle defaults: loading it shows Pinned's undo line, a row taller.
 const LOAD_DEFAULTS = ['preset load', 0]
 

@@ -2,7 +2,7 @@
 // `index.html`, which clamps it and shows its max-size message. Penpa+'s own page keeps its cap and its message.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { boardAgainstCard, newBoardSolveLink, openPenpa, openSolvePage, useBrowser } from './page.mjs'
+import { boardAgainstCard, newBoardSolveLink, openPenpa, openSolvePage, useBrowser, cellSize } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -12,7 +12,6 @@ const PENPA_MIN = 12
 const PENPA_MAX = 90
 const MAX_SIZE_MESSAGE = `${PENPA_MIN}-${PENPA_MAX}`
 const openBig = async () => openSolvePage(browser(), await newBoardSolveLink(browser()), { served: true, contextOptions: BIG_DESK })
-const cellSize = (page) => page.evaluate(() => engine.getState().cellSize)
 const maxSizeMessages = (page) => page.locator('.swal2-popup', { hasText: MAX_SIZE_MESSAGE }).count()
 const boardWidthInCells = (page) => page.evaluate(() => pu.width_c)
 const cardBodyHeight = (page) => page.evaluate(() => document.querySelector('section[aria-label="Board"] .ui-body').clientHeight)

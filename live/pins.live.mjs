@@ -4,7 +4,7 @@
 // would save (`readEngineState`, defined by recorder.js); the keys are real key presses.
 import assert from 'node:assert/strict'
 import { before, after, describe, it } from 'node:test'
-import { afterChange, assertQuiet, cardBodyButtons, chipName, currentTool, newBoardSolveLink, openSolvePage, setTool, storedEntries, typedDigits, useBrowser, waitForDesk, waitForTool } from './page.mjs'
+import { afterChange, assertQuiet, cardBodyButtons, chipName, currentTool, newBoardSolveLink, openSolvePage, setTool, storedEntries, typedDigits, useBrowser, waitForDesk, waitForTool, recentCard } from './page.mjs'
 import { clickCell } from './replay.mjs'
 import { settle } from './settle.mjs'
 
@@ -546,7 +546,6 @@ describe('the pin toggles', () => {
   after(async () => { await opened?.context.close() })
 
   const modeCard = (page) => page.getByRole('region', { name: 'Mode' })
-  const recentCard = (page) => page.getByRole('region', { name: 'Recent' })
 
   it('has no Pin current tool button', async () => {
     assert.equal(await opened.page.getByRole('button', { name: 'Pin current tool' }).count(), 0)

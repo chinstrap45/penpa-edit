@@ -3,7 +3,7 @@
 // history, read back from its recording. Not a check itself, so `live/**/*.live.mjs` skips it.
 import { canonicalState, readEngineState } from './canonical-state.mjs'
 import { random } from './fuzz.mjs'
-import { openPenpa } from './page.mjs'
+import { withPage } from './page.mjs'
 import { dragSteps, engineDriver, pressSteps, typedSteps } from './replay.mjs'
 import { settle } from './settle.mjs'
 
@@ -537,13 +537,4 @@ export async function puzzleFromRecording (browser, id, recording) {
     return historyPuzzle(page, last)
   })
   return { name: id, source, ...puzzle, ...await solvePage(browser, source, nums) }
-}
-
-export async function withPage (browser, query, act) {
-  const { context, page } = await openPenpa(browser, query)
-  try {
-    return await act(page)
-  } finally {
-    await context.close()
-  }
 }

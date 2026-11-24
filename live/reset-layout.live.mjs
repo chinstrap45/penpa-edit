@@ -3,7 +3,7 @@
 // Read through the cards' bounding boxes, the board canvas's drawn size and the bodies' scroll sizes.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
-import { overlaps } from './desk-layout.mjs'
+import { overlaps, CARDS, TOP_MARGIN_PX } from './desk-layout.mjs'
 import { linkFromNewBoard, listedTools, openSolvePage, resetLayoutInSettings, shareOf, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
 
@@ -11,9 +11,7 @@ const browser = useBrowser()
 
 const FULL_HD = { viewport: { width: 1920, height: 1080 } }
 const SHORT = { viewport: { width: 1920, height: 800 } }
-const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
-// desk.js's margins, and each card's smallest width (its MIN_SIZE); Mouse's is the left column's, which caps the Board card.
-const TOP_MARGIN_PX = 12
+// desk.js's side margin, and each card's smallest width (its MIN_SIZE); Mouse's is the left column's, which caps the Board card.
 const DESK_MARGIN_PX = 14
 const MIN_WIDTH_PX = { Board: 240, Mouse: 260, Rules: 200, Pinned: 240, Mode: 280, Recent: 240 }
 const LEFT_COLUMN_MIN_PX = 260

@@ -2,7 +2,7 @@
 // click, takes the tool's pin colour, and stays on the visible part of a zoomed, scrolled board.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
-import { boardCanvasInPage, LONG_RULES_PUZZLE, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, setTool, solveLinkOfImport, useBrowser } from './page.mjs'
+import { boardCanvasInPage, LONG_RULES_PUZZLE, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, setTool, solveLinkOfImport, useBrowser, flipSettingsSwitch } from './page.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
 
 const browser = useBrowser()
@@ -125,11 +125,7 @@ for (const viewport of DESK_WIDTHS) {
 describe('the tool-change banner with board coordinates on', () => {
   it('sits on the grid, centred, not over the coordinate bands', async () => {
     const { context, page } = await openSolvePage(browser(), await solveLinkOfImport(browser(), IMPORTS['sudoku-9x9']), { contextOptions: { viewport: LAPTOP } })
-    await page.getByRole('button', { name: 'Settings' }).click()
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor()
-    await page.locator('wa-switch').filter({ has: page.getByRole('switch', { name: 'Show board coordinates' }) }).click()
-    await page.keyboard.press('Escape')
-    await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
+    await flipSettingsSwitch(page, 'Show board coordinates')
     await changeTool(page, TOOLS[1])
     assertTopOfBoard(await readBanner(page))
     await context.close()

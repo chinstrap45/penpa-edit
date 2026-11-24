@@ -4,7 +4,7 @@
 // cards' bounding boxes and the bodies' scroll sizes.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
-import { CARD_GAP_PX, MODE_MIN_HEIGHT_PX, MOUSE_SLACK_PX, SLACK_PX, steady } from './desk-layout.mjs'
+import { CARD_GAP_PX, MODE_MIN_HEIGHT_PX, MOUSE_SLACK_PX, SLACK_PX, steady, CARDS, dragFrom } from './desk-layout.mjs'
 import { LONG_RULES_PUZZLE, afterChange, linkFromNewBoard, newBoardSolveLink, openSolvePage, setTool, waitForTool, puzzleSolveLinkInPage, resetLayoutInSettings, solveLinkOfImport, useBrowser, waitForDesk } from './page.mjs'
 import { choosePreset } from './pin-card.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
@@ -14,7 +14,6 @@ const browser = useBrowser()
 const LAPTOP = { width: 1366, height: 768 }
 const FULL_HD = { width: 1920, height: 1080 }
 const HUGE = { width: 2560, height: 1440 }
-const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
 // The pins the ticket steps through on Long rules, by their chip names.
 const LONG_RULES_PINS = ['Surface', 'Line > Normal', 'Line x']
 // Line > Normal, and Number > Normal, whose Style and Orientation rows need more than the Mode card's smallest height.
@@ -138,12 +137,6 @@ const handleOf = (page, card, handle) => page.getByRole('region', { name: card }
 const centre = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 })
 const handlePoint = async (page, card, handle) => centre(await handleOf(page, card, handle).boundingBox())
 const headPoint = async (page, card) => centre(await page.getByRole('region', { name: card }).getByRole('heading', { name: card }).boundingBox())
-async function dragFrom (page, point, dx, dy) {
-  await page.mouse.move(point.x, point.y)
-  await page.mouse.down()
-  await page.mouse.move(point.x + dx, point.y + dy, { steps: 5 })
-  await page.mouse.up()
-}
 
 describe('the Mode card on a tall desk', () => {
   let opened

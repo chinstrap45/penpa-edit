@@ -4,7 +4,7 @@
 // the board by what Penpa+ would save.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
-import { board, currentTool, newBoardSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, useBrowser } from './page.mjs'
+import { board, currentTool, newBoardSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, useBrowser, openSettings } from './page.mjs'
 import { clickCell } from './replay.mjs'
 import { settle } from './settle.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
@@ -108,8 +108,7 @@ describe('with Settings open', () => {
     // A Sudoku, whose first Settings control is the Sudoku one the wrap test starts from.
     opened = await openSolve(await solveLinkOfImport(browser(), IMPORTS['sudoku-9x9']))
     await clickCell(opened.page, CELL)
-    await opened.page.getByRole('button', { name: 'Settings' }).click()
-    await opened.page.getByRole('dialog', { name: 'Settings' }).waitFor()
+    await openSettings(opened.page)
   })
   after(async () => { await opened?.context.close() })
 
@@ -165,8 +164,7 @@ describe('with Settings open on a puzzle that hides its first Sudoku control', (
   let opened
   before(async () => {
     opened = await openSolve(await solveLinkOfImport(browser(), NURIKABE_IMPORT))
-    await opened.page.getByRole('button', { name: 'Settings' }).click()
-    await opened.page.getByRole('dialog', { name: 'Settings' }).waitFor()
+    await openSettings(opened.page)
   })
   after(async () => { await opened?.context.close() })
 

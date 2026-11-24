@@ -1,27 +1,19 @@
 // The lint (`live/lint.mjs`, #396): its scope is read from `.gitattributes`, never from a second list, and a missing
 // tool fails it.
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { extname, join } from 'node:path'
 import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { NOT_LINTED, isNotLinted, lintScope, ownedFiles, runLint } from '../live/lint.mjs'
-import { tree } from './live-scratch.mjs'
+import { committedTree } from './live-scratch.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 
 // A scratch repo with the given files committed and `.gitattributes` marking `owned` patterns `merge=ours`, and the real
 // tools linked in.
 function scratch (files, owned) {
-  const dir = tree({ ...files, '.gitattributes': owned.map((pattern) => `${pattern} merge=ours\n`).join('') })
-  const git = (...args) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' })
-  git('init', '-q', '-b', 'master')
-  git('config', 'user.name', 'test')
-  git('config', 'user.email', 'test@example.com')
-  git('add', '-A')
-  git('commit', '-q', '-m', 'base')
-  return dir
+  return committedTree({ ...files, '.gitattributes': owned.map((pattern) => `${pattern} merge=ours\n`).join('') }).dir
 }
 
 // Links the repo's installed StandardJS in; shellcheck is the system's, found on PATH.

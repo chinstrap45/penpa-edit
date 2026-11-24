@@ -11,6 +11,14 @@ export const openList = async (page) => {
   await presetField(page).click()
   await presetList(page).waitFor()
 }
+// Every preset the list offers, each as its name and the tool keys it pins; the list is closed again after.
+export const readPresets = async (page) => {
+  await openList(page)
+  const presets = await presetList(page).locator('[role=option][data-tools]').evaluateAll((options) =>
+    options.map((o) => ({ name: o.textContent, tools: o.dataset.tools.split(',') })))
+  await page.keyboard.press('Escape')
+  return presets
+}
 export const choosePreset = async (page, name) => {
   await openList(page)
   await presetList(page).getByRole('option', { name, exact: true }).click()

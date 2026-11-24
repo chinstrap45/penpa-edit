@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, it } from 'node:test'
-import { CARD_GAP_PX, MOUSE_MIN_HEIGHT_PX, MOUSE_SLACK_PX, overlaps, SLACK_PX, steady } from './desk-layout.mjs'
+import { CARD_GAP_PX, MOUSE_MIN_HEIGHT_PX, MOUSE_SLACK_PX, overlaps, SLACK_PX, steady, CARDS, TOP_MARGIN_PX, dragFrom } from './desk-layout.mjs'
 import { afterChange, LONG_RULES_PUZZLE, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, resetLayoutInSettings, useBrowser, waitForDesk } from './page.mjs'
 import { settle } from './settle.mjs'
 
@@ -14,9 +14,7 @@ const browser = useBrowser()
 const LAPTOPS = [{ width: 1280, height: 720 }, { width: 1366, height: 768 }, { width: 1536, height: 864 }]
 const WIDE = { width: 1920, height: 1080 }
 const HUGE = { width: 2560, height: 1440 }
-const CARDS = ['Board', 'Mouse', 'Rules', 'Pinned', 'Mode', 'Recent']
-// desk.js's top margin above each column, and desk.css's --ui-bar-padding.
-const TOP_MARGIN_PX = 12
+// desk.css's --ui-bar-padding.
 const BAR_PADDING_PX = 14
 // The Board card's smallest width (desk.js's MIN_SIZE).
 const MIN_BOARD_WIDTH_PX = 240
@@ -420,12 +418,6 @@ describe('the desk holds together', () => {
   const keptLayout = (page) => page.evaluate((key) => localStorage.getItem(key), LAYOUT_KEY)
   const cardsOf = async (page) => (await page.evaluate(readDeskInPage, CARDS)).cards
 
-  async function dragFrom (page, point, dx, dy) {
-    await page.mouse.move(point.x, point.y)
-    await page.mouse.down()
-    await page.mouse.move(point.x + dx, point.y + dy, { steps: 5 })
-    await page.mouse.up()
-  }
   async function headPoint (page, name) {
     const box = await page.getByRole('region', { name }).getByRole('heading', { name }).boundingBox()
     return { x: box.x + box.width / 2, y: box.y + box.height / 2 }

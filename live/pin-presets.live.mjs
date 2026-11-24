@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { currentTool, newBoardSolveLink, openPenpa, openSolvePage, useBrowser, waitForDesk } from './page.mjs'
-import { choosePreset, closed, nameField, openList, pinnedCard, presetField, presetList, saveButton, pinChips, savePreset, toolKeyOf } from './pin-card.mjs'
+import { choosePreset, closed, nameField, openList, pinnedCard, presetField, presetList, saveButton, pinChips, savePreset, toolKeyOf, readPresets } from './pin-card.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -107,10 +107,7 @@ describe('the built-in presets', () => {
 
   it('pin no Sudoku clue-drawing tool, and every Sudoku preset pins the three entry modes first', async () => {
     const { page } = opened
-    await openList(page)
-    const presets = await presetList(page).locator('[role=option][data-tools]').evaluateAll((options) =>
-      options.map((o) => ({ name: o.textContent, tools: o.dataset.tools.split(',') })))
-    await page.keyboard.press('Escape')
+    const presets = await readPresets(page)
     const toolsOf = (name) => presets.find((preset) => preset.name === name)?.tools
     assert.deepEqual(toolsOf('Classic sudoku'), ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/'])
     assert.deepEqual(toolsOf('Sudoku with lines and marks'), ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/', 'combi/linex'])
@@ -124,10 +121,7 @@ describe('the built-in presets', () => {
 
   it('each load every tool it names, in order, on a square grid with every tab', async () => {
     const { page } = opened
-    await openList(page)
-    const presets = await presetList(page).locator('[role=option][data-tools]').evaluateAll((options) =>
-      options.map((o) => ({ name: o.textContent, tools: o.dataset.tools.split(',') })))
-    await page.keyboard.press('Escape')
+    const presets = await readPresets(page)
     const listed = await page.evaluate(() => engine.listTools().map((t) => `${t.mode}/${t.submode ?? ''}`))
     for (const { name, tools } of presets) {
       for (const key of tools) {

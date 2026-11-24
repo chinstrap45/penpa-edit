@@ -3,8 +3,9 @@
 // Read through the cards' bounding boxes; the clicks are real.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
-import { cardsMenuItem, closeCardsMenu, newBoardSolveLink, openCardsMenu, openSolvePage, resetLayoutInSettings, toggleInCardsMenu, useBrowser, waitForDesk } from './page.mjs'
+import { cardsMenuItem, closeCardsMenu, newBoardSolveLink, openCardsMenu, openSolvePage, resetLayoutInSettings, toggleInCardsMenu, useBrowser, waitForDesk, cellSize } from './page.mjs'
 import { settle } from './settle.mjs'
+import { TOP_MARGIN_PX, readDeskInPage } from './desk-layout.mjs'
 
 // The link carries rules: with none the Rules card is one line tall and keeps neither the column nor a control to focus.
 const SOME_RULES = 'Put a digit from 1 to 9 in every cell.'
@@ -12,27 +13,14 @@ const SOME_RULES = 'Put a digit from 1 to 9 in every cell.'
 const browser = useBrowser()
 
 const FULL_HD = { viewport: { width: 1920, height: 1080 } }
-// The desk's top margin, and how far a card's height may miss the column's, for rounding.
-const TOP_MARGIN_PX = 12
+// How far a card's height may miss the column's, for rounding.
 const ROUNDING_PX = 2
-
-// Runs in the page. Each named card's box, or null for a card that is not shown, and the desk's.
-function readCardsInPage (names) {
-  const rect = (node) => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }
-  return {
-    desk: rect(document.querySelector('.ui-desk')),
-    cards: Object.fromEntries(names.map((name) => {
-      const node = document.querySelector(`section[aria-label="${name}"]`)
-      return [name, node.offsetParent === null ? null : rect(node)]
-    }))
-  }
-}
 
 describe('The Mouse card closes and reopens', () => {
   let opened
   afterEach(async () => { await opened?.context.close() })
 
-  const read = (page) => page.evaluate(readCardsInPage, ['Mouse', 'Rules'])
+  const read = (page) => page.evaluate(readDeskInPage, ['Mouse', 'Rules'])
   const fillsColumn = async (page) => {
     const { desk, cards } = await read(page)
     return cards.Rules !== null && Math.abs(cards.Rules.h - (desk.h - 2 * TOP_MARGIN_PX)) <= ROUNDING_PX
@@ -127,15 +115,14 @@ describe('The Mouse card closes and reopens', () => {
   it('keeps a zoom the solver set when Mouse closes and opens', async () => {
     opened = await openSolvePage(browser(), await newBoardSolveLink(browser(), undefined, SOME_RULES), { served: true, contextOptions: FULL_HD })
     const { page } = opened
-    const cellSize = () => page.evaluate(() => engine.getState().cellSize)
-    const fitted = await cellSize()
+    const fitted = await cellSize(page)
     await page.getByRole('region', { name: 'Board' }).getByRole('button', { name: 'Zoom in' }).click()
-    const zoomed = await cellSize()
+    const zoomed = await cellSize(page)
     assert.notEqual(zoomed, fitted, 'Zoom in changes the cell size')
     await page.getByRole('button', { name: 'Close Mouse card' }).click()
     await settle(() => fillsColumn(page), true)
-    assert.equal(await cellSize(), zoomed, 'closing Mouse keeps the zoom')
+    assert.equal(await cellSize(page), zoomed, 'closing Mouse keeps the zoom')
     await reopenFromMenu(page)
-    assert.equal(await cellSize(), zoomed, 'opening Mouse keeps the zoom')
+    assert.equal(await cellSize(page), zoomed, 'opening Mouse keeps the zoom')
   })
 })

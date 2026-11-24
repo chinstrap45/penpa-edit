@@ -3,7 +3,7 @@
 // buttons' disabled states, the canvas size and the canvas's pixels.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { afterChange, boardCanvasInPage, linkFromNewBoard, openSolvePage, useBrowser } from './page.mjs'
+import { afterChange, boardCanvasInPage, linkFromNewBoard, openSolvePage, useBrowser, cellSize } from './page.mjs'
 import { settle } from './settle.mjs'
 import { IMPORTS } from './tier-c-puzzles.mjs'
 
@@ -26,7 +26,6 @@ const openSudoku = async () => {
 }
 
 const button = (page, name) => page.locator(BOARD).getByRole('button', { name })
-const cellSize = (page) => page.evaluate(() => engine.getState().cellSize)
 
 // Where the cursor cell lies against the card body's visible box, in CSS px (negative or over the box means hidden).
 const cursorAgainstBody = (page) => page.evaluate((selector) => {

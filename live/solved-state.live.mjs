@@ -15,10 +15,8 @@ const HOLD_WATCH_MS = 1500
 // Index in `pu.centerlist` of a cell clear of the board's edges.
 const FREE_CELL = 12
 
-let numberLink
 async function openSolve () {
-  numberLink ??= await makeNumberSolveLink(browser())
-  const opened = await openSolvePage(browser(), numberLink)
+  const opened = await openSolvePage(browser(), await makeNumberSolveLink(browser()))
   await setTool(opened.page, { mode: 'number', submode: '1' })
   return opened
 }
