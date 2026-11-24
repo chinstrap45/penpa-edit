@@ -101,7 +101,7 @@
       ? [
           { keys: STEP_KEYS.join(', '), text: 'Next pinned tool' },
           { keys: STEP_KEYS.map((key) => `Shift+${key}`).join(', '), text: 'Previous pinned tool' },
-          { keys: 'Wheel over the board', text: 'Down steps the pins like Tab, up like Shift+Tab' },
+          { keys: 'Wheel anywhere without a scroll bar', text: 'Down steps the pins like Tab, up like Shift+Tab' },
           {
             keys: SHORTCUT_LABELS.join(' '),
             text: `Jump to pinned tool 1 to ${SHORTCUT_LABELS.length}, except in Number mode`,
@@ -164,15 +164,19 @@
       }
     })
 
-    // The wheel over the board: down is Tab and up is Shift+Tab, and the board does not scroll under it. Elsewhere the wheel is
-    // the page's, so the Rules card keeps scrolling; so does a board zoomed past its card, which the wheel then scrolls.
-    const boardBody = cards.board.body
+    // The wheel anywhere on the page: down is Tab and up is Shift+Tab, and the page does not scroll under it. Where the pointer is over
+    // an element that can scroll, or inside one, the wheel is the page's, so the Rules card, a long list and a board zoomed past its
+    // card keep scrolling, and keep doing so at the end of their scroll. The body is `overflow: hidden`, so the page itself never scrolls.
     let wheelSum = 0
     let wheelAt = -Infinity
     let swipeSteps = 0
-    boardBody.addEventListener('wheel', (e) => {
-      const scrolls = boardBody.scrollHeight > boardBody.clientHeight || boardBody.scrollWidth > boardBody.clientWidth
-      if (!pins.length || e.ctrlKey || e.deltaY === 0 || scrolls) {
+    const canScroll = (node) => {
+      const { overflowX, overflowY } = getComputedStyle(node)
+      const allows = (overflow) => overflow === 'auto' || overflow === 'scroll'
+      return (allows(overflowY) && node.scrollHeight > node.clientHeight) || (allows(overflowX) && node.scrollWidth > node.clientWidth)
+    }
+    document.addEventListener('wheel', (e) => {
+      if (!pins.length || e.ctrlKey || e.deltaY === 0 || window.uiKeys.dialogIsOpen() || e.composedPath().some((node) => node instanceof Element && canScroll(node))) {
         return
       }
       e.preventDefault()

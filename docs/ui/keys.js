@@ -101,6 +101,7 @@
   window.uiKeys = {
     add: (handler) => keyHandlers.push(handler),
     groups: SHEET_GROUPS,
+    dialogIsOpen: () => document.querySelector(OPEN_DIALOG) !== null,
     describe: (group, rows) => {
       if (!SHEET_GROUPS.includes(group)) {
         throw new RangeError(`uiKeys.describe: no shortcut group "${group}"`)
