@@ -1,5 +1,5 @@
 // The UI driver compared with the engine driver on both pages, split into parts run side by side. A PR replays the
-// hand-made recordings and a sample; REPLAY_UI_CORPUS=all (the nightly) replays every one. Not a check itself, so
+// hand-made recordings and a sample (the Safety net map's standing ruling, #6); REPLAY_UI_CORPUS=all (the nightly) replays every one. Not a check itself, so
 // `live/**/*.live.mjs` skips it.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'

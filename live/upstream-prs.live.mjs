@@ -110,7 +110,8 @@ describe('long links and Load URL (PR 229)', () => {
 
   it('keeps the warning setting off after a restart', async () => {
     const first = await openPenpa(browser(), '', { served: true })
-    // The cookie can lag the setter on a busy machine, so wait for the settings load and then for the cookie store before reading it.
+    // This test once read `true` after the restart on a busy machine. Most likely the cookie had not reached the browser's
+    // store when `context.cookies()` read it (not reproduced), so wait for the settings load and then the store.
     await waitForSettingsLoaded(first.page)
     await first.page.evaluate(() => { UserSettings.warn_long_links = false })
     const savedOff = async () => (await first.context.cookies()).some((c) => c.name === 'warn_long_links' && c.value === 'false')

@@ -153,7 +153,7 @@ describe('Pause', () => {
     await button(page, 'Undo').click({ force: true })
     await button(page, 'Redo').click({ force: true })
     assert.deepEqual(await typedDigits(page), ['1'], 'the board did not change')
-    await button(page, 'Resume').first().click()
+    await button(page, 'Resume').first().click() // the top bar's; the cover has one too
     await assertDisabled(page, 'Undo', false, 'undo after resuming')
     await assertDisabled(page, 'Redo', false, 'redo after resuming')
   })
@@ -163,7 +163,7 @@ describe('Pause', () => {
     t.after(() => context.close())
     await button(page, 'Pause').click()
     await page.getByRole('region', { name: 'Paused' }).waitFor()
-    await button(page, 'Resume').first().click()
+    await button(page, 'Resume').first().click() // the top bar's; the cover has one too
     await page.getByRole('region', { name: 'Paused' }).waitFor({ state: 'hidden' })
     assert.equal((await timer(page)).paused, false)
   })
@@ -180,7 +180,7 @@ describe('the timer', () => {
     await page.getByRole('region', { name: 'Paused' }).waitFor()
     const held = await timer(page)
     const heldText = await timerText(page)
-    await sleep(HOLD_WATCH_MS)
+    await sleep(HOLD_WATCH_MS) // a "nothing happened in N ms" check
     assert.deepEqual(await timer(page), held)
     assert.equal(await timerText(page), heldText)
   })
@@ -301,7 +301,7 @@ describe('trial mode', () => {
     await press(page, 'Try')
     await button(page, 'Pause').click()
     for (const name of names) await assertDisabled(page, name, true, `${name} while paused`)
-    await button(page, 'Resume').first().click()
+    await button(page, 'Resume').first().click() // the top bar's; the cover has one too
     for (const name of names) await assertDisabled(page, name, false, `${name} after Resume`)
   })
 

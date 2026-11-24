@@ -1,5 +1,6 @@
 // Canonical state (GLOSSARY.md): the engine state written the same way every time, so two replays compare line by line.
 
+// The answer boards written out; their `_col` twin holds each entry's custom color.
 const BOARDS = ['pu_a', 'pu_a_col']
 const DEPTH_STACKS = ['command_undo', 'command_redo']
 // Where `record_replay` puts the timer reading, in milliseconds, in each `pu_a.command_replay` entry.

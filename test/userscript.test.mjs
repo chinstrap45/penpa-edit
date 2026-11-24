@@ -16,9 +16,10 @@ function headerOf () {
   return Object.fromEntries([...header.matchAll(/^\/\/ @(\S+)\s+(.*)$/gm)].map(([, key, value]) => [key, value.trim()]))
 }
 
-const HEADER_END = '// ==/UserScript=='
-const versionOf = (text) => text.match(/^\/\/ @version\s+(\S+)/m)[1]
-const bodyOf = (text) => text.slice(text.indexOf(HEADER_END) + HEADER_END.length)
+const VERSION_LINE = /^\/\/ @version\s+(\S+)$/m
+const versionOf = (text) => text.match(VERSION_LINE)[1]
+// Tampermonkey updates an installed copy only on a version rise, so a header change (a new @match) needs one as much as the code.
+const withoutVersion = (text) => text.replace(VERSION_LINE, '')
 
 // True when dotted version `a` is greater than `b`, compared number by number.
 function isGreater (a, b) {
@@ -30,26 +31,28 @@ function isGreater (a, b) {
   return false
 }
 
-// Throws when `head`'s body differs from `base`'s and its @version is not above `base`'s.
+// Throws when `head` differs from `base` other than in its @version line, and its @version is not above `base`'s.
 function assertVersionBumped (base, head) {
-  if (bodyOf(base) === bodyOf(head)) return
-  assert.ok(isGreater(versionOf(head), versionOf(base)), `the body changed but @version stays ${versionOf(head)} (master: ${versionOf(base)})`)
+  if (withoutVersion(base) === withoutVersion(head)) return
+  assert.ok(isGreater(versionOf(head), versionOf(base)), `the script changed but @version stays ${versionOf(head)} (master: ${versionOf(base)})`)
 }
 
 describe('the Redirect script', () => {
-  const script = (version, body) => `// ==UserScript==\n// @version ${version}\n${HEADER_END}\n${body}\n`
+  const script = (version, body, match = 'https://a.test/*') =>
+    `// ==UserScript==\n// @version ${version}\n// @match ${match}\n// ==/UserScript==\n${body}\n`
 
-  it('fails a body change that keeps the version, or lowers it', () => {
+  it('fails a body or header change that keeps the version, or lowers it', () => {
     assert.throws(() => assertVersionBumped(script('1.2.0', 'a()'), script('1.2.0', 'b()')), /@version stays 1\.2\.0/)
+    assert.throws(() => assertVersionBumped(script('1.2.0', 'a()'), script('1.2.0', 'a()', 'https://b.test/*')), /@version stays 1\.2\.0/)
     assert.throws(() => assertVersionBumped(script('1.10.0', 'a()'), script('1.9.0', 'b()')), /@version stays/)
   })
 
-  it('passes a body change with a higher version, compared number by number, and an unchanged body', () => {
+  it('passes a change with a higher version, compared number by number, and an unchanged script', () => {
     assertVersionBumped(script('1.9.0', 'a()'), script('1.10.0', 'b()'))
     assertVersionBumped(script('1.2.0', 'a()'), script('1.2.0', 'a()'))
   })
 
-  it('has a version above the one on origin/master when its body differs from master\'s', () => {
+  it('has a version above the one on origin/master when it differs from master\'s', () => {
     const onMaster = execFileSync('git', ['show', 'origin/master:userscript/penpa-redirect.user.js'], { encoding: 'utf8' })
     assertVersionBumped(onMaster, readFileSync(REDIRECT_SCRIPT, 'utf8'))
   })

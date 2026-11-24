@@ -55,7 +55,7 @@ const seedSavedPresets = async (page, presets) => {
 
 const chipCount = (page) => pinChips(page).getByRole('button', { name: /^Unpin / }).count()
 
-// A pick hands the keyboard back to the puzzle focus is off the Pinned card, the preset's pins are loaded, and Tab lands on
+// A pick hands the keyboard back to the puzzle: focus is off the Pinned card, the preset's pins are loaded, and Tab lands on
 // one of them without the focus returning to the card.
 const focusInPinnedCard = (page) => page.evaluate(() => document.activeElement?.closest('.ui-card-pins') !== null)
 const assertTabCyclesPins = async (page, keys) => {

@@ -135,6 +135,7 @@ describe('engine.changeSize on a square-cell board', () => {
     const { context, page } = await openNumberBoard()
     t.after(() => context.close())
     await page.evaluate(() => engine.changeSize('top', 1))
+    // Penpa+'s board starts at column 2 and row 2 of its point ids.
     await page.evaluate(() => { pu.pu_a.number[2 + 2 * pu.nx0] = ['5', 2, '1'] })
     assert.match(await refusal(page, 'top', -1), /holds an entry/)
     const after = await layout(page)

@@ -1,3 +1,7 @@
+// Every card but the Board closes by its header × and reopens from the top bar's Cards menu: a closed card leaves its
+// column refitted with no overlap and nothing outside the window, stays closed through a reload, and comes back to its
+// automatic place. A column the solver resized keeps its sizes, an emptied column gives the fitted Board its width, and the
+// pins and the shortcut sheet keep working with cards closed. Read through the cards' bounding boxes; the clicks are real.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import {

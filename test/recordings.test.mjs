@@ -1,4 +1,4 @@
-// `live/recordings.mjs` (#437): reading and writing recordings with no browser library, and the helpers the replay, the
+// `live/recordings.mjs`: reading and writing recordings with no browser library, and the helpers the replay, the
 // fuzz and the expected-file gate share. The gate's own import chain is walked for Playwright.
 import assert from 'node:assert/strict'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
@@ -10,12 +10,17 @@ import {
   diffLine, entries, expectedFile, readExpected, recordingText, withoutDuplicateDrops, writeExpected, writeRecording
 } from '../live/recordings.mjs'
 
+// What `source` imports or re-exports, statically or not: an `import`/`export ... from` over any number of lines, a bare
+// `import '...'` and an `import('...')`.
+const importsOf = (source) => [...source.matchAll(
+  /^\s*(?:import|export)\b[^'"`;]*?\bfrom\s*['"]([^'"]+)['"]|^\s*import\s*['"]([^'"]+)['"]|\bimport\(\s*['"]([^'"]+)['"]\s*\)/gm
+)].map((m) => m[1] ?? m[2] ?? m[3])
+
 // Every module and package `file` imports, followed through the relative imports.
 function importChain (file, seen = new Set()) {
   if (seen.has(file)) return seen
   seen.add(file)
-  const source = readFileSync(file, 'utf8')
-  for (const [, specifier] of source.matchAll(/^import [^'\n]*from '([^']+)'/gm)) {
+  for (const specifier of importsOf(readFileSync(file, 'utf8'))) {
     if (specifier.startsWith('.')) importChain(resolve(dirname(file), specifier), seen)
     else seen.add(specifier)
   }
@@ -27,7 +32,23 @@ const here = (path) => fileURLToPath(new URL(path, import.meta.url))
 describe('the expected-file gate', () => {
   it('imports no Playwright, nor any module that does', () => {
     const chain = [...importChain(here('../.github/scripts/expected-gate.mjs'))]
+    assert.ok(chain.includes(here('../live/expected-diff.mjs')) && chain.includes(here('../live/recordings.mjs')), 'the walk reaches the gate\'s own modules')
     assert.deepEqual(chain.filter((m) => /playwright/.test(m) || /\/(replay|page)\.mjs$/.test(m)), [])
+  })
+
+  it('is walked through every form of import', () => {
+    const source = [
+      "import { a } from './one.mjs'",
+      'import {\n  b,\n  c\n} from "./two.mjs"',
+      "export { d } from './three.mjs'",
+      "export * from './four.mjs'",
+      "import './five.mjs'",
+      "const six = await import('./six.mjs')",
+      "import { chromium } from 'playwright'",
+      "// a line that says it comes from 'nowhere.mjs'",
+      "const seven = 'from'"
+    ].join('\n')
+    assert.deepEqual(importsOf(source), ['./one.mjs', './two.mjs', './three.mjs', './four.mjs', './five.mjs', './six.mjs', 'playwright'])
   })
 })
 

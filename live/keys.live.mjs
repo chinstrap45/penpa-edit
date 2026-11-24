@@ -1,3 +1,7 @@
+// The key front door of `solve.html`: browser keys stay the browser's, a text field keeps its digits, Escape closes
+// one thing at a time, Penpa+'s popups block the board, and the keys the board keeps work as on the old page.
+// The pages are driven with real keys and clicks; the UI is found by role and accessible name, the board by what Penpa+
+// would save (`readEngineState`, defined by recorder.js).
 import assert from 'node:assert/strict'
 import { after, before, beforeEach, describe, it } from 'node:test'
 import {

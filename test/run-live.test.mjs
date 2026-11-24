@@ -123,33 +123,30 @@ describe('partOf', () => {
 
 const RUN_LIVE = fileURLToPath(new URL('../live/run-live.mjs', import.meta.url))
 const runLive = (dir, ...args) => spawnSync(process.execPath, [RUN_LIVE, ...args], { cwd: dir, env: ENV, encoding: 'utf8' })
-const list = (dir, ...args) => {
-  const { lines, said } = listedBy(RUN_LIVE, dir, ...args)
-  return { files: lines, said }
-}
+const list = (dir, ...args) => listedBy(RUN_LIVE, dir, ...args)
 
 describe('node live/run-live.mjs', () => {
   it('runs every live file but the safety net for an edit under docs/ui/, and says why', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/ui/pins.js'), '// two\n')
-    const { files, said } = list(dir, '--base', 'master')
-    assert.deepEqual(files, [PINS])
+    const { lines, said } = list(dir, '--base', 'master')
+    assert.deepEqual(lines, [PINS])
     assert.match(said, /all on the skip list/)
   })
 
   it('runs the full set for an edit to a script the page loads, and names it', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/js/class_p.js'), '// two\n')
-    const { files, said } = list(dir, '--base', 'master')
-    assert.deepEqual(files, [ENGINE, PINS, UI])
+    const { lines, said } = list(dir, '--base', 'master')
+    assert.deepEqual(lines, [ENGINE, PINS, UI])
     assert.match(said, /docs\/js\/class_p\.js is an input of the engine side/)
   })
 
   it('runs every live file but the engine side\'s for an edit to a script the page does not load', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/js/engine_bridge.js'), '// two\n')
-    const { files, said } = list(dir, '--base', 'master')
-    assert.deepEqual(files, [PINS, UI])
+    const { lines, said } = list(dir, '--base', 'master')
+    assert.deepEqual(lines, [PINS, UI])
     assert.match(said, /docs\/js\/engine_bridge\.js is off the skip list and no changed file is an input/)
   })
 
@@ -163,8 +160,8 @@ describe('node live/run-live.mjs', () => {
   it('counts an untracked file as changed', () => {
     const { dir } = scratchRepo()
     writeFileSync(join(dir, 'docs/js/new.js'), '// new\n')
-    const { files, said } = list(dir, '--base', 'master')
-    assert.deepEqual(files, [ENGINE, PINS, UI])
+    const { lines, said } = list(dir, '--base', 'master')
+    assert.deepEqual(lines, [ENGINE, PINS, UI])
     assert.match(said, /docs\/js\/new\.js is an input of the engine side/)
   })
 
@@ -177,8 +174,8 @@ describe('node live/run-live.mjs', () => {
 
   it('runs the full set with no --base, and names it', () => {
     const { dir } = scratchRepo()
-    const { files, said } = list(dir)
-    assert.deepEqual(files, [ENGINE, PINS, UI])
+    const { lines, said } = list(dir)
+    assert.deepEqual(lines, [ENGINE, PINS, UI])
     assert.match(said, /no --base/)
   })
 
@@ -186,13 +183,13 @@ describe('node live/run-live.mjs', () => {
     const { dir } = scratchRepo()
     symlinkSync(tmpdir(), join(dir, 'node_modules'))
     writeFileSync(join(dir, 'docs/ui/pins.js'), '// two\n')
-    assert.deepEqual(list(dir, '--base', 'master').files, [PINS])
+    assert.deepEqual(list(dir, '--base', 'master').lines, [PINS])
   })
 
   it('runs the full set when the base cannot be read, and says why', () => {
     const { dir } = scratchRepo()
-    const { files, said } = list(dir, '--base', 'no-such-ref')
-    assert.deepEqual(files, [ENGINE, PINS, UI])
+    const { lines, said } = list(dir, '--base', 'no-such-ref')
+    assert.deepEqual(lines, [ENGINE, PINS, UI])
     assert.match(said, /change detection failed .*: the full set/)
   })
 
@@ -200,8 +197,8 @@ describe('node live/run-live.mjs', () => {
     const { dir } = scratchRepo()
     rmSync(join(dir, 'docs/index.html'))
     writeFileSync(join(dir, 'docs/ui/pins.js'), '// two\n')
-    const { files, said } = list(dir, '--base', 'master')
-    assert.deepEqual(files, [ENGINE, PINS, UI])
+    const { lines, said } = list(dir, '--base', 'master')
+    assert.deepEqual(lines, [ENGINE, PINS, UI])
     assert.match(said, /change detection failed .*docs\/index\.html.*: the full set/)
   })
 
@@ -229,7 +226,7 @@ describe('node live/run-live.mjs', () => {
 
   it('lists only its own part with --part', () => {
     const { dir } = scratchRepo()
-    assert.deepEqual(list(dir, '--part', '3/3').files, [PINS])
+    assert.deepEqual(list(dir, '--part', '3/3').lines, [PINS])
   })
 })
 
@@ -243,12 +240,12 @@ const REPLAY_PART_KINDS = [
   { kind: 'UI', glob: 'live/ui-replay-*.live.mjs', count: partCount('live/ui-replay-part.mjs', 'UI_REPLAY_PARTS') }
 ]
 
-// What is wrong with `listed` against the part files on disk, one sentence each.
-function replayPartProblems (listed, onDisk, kinds) {
-  return kinds.flatMap(({ kind, glob, count }) => {
+// What is wrong with `SAFETY_NET_FILES` against the part files `onDisk`, one sentence each.
+function replayPartProblems (onDisk) {
+  return REPLAY_PART_KINDS.flatMap(({ kind, glob, count }) => {
     const prefix = glob.replace('*.live.mjs', '')
     const mine = (files) => files.filter((file) => file.startsWith(prefix) && /-\d+\.live\.mjs$/.test(file)).sort()
-    const problems = mine(onDisk).filter((file) => !listed.includes(file)).map((file) => `${file} is not in SAFETY_NET_FILES`)
+    const problems = mine(onDisk).filter((file) => !SAFETY_NET_FILES.includes(file)).map((file) => `${file} is not in SAFETY_NET_FILES`)
     if (mine(onDisk).length !== count) problems.push(`${mine(onDisk).length} ${kind} part files on disk, ${count} parts declared`)
     return problems
   })
@@ -256,12 +253,12 @@ function replayPartProblems (listed, onDisk, kinds) {
 
 describe('SAFETY_NET_FILES', () => {
   it('names every engine and UI replay part file, and the part counts match the files', () => {
-    assert.deepEqual(replayPartProblems(SAFETY_NET_FILES, globSync('live/*.live.mjs', { cwd: ROOT }), REPLAY_PART_KINDS), [])
+    assert.deepEqual(replayPartProblems(globSync('live/*.live.mjs', { cwd: ROOT })), [])
   })
 
   it('finds a replay part file left off the list, and a count that no longer matches the files', () => {
     const onDisk = [...globSync('live/*.live.mjs', { cwd: ROOT }), 'live/ui-replay-4.live.mjs']
-    assert.deepEqual(replayPartProblems(SAFETY_NET_FILES, onDisk, REPLAY_PART_KINDS), [
+    assert.deepEqual(replayPartProblems(onDisk), [
       'live/ui-replay-4.live.mjs is not in SAFETY_NET_FILES',
       '5 UI part files on disk, 4 parts declared'
     ])

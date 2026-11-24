@@ -1,3 +1,9 @@
+// The solve page's UI fuzz (`live/ui-fuzz/`): a scripted action list holding every action kind runs clean, rules included,
+// on every puzzle of its set, `--focus` raises its area's share of the actions, a run whose time limit passes before its
+// first list gives no verdict, and `npm run fuzz:ui` on a page that throws on one action, or breaks a rule on one, finds
+// it, shrinks it and prints a replay command, puzzle and focus and all, that fails again on the same step, even on a
+// reordered puzzle list. A planted solve-UI bug (`UI_PLANTS`, `live/plants.mjs`) is found the same way, and the same seed
+// runs as many lists clean with no plant in.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import fc from 'fast-check'
@@ -106,10 +112,10 @@ async function findsAndReplays (target, error, { hunt = PLANT_HUNT, focus = PLAN
   const { output, result: found } = await fuzzCommand([...hunt, ...focus.flatMap((area) => ['--focus', area])], target)
   assert.equal(found.failed, true, `the run finds the plant, got ${output}`)
   assert.match(found.error, error)
-  assert.match(found.actions.at(-1), last, 'the shrunk list ends on the planted step')
-  if (only) assert.equal(found.actions.length, 1, `shrunk to the one step, got ${found.actions.join('; ')}`)
-  assert.ok(found.actions.length <= HANDFUL, `shrunk to at most ${HANDFUL} steps, got ${found.actions.join('; ')}`)
-  assert.ok(found.huntActions > found.actions.length, `the shrink cut the ${found.huntActions} steps the hunt found to fewer, got ${found.actions.length}`)
+  assert.match(found.actions.at(-1), last, 'the shrunk list ends on the planted action')
+  if (only) assert.equal(found.actions.length, 1, `shrunk to the one action, got ${found.actions.join('; ')}`)
+  assert.ok(found.actions.length <= HANDFUL, `shrunk to at most ${HANDFUL} actions, got ${found.actions.join('; ')}`)
+  assert.ok(found.huntActions > found.actions.length, `the shrink cut the ${found.huntActions} actions the hunt found to fewer, got ${found.actions.length}`)
   assert.equal(found.step, found.actions.length, 'the failure is read after the last step of the shrunk list')
 
   const command = /^replay: (.*)$/m.exec(output)?.[1]

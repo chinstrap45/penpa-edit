@@ -1,3 +1,7 @@
+// Where the keyboard goes on `solve.html`: Tab steps pins only from the board, a dialog keeps Tab and every key to itself,
+// a mouse click on a bar or card-head button hands focus back to the board, and Escape in the pin-name field clears it.
+// Real key presses and clicks; focus is read as the page's `document.activeElement` (a Web Awesome control is its host element),
+// the board by what Penpa+ would save.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { board, currentTool, newBoardSolveLink, NURIKABE_IMPORT, openSolvePage, solveLinkOfImport, setTool, useBrowser, openSettings } from './page.mjs'
@@ -10,6 +14,7 @@ const browser = useBrowser()
 const CELL = 12
 const PINS = ['Line Normal', 'Sudoku Corner']
 const TABS_PAST_THE_DIALOG = 60
+// Longer than the zero-delay timeouts the key rules queue.
 const AFTER_TIMEOUT_MS = 150
 const MAX_SHIFT_TABS = 6
 const DIALOG_CONTROL = 'wa-button, wa-select, wa-switch'
@@ -112,6 +117,7 @@ describe('with Settings open', () => {
     await afterTimeouts(page)
     assert.equal(await settle(() => focusIsInDialog(page), true), true, 'focus is still in the dialog')
     await page.keyboard.press('5')
+    // X picks the second pin: the tool changes if the key leaks.
     await page.keyboard.press('x')
     assert.equal(await boardAndTool(page), before)
   })

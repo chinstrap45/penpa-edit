@@ -1,3 +1,4 @@
+// A puzz.link import that fails (audit C10): the previous board stays, an error shows, and no clue is NaN or null.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'

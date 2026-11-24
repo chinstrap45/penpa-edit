@@ -1,3 +1,8 @@
+// The two drivers (`live/replay.mjs`). The engine driver: a recording replays through `pu`'s own calls to the states it
+// was recorded at (every checked-in recording does, in `live/engine-replay-<k>.live.mjs`), a planted change in the Surface handler fails at the step it
+// breaks, and a recording whose replay cannot reach the board it was recorded on is refused. The UI driver: recordings
+// replay through real mouse and keyboard to the engine driver's states (in `live/ui-replay-<k>.live.mjs`), and a
+// planted pixel offset in `main.js` makes the two disagree.
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { before, describe, it } from 'node:test'

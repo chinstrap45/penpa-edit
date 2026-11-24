@@ -1,3 +1,6 @@
+// The Mouse card can be closed: its × hides it, the top bar's Cards menu shows and hides it, the closed state
+// survives a reload, and with Mouse closed the fitted layout gives Rules the left column's whole height.
+// Read through the cards' bounding boxes; the clicks are real.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import { cardsMenuItem, closeCardsMenu, newBoardSolveLink, openCardsMenu, openSolvePage, resetLayoutInSettings, toggleInCardsMenu, useBrowser, waitForDesk, cellSize } from './page.mjs'

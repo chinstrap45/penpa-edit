@@ -28,8 +28,15 @@ const rectOf = (locator) => locator.evaluate((node) => {
   return { x, y, width, height }
 })
 
+// `overflow` makes the list taller than its box: the Mode tree opens with its groups shut, which fits.
 const CASES = [
-  { card: 'Mode', field: 'Tool', list: (card) => card.getByRole('tree', { name: 'Tools' }), row: 'treeitem' },
+  {
+    card: 'Mode',
+    field: 'Tool',
+    list: (card) => card.getByRole('tree', { name: 'Tools' }),
+    row: 'treeitem',
+    overflow: (card) => card.getByRole('button', { name: 'Everything', exact: true }).click()
+  },
   { card: 'Pinned', field: 'Pin presets', list: (card) => card.getByRole('listbox', { name: 'Presets' }), row: 'option' }
 ]
 
@@ -45,7 +52,7 @@ for (const height of HEIGHTS) {
     const page = () => opened.page
     const barBottom = () => rectOf(page().locator('.ui-bar')).then(({ y, height: barHeight }) => y + barHeight)
 
-    for (const { card: cardName, field: fieldName, list: listOf, row } of CASES) {
+    for (const { card: cardName, field: fieldName, list: listOf, row, overflow } of CASES) {
       describe(`the ${cardName} card's list`, () => {
         const card = () => page().getByRole('region', { name: cardName })
         // The default layout stacks the Recent card over the Pinned card's preset field, so it is focused rather than clicked.
@@ -73,6 +80,9 @@ for (const height of HEIGHTS) {
         })
 
         it('scrolls to its last row', async () => {
+          await overflow?.(card())
+          const overflows = await settle(() => list().evaluate((node) => node.scrollHeight > node.clientHeight), true)
+          assert.equal(overflows, true, 'the list is taller than its box (the premise)')
           const at = await rectOf(list())
           await page().mouse.move(at.x + at.width / 2, at.y + at.height / 2)
           await page().mouse.wheel(0, 100000)

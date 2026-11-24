@@ -1,3 +1,7 @@
+// The tool catalog and the Mode and Mouse cards of `solve.html`: the engine lists every tool a link offers and
+// applies a whole one, the Mode card's tree picks any of them, and the Mouse card and the board's title bar say what
+// the current one does. The UI is found by role and accessible name or test id, the board by what Penpa+ would save
+// (`readEngineState`, defined by recorder.js).
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { after, before, describe, it } from 'node:test'

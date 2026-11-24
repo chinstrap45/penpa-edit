@@ -36,10 +36,10 @@ const pinsSaved = (page) => page.evaluate(() => {
 })
 
 const linkHash = () => newBoardSolveLink(browser(), PIN_TAB_SET)
-const withPage = (body) => withPinnedPage(browser, body)
+const inPinnedPage = (body) => withPinnedPage(browser, body)
 
 describe('preset undo', () => {
-  it('Undo after a load brings the earlier pins back', withPage(async (page) => {
+  it('Undo after a load brings the earlier pins back', inPinnedPage(async (page) => {
     const earlier = await chipTexts(page)
     assert.equal(earlier.length, 3)
     await loadPreset(page, 'Slitherlink')
@@ -48,7 +48,7 @@ describe('preset undo', () => {
     assert.deepEqual(await settle(() => chipTexts(page), earlier), earlier)
   }))
 
-  it('saving under an existing name offers an Undo that brings the earlier preset back', withPage(async (page) => {
+  it('saving under an existing name offers an Undo that brings the earlier preset back', inPinnedPage(async (page) => {
     await savePreset(page, 'Mine')
     await pinned(page).getByRole('button', { name: 'Unpin Surface' }).click()
     await savePreset(page, 'Mine')
@@ -58,7 +58,7 @@ describe('preset undo', () => {
     assert.deepEqual(await settle(() => chipTexts(page), ['Line > Normal', 'Sudoku > Corner', 'Surface']), ['Line > Normal', 'Sudoku > Corner', 'Surface'])
   }))
 
-  it('the Deleted line clears when the list closes', withPage(async (page) => {
+  it('the Deleted line clears when the list closes', inPinnedPage(async (page) => {
     await savePreset(page, 'Mine')
     await openList(page)
     await presetList(page).getByRole('button', { name: 'Delete preset Mine' }).click()
@@ -68,7 +68,7 @@ describe('preset undo', () => {
     assert.equal(await settle(() => undoLine(page).textContent(), ''), '')
   }))
 
-  it('Ctrl+Z in the preset field undoes a delete, for a keyboard that cannot reach the Undo button', withPage(async (page) => {
+  it('Ctrl+Z in the preset field undoes a delete, for a keyboard that cannot reach the Undo button', inPinnedPage(async (page) => {
     await savePreset(page, 'Mine')
     await openList(page)
     await presetField(page).fill('mine your')
@@ -94,7 +94,7 @@ describe('preset undo', () => {
 
 describe('pin colours', () => {
   // Every tool the grid offers, far past any fixed list of colours.
-  it('give every pin its own colour, however many there are', withPage(async (page) => {
+  it('give every pin its own colour, however many there are', inPinnedPage(async (page) => {
     const count = await page.evaluate(() => { window.pinBoard.replace(engine.listTools()); return engine.listTools().length })
     assert.ok(count > 30, `${count} pins, well past a short palette`)
     await settle(async () => (await chipColours(page)).length, count)
@@ -102,7 +102,7 @@ describe('pin colours', () => {
     assert.equal(new Set(colours).size, count, `${count} pins, ${new Set(colours).size} different colours`)
   }))
 
-  it('keep a tool\'s colour when it is pinned again, though another tool was pinned meanwhile', withPage(async (page) => {
+  it('keep a tool\'s colour when it is pinned again, though another tool was pinned meanwhile', inPinnedPage(async (page) => {
     await page.evaluate(() => window.pinBoard.replace(engine.listTools().slice(0, 8)))
     await settle(async () => (await chipColours(page)).length, 8)
     const names = await chipTexts(page)
@@ -119,7 +119,7 @@ describe('pin colours', () => {
     assert.equal(new Set(colours).size, 9, `still nine different colours: ${colours}`)
   }))
 
-  it('survive a preset load and the Puzzle defaults entry', withPage(async (page) => {
+  it('survive a preset load and the Puzzle defaults entry', inPinnedPage(async (page) => {
     const names = await chipTexts(page)
     const before = await chipColours(page)
     await loadPreset(page, 'Slitherlink')
@@ -134,7 +134,7 @@ describe('pin colours', () => {
 
   // A stored value this code did not write must not reach a chip's colour: each of these is read as no colour for the tool.
   for (const colours of [null, 'red', { 'line/1': 1.5, 'sudoku/2': 'x', 'surface/': -1 }]) {
-    it(`are real colours whatever a stored value holds: ${JSON.stringify(colours)}`, withPage(async (page) => {
+    it(`are real colours whatever a stored value holds: ${JSON.stringify(colours)}`, inPinnedPage(async (page) => {
       await page.evaluate((bad) => {
         const key = Object.keys(localStorage).find((k) => k.startsWith('chinstrap.pins:'))
         localStorage.setItem(key, JSON.stringify({ ...JSON.parse(localStorage.getItem(key)), colours: bad }))
@@ -150,14 +150,14 @@ describe('pin colours', () => {
 })
 
 describe('the chips', () => {
-  it('label the first four Z, X, C and V and later ones with no key', withPage(async (page) => {
+  it('label the first four Z, X, C and V and later ones with no key', inPinnedPage(async (page) => {
     await page.evaluate(() => window.pinBoard.replace(engine.listTools().slice(0, 6)))
     await settle(async () => (await chips(page).count()), 6)
     const keys = await chips(page).locator('.ui-chip-num').allInnerTexts()
     assert.deepEqual(keys, ['Z', 'X', 'C', 'V'])
   }))
 
-  it('say Pin or Unpin in a title, and the × is a bigger target', withPage(async (page) => {
+  it('say Pin or Unpin in a title, and the × is a bigger target', inPinnedPage(async (page) => {
     assert.equal(await pinned(page).getByRole('button', { name: 'Unpin Surface' }).getAttribute('title'), 'Unpin Surface')
     await setTool(page, { mode: 'wall', submode: null })
     assert.equal(await modeCard(page).getByRole('button', { name: 'Pin Wall' }).getAttribute('title'), 'Pin Wall')
@@ -165,28 +165,28 @@ describe('the chips', () => {
     assert.ok(box.width >= 22 && box.height >= 22, `the × is ${box.width} x ${box.height}, at least 22 x 22`)
   }))
 
-  it('Recent chips have no tan bar', withPage(async (page) => {
+  it('Recent chips have no tan bar', inPinnedPage(async (page) => {
     await setTool(page, { mode: 'wall', submode: null })
     await recentCard(page).getByRole('button', { name: 'Pin Wall' }).waitFor()
     const bar = await recentCard(page).locator('.ui-chip').first().evaluate((n) => getComputedStyle(n).borderLeftWidth)
     assert.equal(bar, '1px')
   }))
 
-  it('have a hover state', withPage(async (page) => {
+  it('have a hover state', inPinnedPage(async (page) => {
     const chip = chips(page).nth(1)
     const rest = await chip.evaluate((n) => getComputedStyle(n).backgroundColor)
     await chip.hover()
     assert.notEqual(await settle(() => chip.evaluate((n) => getComputedStyle(n).backgroundColor), rest), rest)
   }))
 
-  it('an empty Pinned card says how to pin', withPage(async (page) => {
+  it('an empty Pinned card says how to pin', inPinnedPage(async (page) => {
     await page.evaluate(() => window.pinBoard.replace([]))
     await pinned(page).getByText(/pin button/i).waitFor()
   }))
 })
 
 describe('Settings', () => {
-  it('has no Reset pins button', withPage(async (page) => {
+  it('has no Reset pins button', inPinnedPage(async (page) => {
     await page.getByRole('button', { name: 'Settings' }).click()
     await page.getByRole('button', { name: 'Reset layout' }).first().waitFor()
     assert.equal(await page.getByRole('button', { name: /Reset pins/ }).count(), 0)
@@ -196,7 +196,7 @@ describe('Settings', () => {
 describe('swatches', () => {
   const swatchGroup = (page) => modeCard(page).getByRole('group', { name: 'Style' }).getByRole('button')
 
-  it('show the key that picks each, and twelve split six and six', withPage(async (page) => {
+  it('show the key that picks each, and twelve split six and six', inPinnedPage(async (page) => {
     await setTool(page, { mode: 'multicolor', submode: null })
     await waitForTool(page, { mode: 'multicolor', submode: null })
     await swatchGroup(page).first().waitFor()
@@ -211,7 +211,7 @@ describe('swatches', () => {
     assert.deepEqual(await settle(rowCounts, [6, 6]), [6, 6], 'swatches sit in two rows of six')
   }))
 
-  it('are picked by the key they show', withPage(async (page) => {
+  it('are picked by the key they show', inPinnedPage(async (page) => {
     await setTool(page, { mode: 'surface', submode: null })
     await waitForTool(page, { mode: 'surface', submode: null })
     await swatchGroup(page).first().waitFor()
@@ -226,7 +226,7 @@ describe('swatches', () => {
 })
 
 describe('dragging a chip', () => {
-  it('moves it, Z selects the moved tool, and the order survives a reload', withPage(async (page) => {
+  it('moves it, Z selects the moved tool, and the order survives a reload', inPinnedPage(async (page) => {
     const before = await chipTexts(page)
     const third = chips(page).nth(2)
     const first = chips(page).nth(0)

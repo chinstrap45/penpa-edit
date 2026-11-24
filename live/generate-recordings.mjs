@@ -47,7 +47,7 @@ const FAMILY = {
 }
 // One Shape tool on each of `key_number`'s two paths: a plain variant number, and one from `onoff_symbolmode_list`.
 const SHAPE_TOOLS = ['circle_L', 'cross']
-// The modes the clearing keys are recorded in, which the gesture set does not press : Number on a cell and on a
+// The modes the clearing keys are recorded in, which the gesture set does not press: Number on a cell and on a
 // corner, whose Backspace deletes one character, Shape, whose Ctrl+Space clears a shape, and Multicolor, whose
 // Delete clears a colour.
 const CLEAR_KEY_PAIRS = [
@@ -80,6 +80,8 @@ function runInPage ({ cell, types, length }) {
     if (!next) break
     run.push(next)
   }
+  // The key panel Shape mode opens floats over the board, and a click on it never reaches the board; a solver drags
+  // it aside. Still open, so `UserSettings.panel_shown` stays as the engine set it.
   document.getElementById('float-key').style.left = '-10000px'
   return run.map((p) => p.num)
 }
@@ -180,6 +182,7 @@ function tierAInPage (shapeTools) {
       pu.mode_set(mode)
       const subs = [...document.querySelectorAll(`input[name="mode_${mode}"]`)].filter((e) => visible(e.id + '_lb'))
       if (!subs.length) pairs.push({ mode, name: '' })
+      // Number's 1/4 and Side labels are drawn by CSS and hold no text.
       for (const e of subs) pairs.push({ mode, sub: e.value, name: document.getElementById(e.id + '_lb').textContent || `sub ${e.value}` })
     }
   }

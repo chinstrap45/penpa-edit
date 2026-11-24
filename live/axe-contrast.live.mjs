@@ -1,3 +1,6 @@
+// WCAG AA colour contrast on `solve.html`, read by axe-core's `color-contrast` rule on the loaded page: with a puzzle
+// loaded, with Settings open, with another dialog open and on the welcome dialog, in each theme. A planted low-contrast
+// colour must fail it, so a pass is a check that can fail.
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { describe, it } from 'node:test'
@@ -20,6 +23,7 @@ async function openIn (theme, { welcome = false } = {}) {
   return opened
 }
 
+// WCAG AA: 4.5:1, or 3:1 for large text (24px, or 18.66px and bold).
 const AA_TEXT = 4.5
 const AA_LARGE_TEXT = 3
 

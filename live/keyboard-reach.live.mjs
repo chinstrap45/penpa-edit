@@ -1,3 +1,6 @@
+// Keyboard reach on `solve.html`: from a control, Tab reaches every top-bar and card control in one stable order, Enter
+// and Space press a focused card button, and the board's own keys still reach Penpa+. Real key presses; focus is read as the
+// page's `document.activeElement` (a Web Awesome control is its host element).
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 import { afterChange, board, currentTool, openSolvePage, setTool, solveLinkOfImport, useBrowser, waitForTool } from './page.mjs'
@@ -55,6 +58,7 @@ describe('keyboard reach on the solve page', () => {
   it('Tab from the first control reaches every top-bar and card control, in the same order each lap', async () => {
     const { page } = opened
     const names = await page.evaluate(listControlsInPage)
+    // More presses than there are controls and the open pickers' own, so a lap that loops is cut off rather than endless.
     const limit = 4 * names.length
     const first = await tabLap(page, limit)
     const missed = names.filter((_, i) => !first.includes(i))

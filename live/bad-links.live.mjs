@@ -1,3 +1,4 @@
+// Links that broke boot (audit C3, C4): each loads the puzzle, or opens the editor, or shows an error dialog.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { openPenpa, useBrowser } from './page.mjs'

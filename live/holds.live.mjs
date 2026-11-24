@@ -193,6 +193,8 @@ describe('a Shift hold ended by Shift+Tab to a Line pin', () => {
   })
 })
 
+// A page of its own: Penpa+ treats a key pressed within 15 ms of a Shift release as a Shift press, which a Ctrl hold right after the
+// Shift tests would trip.
 describe('a held Ctrl', () => {
   let opened
   before(async () => { opened = await openSolve(['Sudoku Normal', 'Sudoku Corner']) })
@@ -244,6 +246,7 @@ function hexSolveLinkInPage (names) {
   return url.slice(url.indexOf('#'))
 }
 
+// A page of its own, as above: Penpa+ treats a key pressed within 15 ms of a Shift release as a Shift press.
 describe('a held Shift or Ctrl on a hex grid, which has centre marks but no corner marks', () => {
   let opened
   before(async () => {

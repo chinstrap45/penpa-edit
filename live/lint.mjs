@@ -42,6 +42,7 @@ export function lintScope (root) {
   }
 }
 
+// A tool that is not installed is a failure, never a pass.
 function bin (root, name) {
   const path = join(root, 'node_modules/.bin', name)
   if (!existsSync(path)) throw new Error(`${name} is not installed (${path}): run npm ci`)
@@ -74,6 +75,7 @@ function shellcheck (root, files, env) {
   return out.error || out.status !== 0 ? [out.error?.message ?? out.stdout + out.stderr] : []
 }
 
+// Each tool runs whatever the other did, so one tool's failure never hides the other's findings.
 const attempt = (run) => {
   try {
     return run()

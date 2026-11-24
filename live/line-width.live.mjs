@@ -1,3 +1,5 @@
+// Line widths on solve.html grow with the cell size past Penpa+'s normal 38 px a cell: read as the run of line pixels
+// across a solver's line on the board's canvas, and as the width Penpa+'s line setter leaves on a context.
 import assert from 'node:assert/strict'
 import { before, describe, it } from 'node:test'
 import { linkFromNewBoard, openPenpa, openSolvePage, puzzleSolveLinkInPage, useBrowser } from './page.mjs'

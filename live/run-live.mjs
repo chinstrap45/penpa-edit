@@ -33,7 +33,7 @@ export const SAFETY_NET_FILES = [
 ]
 
 // The engine side: the safety net's files but the UI driver's replays, which also replay on `solve.html` and so keep the
-// skip list's rule (controller's ruling, 2026-11-18).
+// skip list's rule (controller's ruling on #315, 2026-11-18).
 export const ENGINE_FILES = SAFETY_NET_FILES.filter((file) => !/^live\/ui-replay-\d+\.live\.mjs$/.test(file))
 
 export const ENGINE_PAGE = 'docs/index.html'
