@@ -7,7 +7,7 @@ import { describe, it } from 'node:test'
 
 const ACTION = readFileSync(new URL('../.github/actions/setup-tests/action.yml', import.meta.url), 'utf8')
 const steps = ACTION.split(/^ {4}- /m).slice(1)
-const stepRunning = (command) => steps.find((step) => step.includes(`run: ${command}`))
+const stepRunning = (command) => steps.find((step) => step.split('\n').includes(`      run: ${command}`))
 
 describe('setup-tests action: Playwright browser cache', () => {
   it('caches ~/.cache/ms-playwright with actions/cache', () => {
