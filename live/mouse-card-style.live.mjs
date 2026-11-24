@@ -2,9 +2,8 @@
 // row has a fill, and the click labels are bold in the card's text colour, in the light and the dark theme.
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
-import { newBoardSolveLink, openSolvePage, useBrowser } from './page.mjs'
+import { animationsDone, newBoardSolveLink, openSolvePage, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
-import { animationsDone } from './page.mjs'
 
 const browser = useBrowser()
 
