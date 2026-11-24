@@ -1,6 +1,3 @@
-// The Mode card (a searchable tree of every tool, then the current tool's styles and, for Number, its orientation), the Mouse card (what the mouse does with
-// the current tool) and the board's title-bar tool name. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs
-// fails otherwise).
 (function () {
   'use strict'
 
@@ -10,10 +7,8 @@
   const { NOTHING, AS_A_CLICK, SECOND_COLOUR_DOT, mouseRows, toolKey, findTool, chipLabel } = window.toolGuide
   const { el, luminance, onDeskReady } = window.uiKit
 
-  // Space the Mouse card's body keeps below the tallest content, for the borders.
   const MOUSE_BODY_SLACK_PX = 2
 
-  // ---- The tool in words ------------------------------------------------------------------------------------------
 
   function styleOf (tool, style) {
     return tool.styles.find((s) => s.style === style) ?? null
@@ -23,11 +18,9 @@
   // under it.
   function inkOn (colour) {
     const lum = luminance(colour)
-    // Contrast with white is 1.05 / (L + .05); with black, (L + .05) / .05.
     return 1.05 / (lum + 0.05) >= (lum + 0.05) / 0.05 ? '#ffffff' : '#000000'
   }
 
-  // The colour a tool's selected style paints, or null for a tool with no colour style.
   const styleColour = (tool, style) => styleOf(tool, style)?.swatch ?? null
 
   const dot = (colour) => el('i', { class: 'ui-dot', style: `background:${colour}` })
@@ -44,8 +37,6 @@
     return inkOn(sample.text[inkKey]) === '#ffffff' ? { ...sample, text: { ...sample.text, [inkKey]: 'currentColor' } } : sample
   }
 
-  // A dot in the style's colour, else the Mode card's own sample of it (desk.css sizes it to a line of text); null when `style` is not one of the tool's.
-  // `onPill` is the Board chip, whose pill is coloured.
   function styleMark (tool, style, onPill = false) {
     const entry = styleOf(tool, style)
     if (!entry) {
@@ -59,9 +50,7 @@
     return mark
   }
 
-  // ---- The Mouse card ---------------------------------------------------------------------------------------------
 
-  // The tool's one name, with the selected style's mark; the full name is the tooltip when a narrow card cuts it.
   function headline (tool, style, held) {
     const name = chipLabel(tool)
     const mark = styleMark(tool, style)
@@ -75,12 +64,10 @@
     return h3
   }
 
-  // An effect's words, with a dot in `secondColour` where it names the 2nd colour (no dot when there is none).
   function effectNodes (effect, secondColour) {
     return effect.split(SECOND_COLOUR_DOT).flatMap((text, i) => (i === 0 || !secondColour ? [text] : [dot(secondColour), text]))
   }
 
-  // A flick tool's nine keys, drawn as a 3×3 keypad.
   const keypad = (keys) => el('div', { class: 'ui-keypad' }, keys.map((key) => el('span', {}, [key])))
 
   function renderMouse (target, tool, style, held = false, secondColour = null) {
@@ -88,7 +75,7 @@
     const row = (gesture, effect, cls, extra = []) => el('div', { class: `ui-mrow ${cls}` }, [
       el('span', { class: 'ui-mg' }, [gesture]), el('span', { class: 'ui-md' }, [...effectNodes(effect, secondColour), ...extra])
     ])
-    // A gesture that does nothing gets no row (#191), nor does one that only repeats its click row (#253): a tool with few
+    // A gesture that does nothing gets no row, nor does one that only repeats its click row: a tool with few
     // actions takes little of a short screen.
     const shown = ([, effect]) => effect !== NOTHING && effect !== AS_A_CLICK
     const main = [['Left click', rows.left], ['Right click', rows.right], ['Drag', rows.drag], ['Digit', rows.digit ?? NOTHING]]
@@ -114,7 +101,6 @@
     return Math.max(0, ...tools.map((tool) => heights.get(keyOf(tool)) ?? fresh.get(keyOf(tool))))
   }
 
-  // A hidden copy of `body` at `width`, appended beside it; the caller removes it.
   function probeOf (body, width, cls = body.className) {
     const probe = el('div', { class: cls })
     probe.style.cssText = `position:absolute;visibility:hidden;left:0;top:0;width:${width}px;box-sizing:border-box;height:auto;`
@@ -124,8 +110,6 @@
 
   const mouseHeights = new Map()
 
-  // The Mouse card keeps one height: the tallest content any of `tools` needs, measured in a hidden copy of its body at
-  // `width` (the card's own by default). Shorter content sits at the top.
   function measureMouseBody (body, tools, width = body.clientWidth) {
     return tallestOf(mouseHeights, tools, `${width}/${getComputedStyle(body).fontSize}`, (unseen) => {
       const probe = probeOf(body, width, 'ui-body ui-mouse-probe')
@@ -138,14 +122,11 @@
     })
   }
 
-  // ---- The Mode card ----------------------------------------------------------------------------------------------
 
   const STYLE_ICON_PX = 20
 
   const svg = (inner) => `<svg width="${STYLE_ICON_PX}" height="${STYLE_ICON_PX}" viewBox="0 0 20 20" aria-hidden="true">${inner}</svg>`
 
-  // A sample (drawn on a 20 px grid, scaled with its button) of a style: a swatch for a colour, Penpa+'s own paint for a text style that has a `sample`, a tiny drawing for the rest.
-  // `digit` is the key that picks a swatch's colour, or null where no key does.
   function styleSample (name, swatch, sample, digit) {
     const line = (attrs) => `<line x1="3" y1="10" x2="17" y2="10" stroke-linecap="round" ${attrs}/>`
     const ink = 'stroke="currentColor"'
@@ -183,7 +164,6 @@
     return text(String(name).replace(/^style /, '#'))
   }
 
-  // Number mode's directions as the degrees Penpa+'s Orientation buttons turn their "A" by.
   const ORIENTATION_TURN = { R: 0, UR: -45, U: -90, UL: -135, L: 180, DL: 135, D: 90, DR: 45 }
   const ORIENTATION_NAMES = {
     R: 'right', UR: 'up and right', U: 'up', UL: 'up and left', L: 'left', DL: 'down and left', D: 'down', DR: 'down and right'
@@ -344,8 +324,6 @@
         }
         renderToolOptions(toolOptions, tool, style, orientation)
       },
-      // The body's height that shows the options of the tallest of `sized` at a body `width` wide, measured in a hidden
-      // copy of the body: the picker row, then each tool's options in turn.
       measure (sized, width) {
         return tallestOf(modeHeights, sized, `${width}/${getComputedStyle(body).fontSize}`, (unseen) => {
           const probe = probeOf(body, width)
@@ -364,7 +342,6 @@
     }
   }
 
-  // ---- Wiring -----------------------------------------------------------------------------------------------------
 
   onDeskReady(({ cards, relayout, fit, fitToTools }) => {
     const tools = engine.listTools()
@@ -379,8 +356,8 @@
 
     const surfaceTool = tools.find((t) => t.mode === 'surface')
 
-    // The tools the Mode and Mouse cards are sized for: the pins and the current tool (#252), so stepping through the pins
-    // never changes either card's height. Read from the fit on, after pins.js is up.
+    // The tools Mode and Mouse are sized for: the pins and the current tool, so stepping through the pins
+    // never changes either card's height. Read only after pins.js is up.
     function sizedTools () {
       const keys = new Set([...window.pinBoard.snapshot(), engine.getTool()].map(toolKey))
       return tools.filter((tool) => keys.has(toolKey(tool)))
@@ -410,7 +387,6 @@
       drawn = now
       const tool = toolFor(current)
       renderMouse(cards.mouse.body, tool, current.style, held, secondColour)
-      // Drawn like the current pin's chip, whose colour pins.js gives the card; the mark is the selected style's, as on the Mouse card.
       const mark = styleMark(tool, current.style, true)
       titleBarName.replaceChildren(...(mark ? [mark] : []), chipLabel(tool))
       // The label keeps to one line and may be cut short (desk.css), so its whole text is its tooltip.
@@ -423,7 +399,6 @@
     engine.on('change', render)
     // pins.js builds `window.pinBoard` in its own deskReady callback, which runs after this one: the fit waits for it.
     onDeskReady(() => {
-      // The whole card's height for a card `cardWidth` wide, for the desk's fitted layout.
       fit.mouseCardHeight = (cardWidth) => {
         const { node, body } = cards.mouse
         const bodyWidth = cardWidth - (node.offsetWidth - body.offsetWidth)

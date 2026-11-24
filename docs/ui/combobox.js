@@ -1,6 +1,5 @@
-// A searchable list: a text field that opens a grouped list on focus, filters it as you type, and picks by mouse or by Arrow keys
-// and Enter. Escape closes it. The pick leaves the field, which is how focus returns to the board: nothing else on the page takes
-// keys. Plain DOM, so it needs no `engine`.
+// The pick leaves the field, which is how focus returns to the board: nothing else on the page takes keys. Plain DOM, so it
+// needs no `engine`.
 (function () {
   'use strict'
 
@@ -26,7 +25,7 @@
       placeholder
     })
     // Out of the Tab order: Chromium makes a scrolling list a Tab stop, and Tab into it leaves the field, which hides the list
-    // and drops focus to the page (#377).
+    // and drops focus to the page.
     const list = el('div', { role: 'listbox', id: listId, 'aria-label': listLabel, class: 'ui-list', tabindex: '-1', hidden: '' })
     const node = el('div', { class: 'ui-picker' }, [input, list])
     window.floatList(input, list)
@@ -66,8 +65,6 @@
       input.blur()
     }
 
-    // The options are numbered in the order they show, which is the groups' order, not the filter's. `activeKey` is the entry
-    // that stays highlighted through the redraw, when it is still listed.
     function renderList (activeKey) {
       const words = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
       list.replaceChildren()
@@ -135,7 +132,6 @@
 
     return {
       node,
-      // Draws the open list again, keeping the highlighted entry.
       redraw () {
         if (open) {
           renderList(shown[active]?.key)

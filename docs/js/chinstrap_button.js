@@ -1,8 +1,6 @@
-// caneff: index.html's Back to new UI button, the way back to the solve page (#364), the mirror of solve.html's Penpa+ button (#148): a button in
-// Penpa+'s top row that saves the progress, then opens solve.html on the same link, which reads the progress back from the store.
-
+// caneff: saves the progress first, because solve.html reads it back from the store.
 async function openInChinStrap () {
-  // The Penpa+ button's mark, which only keeps a link on this page, is dropped (#376).
+  // The Penpa+ mark only keeps a link on index.html, so the jump drops it.
   const goToChinStrap = () => { location.href = `solve.html${withoutPenpaMark(location.search + location.hash)}` }
   if (await saveProgressNow()) {
     goToChinStrap()

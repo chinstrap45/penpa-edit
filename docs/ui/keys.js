@@ -1,14 +1,12 @@
-// Where each key goes: the board (Penpa+), the browser or the UI. Answers `engine.onKey`, returns focus to the board after
-// a board click, a menu choice, a dialog closing and a mouse click on a bar or card-head button, and keeps Tab inside an open dialog. Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
+// Reaches Penpa+ only through `engine` (test/ui-boundary.test.mjs fails otherwise).
 (function () {
   'use strict'
 
-  // Keys the browser keeps in every mode. Penpa+'s own Ctrl+D (clone) is dropped for the same reason.
+  // Keys the browser keeps in every mode. Ctrl+D is the browser's too (isBrowserKey), so Penpa+'s own clone on it is dropped.
   const BROWSER_KEYS = ['F1', 'F2', 'F3', 'F5', 'F11', 'F12', 'PageDown', 'Home', 'Alt']
   const BROWSER_ALT_KEYS = ['ArrowLeft', 'ArrowRight']
   // The browser's tab switch, kept except where the Centre tool is in use: Ctrl lends it in Sudoku and Ctrl + digit then writes a mark.
   const BROWSER_CTRL_DIGIT = /^Digit[1-9]$/
-  // Penpa+'s pause toggle, the one key a paused board answers.
   const RESUME_KEY = 'F4'
 
   const TEXT_ENTRY = 'input, textarea, select, [contenteditable], wa-input, wa-select'
@@ -16,9 +14,8 @@
   const OPEN_DIALOG = 'wa-dialog[open]'
   // The Mode card's tool tree takes its own arrows, Enter, Space and Home; none of them is a board key.
   const TOOL_TREE = '[role=tree]'
-  // A control the board still takes keys from while it has focus.
   const PLAIN_CONTROL = 'button, wa-button, .ui-card'
-  // The keys that press a focused button. Penpa+ cancels Space's default, which would stop the press (#377).
+  // The keys that press a focused button. Penpa+ cancels Space's default, which would stop the press.
   const BUTTON = 'button, wa-button'
   const PRESS_KEYS = [' ', 'Enter']
   const BOARD = '.ui-card-board canvas'
@@ -43,7 +40,6 @@
     return mode === centre?.mode && submode === centre?.submode
   }
 
-  // Walks the event's path, so it sees inside Web Awesome's shadow DOM.
   function boardHasFocus (path) {
     const nodes = elementsOf(path)
     // A dialog is open for the whole page, whatever the event's path holds: focus that fell out of it must not reach the board.
@@ -53,7 +49,6 @@
     return isBodyOrBoard(nodes) || nodes.some((node) => node.matches(PLAIN_CONTROL))
   }
 
-  // Focus is on the page itself or on the board, not on a control.
   function isBodyOrBoard (nodes) {
     const origin = nodes[0]
     return !origin || origin === document.body || origin === document.documentElement || nodes.some((node) => node.matches(BOARD))
@@ -65,7 +60,6 @@
     return document.querySelector(`${OPEN_MENU}, ${OPEN_DIALOG}`) !== null
   }
 
-  // The deepest focused element, through shadow roots.
   function focusedElement () {
     let focused = document.activeElement
     while (focused?.shadowRoot?.activeElement) {
@@ -87,7 +81,6 @@
     setTimeout(focusBoard)
   }
 
-  // Where focus lands after Tab (`fromEnd` false) or Shift+Tab left the dialog.
   function keepFocusIn (dialog, fromEnd) {
     if (dialog.contains(document.activeElement)) {
       return
@@ -117,7 +110,6 @@
     rowsOf: (group) => keyRows.filter((entry) => entry.group === group).flatMap(({ rows }) => (typeof rows === 'function' ? rows() : rows))
   }
 
-  // Penpa+ answers these on the board; the UI only lets them through.
   window.uiKeys.describe('Board', [
     { keys: 'Digits, letters', text: 'Enter a digit or letter in the selected cells with the current tool' },
     { keys: 'Arrow keys', text: 'Move the selection' },
@@ -157,7 +149,6 @@
       if (!boardHasFocus(e.composedPath()) || isBrowserKey(e)) {
         return 'browser'
       }
-      // From a control Tab is the browser's, so the bar, the card buttons and the chips can be reached.
       if (e.key === 'Tab' && !isBodyOrBoard(elementsOf(e.composedPath()))) {
         return 'browser'
       }
@@ -206,20 +197,16 @@
         focusBoardAfterWebAwesome()
       }
     })
-    // The dropdown hands focus back to its trigger as it closes, so the board takes it after that.
     document.addEventListener('wa-select', (e) => {
       const dropdown = e.target.closest('wa-dropdown')
       dropdown?.addEventListener('wa-after-hide', focusBoardAfterWebAwesome, { once: true })
     })
-    // A pick in a select on the desk hands the keyboard back too: Web Awesome has closed the list by the time it announces
-    // `change`. A select in a dialog leaves it to the dialog's own close rule; typing in a text field fires no `change`
-    // from a select, so it keeps focus.
+    // A select in a dialog leaves it to the dialog's own close rule.
     document.addEventListener('change', (e) => {
       const select = e.target.closest?.('wa-select')
       if (select && !select.closest('wa-dialog')) {
         focusBoardAfterWebAwesome()
       }
     })
-    // A failed load leaves no board to route keys to, and main.js shows its error dialog already.
   }, () => {})
 })()
