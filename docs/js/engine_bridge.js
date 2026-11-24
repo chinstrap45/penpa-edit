@@ -276,12 +276,7 @@
   // Resolves when boot() has loaded the link's puzzle in solve mode; rejects with boot()'s error, which main.js already
   // shows, or with reopenInSolveMode's, shown here. An edit link never resolves: the page reloads. A page with no link
   // never resolves either.
-  let resolveBoot
-  let rejectBoot
-  const ready = new Promise((resolve, reject) => {
-    resolveBoot = resolve
-    rejectBoot = reject
-  })
+  const { promise: ready, resolve: resolveBoot, reject: rejectBoot } = Promise.withResolvers()
   const penpaBoot = window.boot
   // A copy of boot()'s own test for a link (general.js): a query with `p=`, else any `#` data. general.js is upstream's, so
   // it is copied rather than edited to export it.
@@ -418,10 +413,10 @@
   // The sub-mode of Sudoku each hold key lends: Shift Corner, Ctrl and Cmd Centre.
   const HOLD_SUBMODES = { Shift: '2', Control: '3', Meta: '3' }
 
-  // A grid without the tool a key would lend (hex has no Corner) gets no hold from it: Penpa+ would put itself on a tool
-  // `listTools()` does not list.
-  function lendsListedTool (key) {
-    return toolCatalog().some((t) => t.mode === 'sudoku' && t.submode === HOLD_SUBMODES[key])
+  // The tool a key lends, from `listTools()`; none on a grid without it (hex has no Corner), which then gets no hold from the
+  // key: Penpa+ would put itself on a tool `listTools()` does not list.
+  function heldTool (key) {
+    return toolCatalog().find((t) => t.mode === 'sudoku' && t.submode === HOLD_SUBMODES[key])
   }
 
   // MVP gap: main.js's onKeyUp is the only way to end a hold, so the end is a synthetic key-up straight to it. That key-up
@@ -478,7 +473,7 @@
       }
     }
     if (e.type === 'keydown' && startsHold(e)) {
-      if (!lendsListedTool(e.key)) {
+      if (!heldTool(e.key)) {
         releasedKeys.add(e.key)
         return
       }
@@ -1051,9 +1046,8 @@
     // The tool each key lends while held in Sudoku, as `{ key: 'Shift' | 'Ctrl', tool }` with `tool` from `listTools()`: Shift
     // Corner, Ctrl Centre. A grid without that tool gets no row, as it gets no hold.
     holdTools () {
-      const tools = toolCatalog()
-      return [['Shift', 'Shift'], ['Ctrl', 'Control']].filter(([, key]) => lendsListedTool(key)).map(([label, key]) => ({
-        key: label, tool: tools.find((t) => t.mode === 'sudoku' && t.submode === HOLD_SUBMODES[key])
+      return [['Shift', 'Shift'], ['Ctrl', 'Control']].filter(([, key]) => heldTool(key)).map(([label, key]) => ({
+        key: label, tool: heldTool(key)
       }))
     },
 

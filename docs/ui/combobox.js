@@ -8,10 +8,10 @@
 
   // `groups()` gives the groups in display order as `{ title, entries }`, an entry being `{ key, haystack, attrs? }` with a `key`
   // that is stable between calls and a lowercase `haystack` the typed words are looked for in. `renderEntry(entry)` gives the
-  // nodes inside an entry's option, and `rowButtons(entry)` the buttons beside it (none when absent). `currentText()` is what the
-  // closed field shows. `onPick(entry)` is a pick; `onKey(e, entry)` may answer a key for the highlighted entry (`entry` is
-  // undefined when none is) and returns true when it did. `onClose()` runs each time the list closes.
-  function createCombobox ({ idPrefix, label, listLabel, placeholder, noMatch, groups, renderEntry, rowButtons, currentText, onPick, onKey, onClose }) {
+  // nodes inside an entry's option, and `rowButtons(entry)` the buttons beside it (none when absent). The
+  // field is empty while the list is closed. `onPick(entry)` is a pick; `onKey(e, entry)` may answer a key for the highlighted
+  // entry (`entry` is undefined when none is) and returns true when it did. `onClose()` runs each time the list closes.
+  function createCombobox ({ idPrefix, label, listLabel, placeholder, noMatch, groups, renderEntry, rowButtons, onPick, onKey, onClose }) {
     const listId = `${idPrefix}-listbox`
     const input = el('input', {
       type: 'text',
@@ -35,10 +35,6 @@
     let shown = []
     let active = -1
 
-    function showCurrent () {
-      input.value = currentText()
-    }
-
     function markActive () {
       list.querySelectorAll('[role=option]').forEach((option, i) => {
         option.setAttribute('aria-selected', String(i === active))
@@ -61,7 +57,7 @@
       list.hidden = true
       input.setAttribute('aria-expanded', 'false')
       input.removeAttribute('aria-activedescendant')
-      showCurrent()
+      input.value = ''
       onClose?.()
     }
 
@@ -139,12 +135,6 @@
 
     return {
       node,
-      // Shows `currentText()` in the field while the list is closed.
-      showCurrent () {
-        if (!open) {
-          showCurrent()
-        }
-      },
       // Draws the open list again, keeping the highlighted entry.
       redraw () {
         if (open) {

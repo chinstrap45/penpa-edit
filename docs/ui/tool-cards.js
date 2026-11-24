@@ -189,9 +189,7 @@
     R: 'right', UR: 'up and right', U: 'up', UL: 'up and left', L: 'left', DL: 'down and left', D: 'down', DR: 'down and right'
   }
 
-  // `applyTool(tool)` picks a tool; `colourSelection(style)` is a Multicolor swatch's press; `orientations.list()` and
-  // `orientations.apply(direction)` are Number mode's directions and the pick of one.
-  function buildModeCard (body, tools, applyTool, colourSelection, orientations) {
+  function buildModeCard (body, tools) {
     const input = el('input', {
       type: 'text',
       role: 'combobox',
@@ -241,7 +239,7 @@
     }
 
     function pick (tool) {
-      applyTool({ mode: tool.mode, submode: tool.submode })
+      engine.setTool({ mode: tool.mode, submode: tool.submode })
       document.activeElement?.blur()
     }
 
@@ -305,9 +303,9 @@
         button.addEventListener('click', () => {
           // A Multicolor swatch colours the selected cells, as a digit key does; any other style is only picked.
           if (tool.mode === MULTICOLOR_MODE) {
-            colourSelection(s.style)
+            engine.colourSelection(s.style)
           } else {
-            applyTool({ mode: tool.mode, submode: tool.submode, style: s.style })
+            engine.setTool({ mode: tool.mode, submode: tool.submode, style: s.style })
           }
           button.blur()
         })
@@ -318,13 +316,13 @@
 
     function orientationGroup (current) {
       const group = el('div', { role: 'group', 'aria-label': 'Orientation', class: 'ui-styles' })
-      orientations.list().forEach((direction) => {
+      engine.listOrientations().forEach((direction) => {
         const name = ORIENTATION_NAMES[direction]
         const button = el('button', { type: 'button', class: 'ui-stylebtn', 'aria-pressed': String(direction === current), 'aria-label': name, title: name })
         button.innerHTML = svg('<text x="10" y="10" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="700" ' +
                     `font-family="system-ui,sans-serif" fill="currentColor" transform="rotate(${ORIENTATION_TURN[direction]} 10 10)">A</text>`)
         button.addEventListener('click', () => {
-          orientations.apply(direction)
+          engine.setOrientation(direction)
           button.blur()
         })
         group.append(button)
@@ -355,7 +353,7 @@
           probe.append(el('div', { style: `height:${body.firstElementChild.offsetHeight}px` }), options)
           const heights = unseen.map((tool) => {
             // Number is the one tool with an orientation; which direction is picked changes no height.
-            const orientation = tool.mode === 'number' && orientations.list().length ? orientations.list()[0] : null
+            const orientation = tool.mode === 'number' && engine.listOrientations().length ? engine.listOrientations()[0] : null
             renderToolOptions(options, tool, tool.styles[0]?.style ?? null, orientation)
             return probe.offsetHeight
           })
@@ -377,8 +375,7 @@
     const titleBarName = el('span', { class: 'ui-tool-name', 'data-testid': 'board-tool-name' })
     cards.board.head.append(titleBarName)
 
-    const mode = buildModeCard(cards.mode.body, tools, (tool) => engine.setTool(tool), (style) => engine.colourSelection(style),
-      { list: () => engine.listOrientations(), apply: (direction) => engine.setOrientation(direction) })
+    const mode = buildModeCard(cards.mode.body, tools)
 
     const surfaceTool = tools.find((t) => t.mode === 'surface')
 
