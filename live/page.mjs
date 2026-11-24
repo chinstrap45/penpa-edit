@@ -1,7 +1,7 @@
 // Opening Penpa+ in headless Chromium for a test. Not a check itself, so `live/**/*.live.mjs` skips it.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { after, afterEach, before } from 'node:test'
+import { after, before, beforeEach } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import vm from 'node:vm'
 import { chromium } from 'playwright'
@@ -38,13 +38,17 @@ export function takePageErrors () {
 }
 
 // Launches one Chromium before a file's tests and closes it after them, and fails any test during which a page
-// it opened raised a page error or logged a `console.error`. Its hooks run with the file's other top-level hooks,
+// it opened raised a page error or logged a `console.error`, one a test's own `t.after` hook (the context's close) raises
+// included: node runs a hook registered inside an after hook last, which an `afterEach` does not (it runs before them).
+// Its hooks run with the file's other top-level hooks,
 // so a test reads `browser()` in a `describe`'s hooks or tests, never in a top-level `before`.
 export function useBrowser () {
   let browser
   before(async () => { browser = await chromium.launch() })
-  afterEach(() => {
-    assert.deepEqual(takePageErrors(), [], 'no page error or console.error')
+  beforeEach((t) => {
+    t.after(() => {
+      t.after(() => assert.deepEqual(takePageErrors(), [], 'no page error or console.error'))
+    })
   })
   after(async () => { await browser?.close() })
   return () => browser

@@ -82,18 +82,15 @@ describe('preset undo', () => {
     assert.equal(await presetList(page).getByRole('option', { name: 'Mine', exact: true }).count(), 1)
   }))
 
-  it('an Undo line goes away after a few seconds', async () => {
+  it('an Undo line goes away after a few seconds', async (t) => {
     const opened = await openSolvePage(browser(), await linkHash())
-    try {
-      const { page } = opened
-      await page.clock.install()
-      await loadPreset(page, 'Slitherlink')
-      await undoLine(page).getByRole('button', { name: /^Undo/ }).waitFor()
-      await page.clock.runFor(60000)
-      assert.equal(await settle(() => undoLine(page).textContent(), ''), '')
-    } finally {
-      await opened.context.close()
-    }
+    t.after(() => opened.context.close())
+    const { page } = opened
+    await page.clock.install()
+    await loadPreset(page, 'Slitherlink')
+    await undoLine(page).getByRole('button', { name: /^Undo/ }).waitFor()
+    await page.clock.runFor(60000)
+    assert.equal(await settle(() => undoLine(page).textContent(), ''), '')
   })
 })
 

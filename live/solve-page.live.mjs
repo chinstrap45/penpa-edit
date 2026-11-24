@@ -79,33 +79,27 @@ describe('solve.html on a solve link', () => {
 })
 
 describe('solve.html on an edit link', () => {
-  it('opens it in solve mode, with the board in its card', async () => {
+  it('opens it in solve mode, with the board in its card', async (t) => {
     const links = await linkFromNewBoard(browser(), linksInPage, { title: TITLE, author: AUTHOR, rules: RULES })
     const { context, page } = await openPenpa(browser(), links.edit, { solve: true })
-    try {
-      await page.getByRole('region', { name: 'Board' }).waitFor()
-      assert.equal(await page.getByRole('heading', { name: TITLE, level: 1 }).textContent(), TITLE)
-      const read = async () => (await boardAgainstCard(page)).inside
-      assert.equal(await settle(read, true), true)
-      assert.equal(await page.evaluate(() => engine.getInfo().title), TITLE)
-      // The engine API does not say which mode Penpa+ opened the link in, so Penpa+ is asked.
-      assert.equal(await page.evaluate(() => pu.mmode), 'solve')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await page.getByRole('region', { name: 'Board' }).waitFor()
+    assert.equal(await page.getByRole('heading', { name: TITLE, level: 1 }).textContent(), TITLE)
+    const read = async () => (await boardAgainstCard(page)).inside
+    assert.equal(await settle(read, true), true)
+    assert.equal(await page.evaluate(() => engine.getInfo().title), TITLE)
+    // The engine API does not say which mode Penpa+ opened the link in, so Penpa+ is asked.
+    assert.equal(await page.evaluate(() => pu.mmode), 'solve')
   })
 })
 
 describe('solve.html on the sample puzzle link', () => {
-  it('opens a real puzzle link without a page error', async () => {
+  it('opens a real puzzle link without a page error', async (t) => {
     const { context, page } = await openPenpa(browser(), AKARI_SOLVE, { solve: true })
-    try {
-      await page.getByRole('region', { name: 'Board' }).waitFor()
-      const read = async () => (await boardAgainstCard(page)).inside
-      assert.equal(await settle(read, true), true)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await page.getByRole('region', { name: 'Board' }).waitFor()
+    const read = async () => (await boardAgainstCard(page)).inside
+    assert.equal(await settle(read, true), true)
   })
 })
 
@@ -160,41 +154,35 @@ describe('the engine', () => {
 })
 
 describe('getState\'s historyLength', () => {
-  it('grows with each entry, falls back with an undo, rises with a redo and is 0 after a restart', async () => {
+  it('grows with each entry, falls back with an undo, rises with a redo and is 0 after a restart', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openPenpa(browser(), link, { solve: true })
-    try {
-      await page.evaluate(() => engine.ready)
-      const length = () => page.evaluate(() => engine.getState().historyLength)
-      assert.equal(await length(), 0, 'a fresh puzzle has no history')
-      await page.evaluate(typeDigitInPage, { index: ANSWER_CELL, digit: '3' })
-      const one = await length()
-      await page.evaluate(typeDigitInPage, { index: ANSWER_CELL + 1, digit: '4' })
-      const two = await length()
-      assert.ok(one > 0 && two > one, `each entry lengthens the history (${one}, then ${two})`)
-      await page.evaluate(() => engine.undo())
-      assert.equal(await length(), one, 'an undo takes back the second entry only')
-      await page.evaluate(() => engine.redo())
-      assert.equal(await length(), two, 'a redo brings it back')
-      await page.evaluate(() => engine.restart())
-      assert.equal(await length(), 0, 'a restart clears the history')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await page.evaluate(() => engine.ready)
+    const length = () => page.evaluate(() => engine.getState().historyLength)
+    assert.equal(await length(), 0, 'a fresh puzzle has no history')
+    await page.evaluate(typeDigitInPage, { index: ANSWER_CELL, digit: '3' })
+    const one = await length()
+    await page.evaluate(typeDigitInPage, { index: ANSWER_CELL + 1, digit: '4' })
+    const two = await length()
+    assert.ok(one > 0 && two > one, `each entry lengthens the history (${one}, then ${two})`)
+    await page.evaluate(() => engine.undo())
+    assert.equal(await length(), one, 'an undo takes back the second entry only')
+    await page.evaluate(() => engine.redo())
+    assert.equal(await length(), two, 'a redo brings it back')
+    await page.evaluate(() => engine.restart())
+    assert.equal(await length(), 0, 'a restart clears the history')
   })
 })
 
 describe('getState on a solved board', () => {
-  it('says solved', async () => {
+  it('says solved', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openPenpa(browser(), link, { solve: true })
-    try {
-      await page.evaluate(() => engine.ready)
-      await page.evaluate(typeDigitInPage, { index: ANSWER_CELL, digit: '2' })
-      assert.equal(await settle(() => page.evaluate(() => engine.getState().solved), true), true)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await page.evaluate(() => engine.ready)
+    await page.evaluate(typeDigitInPage, { index: ANSWER_CELL, digit: '2' })
+    assert.equal(await settle(() => page.evaluate(() => engine.getState().solved), true), true)
   })
 })
 
@@ -265,108 +253,93 @@ describe('the theme', () => {
   const themeCookie = async (context) => (await context.cookies()).find((c) => c.name === 'color_theme')?.value ?? null
   const theme = (page) => page.evaluate(() => engine.ready.then(() => engine.getSettings().theme))
 
-  it('opens light whatever Penpa+\'s own theme is', async () => {
+  it('opens light whatever Penpa+\'s own theme is', async (t) => {
     const { context, page } = await openPenpa(browser(), AKARI_SOLVE, { solve: true, served: true, cookies: [PENPA_DARK] })
-    try {
-      assert.equal(await theme(page), 'light')
-      assert.equal(await themeCookie(context), '2', 'Penpa+\'s theme is left as it was')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.equal(await theme(page), 'light')
+    assert.equal(await themeCookie(context), '2', 'Penpa+\'s theme is left as it was')
   })
 
-  it('keeps a dark choice for the next visit without touching Penpa+\'s theme', async () => {
+  it('keeps a dark choice for the next visit without touching Penpa+\'s theme', async (t) => {
     const { context, page } = await openPenpa(browser(), AKARI_SOLVE, { solve: true, served: true })
-    try {
-      await page.evaluate(() => engine.ready.then(() => {
-        engine.setTheme('dark')
-        // Any setting makes Penpa+ save every setting on its cookie list.
-        engine.setSetting('outline_text', !engine.getSettings().outline_text)
-      }))
-      assert.equal(await themeCookie(context), null, 'no theme cookie is written')
-      await page.reload()
-      assert.equal(await theme(page), 'dark')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await page.evaluate(() => engine.ready.then(() => {
+      engine.setTheme('dark')
+      // Any setting makes Penpa+ save every setting on its cookie list.
+      engine.setSetting('outline_text', !engine.getSettings().outline_text)
+    }))
+    assert.equal(await themeCookie(context), null, 'no theme cookie is written')
+    await page.reload()
+    assert.equal(await theme(page), 'dark')
   })
 })
 
 // An upstream rename of main.js's key handler would leave the gate unable to wrap it; onKey refuses then, so the UI
 // fails loudly instead of leaving every key ungated.
 describe('the key gate with one of Penpa+\'s key handlers renamed', () => {
-  it('makes engine.onKey throw', async () => {
+  it('makes engine.onKey throw', async (t) => {
     const renamed = readFileSync(new URL('../docs/js/main.js', import.meta.url), 'utf8').replaceAll('onKeyUp', 'onKeyRelease')
     const setup = (context) => context.route(jsRequest('main.js'), (route) => route.fulfill({ contentType: 'text/javascript', body: renamed }))
     const { context, page, errors } = await openPenpa(browser(), AKARI_SOLVE, { solve: true, setup })
-    try {
-      const message = await page.evaluate(() => engine.ready.then(() => {
-        try {
-          engine.onKey(() => {})
-          return null
-        } catch (e) {
-          return e.message
-        }
-      }))
-      assert.match(String(message), /missed main\.js's key handlers/)
-      // keys.js made the same call at boot, and its throw is a page error.
-      assert.equal(await settle(() => errors.length > 0, true), true, 'a page error')
-      const raised = takePageErrors()
-      assert.ok(raised.every((e) => /missed main\.js's key handlers/.test(e)), raised.join('\n'))
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const message = await page.evaluate(() => engine.ready.then(() => {
+      try {
+        engine.onKey(() => {})
+        return null
+      } catch (e) {
+        return e.message
+      }
+    }))
+    assert.match(String(message), /missed main\.js's key handlers/)
+    // keys.js made the same call at boot, and its throw is a page error.
+    assert.equal(await settle(() => errors.length > 0, true), true, 'a page error')
+    const raised = takePageErrors()
+    assert.ok(raised.every((e) => /missed main\.js's key handlers/.test(e)), raised.join('\n'))
   })
 })
 
 // A link that should have opened in solve mode but did not would reload forever; the bridge stops and says so.
 describe('a solve link that opens in another mode', () => {
-  it('rejects engine.ready and shows the error', async () => {
+  it('rejects engine.ready and shows the error', async (t) => {
     const general = readFileSync(new URL('../docs/js/general.js', import.meta.url), 'utf8')
     const forced = general.replace('await load(urlParam);', 'await load(urlParam); pu.mmode = \'edit\';')
     assert.notEqual(forced, general, 'the planted line found its place')
     const setup = (context) => context.route(jsRequest('general.js'), (route) => route.fulfill({ contentType: 'text/javascript', body: forced }))
     const { context, page } = await openPenpa(browser(), AKARI_SOLVE, { solve: true, setup })
-    try {
-      // The popup first: a `ready` that never settles would hang the test, and Playwright's wait for the popup ends.
-      assert.match(await page.locator('.swal2-html-container').textContent({ timeout: 10000 }), /did not open in solve mode/)
-      // The popup came with the rejection, so `ready` has settled by the next task unless the rejection never came.
-      const outcome = await page.evaluate(() => Promise.race([
-        engine.ready.then(() => 'resolved', (e) => e.message),
-        new Promise((resolve) => setTimeout(() => resolve('pending'), 0))
-      ]))
-      assert.match(outcome, /did not open in solve mode/)
-      takePageErrors()
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    // The popup first: a `ready` that never settles would hang the test, and Playwright's wait for the popup ends.
+    assert.match(await page.locator('.swal2-html-container').textContent({ timeout: 10000 }), /did not open in solve mode/)
+    // The popup came with the rejection, so `ready` has settled by the next task unless the rejection never came.
+    const outcome = await page.evaluate(() => Promise.race([
+      engine.ready.then(() => 'resolved', (e) => e.message),
+      new Promise((resolve) => setTimeout(() => resolve('pending'), 0))
+    ]))
+    assert.match(outcome, /did not open in solve mode/)
+    takePageErrors()
   })
 })
 
 describe('Penpa+\'s CSS and the top bar', () => {
-  it('does not restyle a Web Awesome button', async () => {
+  it('does not restyle a Web Awesome button', async (t) => {
     const { context, page } = await openPenpa(browser(), AKARI_SOLVE, { solve: true })
-    try {
-      await page.getByRole('region', { name: 'Board' }).waitFor()
-      const styles = await page.evaluate(async () => {
-        await customElements.whenDefined('wa-button')
-        const read = (el) => { const s = getComputedStyle(el); return { padding: s.paddingLeft, radius: s.borderTopLeftRadius } }
-        // Penpa+ styles its own `.button` with a 5px padding and a 4px radius. A control outside the UI shows its sheets are on.
-        const outside = document.createElement('a')
-        outside.className = 'button'
-        document.body.append(outside)
-        const control = read(outside)
-        // The same rule aimed at a top-bar Web Awesome button: the class Penpa+'s selector needs, planted on a clone.
-        const topBar = document.querySelector('header wa-button')
-        const planted = topBar.cloneNode(true)
-        planted.classList.add('button')
-        topBar.after(planted)
-        return { control, planted: read(planted) }
-      })
-      assert.deepEqual(styles.control, { padding: '5px', radius: '4px' }, 'Penpa+\'s stylesheet is active on the page')
-      assert.deepEqual(styles.planted, { padding: '0px', radius: '0px' })
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await page.getByRole('region', { name: 'Board' }).waitFor()
+    const styles = await page.evaluate(async () => {
+      await customElements.whenDefined('wa-button')
+      const read = (el) => { const s = getComputedStyle(el); return { padding: s.paddingLeft, radius: s.borderTopLeftRadius } }
+      // Penpa+ styles its own `.button` with a 5px padding and a 4px radius. A control outside the UI shows its sheets are on.
+      const outside = document.createElement('a')
+      outside.className = 'button'
+      document.body.append(outside)
+      const control = read(outside)
+      // The same rule aimed at a top-bar Web Awesome button: the class Penpa+'s selector needs, planted on a clone.
+      const topBar = document.querySelector('header wa-button')
+      const planted = topBar.cloneNode(true)
+      planted.classList.add('button')
+      topBar.after(planted)
+      return { control, planted: read(planted) }
+    })
+    assert.deepEqual(styles.control, { padding: '5px', radius: '4px' }, 'Penpa+\'s stylesheet is active on the page')
+    assert.deepEqual(styles.planted, { padding: '0px', radius: '0px' })
   })
 })

@@ -156,7 +156,7 @@ describe('tier C', () => {
     })
   })
 
-  it('reads unsolved once a solved sudoku has a conflict', async () => {
+  it('reads unsolved once a solved sudoku has a conflict', async (t) => {
     const puzzle = puzzles['sudoku-9x9']
     // A digit of another cell of its row, typed into a solved cell.
     const [cell] = puzzle.answer
@@ -168,11 +168,8 @@ describe('tier C', () => {
       { kind: 'key', call: 'key_number', args: [String(other.digit)] }
     ]
     const { context, page } = await solvedPage(puzzle, [...generateSolve(puzzle, RECORDING_SEED), ...conflict])
-    try {
-      assert.notDeepEqual(await page.evaluate(() => pu.conflict_cells), [], 'the digit makes a conflict (the premise)')
-      assert.equal(await page.evaluate(() => pu.sol_flag), 0)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.notDeepEqual(await page.evaluate(() => pu.conflict_cells), [], 'the digit makes a conflict (the premise)')
+    assert.equal(await page.evaluate(() => pu.sol_flag), 0)
   })
 })

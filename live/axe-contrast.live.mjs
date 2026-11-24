@@ -72,68 +72,61 @@ async function openWelcomeIn (theme) {
 
 for (const theme of ['light', 'dark']) {
   describe(`WCAG AA contrast, ${theme} theme`, () => {
-    it('holds with a puzzle loaded', async () => {
+    it('holds with a puzzle loaded', async (t) => {
       const { context, page } = await openIn(theme)
-      try {
-        assert.deepEqual(await contrastViolations(page), [])
-      } finally { await context.close() }
+      t.after(() => context.close())
+      assert.deepEqual(await contrastViolations(page), [])
     })
 
-    it('holds with Settings open', async () => {
+    it('holds with Settings open', async (t) => {
       const { context, page } = await openIn(theme)
-      try {
-        await openSettings(page)
-        await animationsDone(page)
-        assert.deepEqual(await contrastViolations(page), [])
-      } finally { await context.close() }
+      t.after(() => context.close())
+      await openSettings(page)
+      await animationsDone(page)
+      assert.deepEqual(await contrastViolations(page), [])
     })
 
-    it('holds with the Change size dialog open', async () => {
+    it('holds with the Change size dialog open', async (t) => {
       const { context, page } = await openIn(theme)
-      try {
-        await page.getByRole('region', { name: 'Board' }).getByRole('button', { name: 'Change size' }).click()
-        await page.getByRole('dialog', { name: 'Change size' }).waitFor()
-        await animationsDone(page)
-        assert.deepEqual(await contrastViolations(page), [])
-      } finally { await context.close() }
+      t.after(() => context.close())
+      await page.getByRole('region', { name: 'Board' }).getByRole('button', { name: 'Change size' }).click()
+      await page.getByRole('dialog', { name: 'Change size' }).waitFor()
+      await animationsDone(page)
+      assert.deepEqual(await contrastViolations(page), [])
     })
 
-    it('holds on the welcome dialog', async () => {
+    it('holds on the welcome dialog', async (t) => {
       const { context, page } = await openWelcomeIn(theme)
-      try {
-        assert.deepEqual(await contrastViolations(page, WELCOME_DIALOG), [])
-      } finally { await context.close() }
+      t.after(() => context.close())
+      assert.deepEqual(await contrastViolations(page, WELCOME_DIALOG), [])
     })
   })
 }
 
 describe('the contrast check', () => {
-  it('fails on a planted low-contrast colour', async () => {
+  it('fails on a planted low-contrast colour', async (t) => {
     const { context, page } = await openIn('light')
-    try {
-      await page.addStyleTag({ content: '.ui-card, .ui-card * { color: #bbb !important; background: #fff !important; }' })
-      const found = await contrastViolations(page)
-      assert.ok(found.length > 0, 'a planted #bbb on white is reported')
-    } finally { await context.close() }
+    t.after(() => context.close())
+    await page.addStyleTag({ content: '.ui-card, .ui-card * { color: #bbb !important; background: #fff !important; }' })
+    const found = await contrastViolations(page)
+    assert.ok(found.length > 0, 'a planted #bbb on white is reported')
   })
 
-  it('fails on a planted low-contrast colour in the Settings dialog, which axe cannot judge itself', async () => {
+  it('fails on a planted low-contrast colour in the Settings dialog, which axe cannot judge itself', async (t) => {
     const { context, page } = await openIn('light')
-    try {
-      await openSettings(page)
-      await animationsDone(page)
-      await page.addStyleTag({ content: 'wa-dialog[open] legend { color: #ddd !important; }' })
-      const found = await contrastViolations(page)
-      assert.ok(found.some((line) => line.includes('legend')), `a planted #ddd legend is reported: ${JSON.stringify(found)}`)
-    } finally { await context.close() }
+    t.after(() => context.close())
+    await openSettings(page)
+    await animationsDone(page)
+    await page.addStyleTag({ content: 'wa-dialog[open] legend { color: #ddd !important; }' })
+    const found = await contrastViolations(page)
+    assert.ok(found.some((line) => line.includes('legend')), `a planted #ddd legend is reported: ${JSON.stringify(found)}`)
   })
 
-  it('fails on a planted low-contrast colour in the welcome dialog', async () => {
+  it('fails on a planted low-contrast colour in the welcome dialog', async (t) => {
     const { context, page } = await openWelcomeIn('light')
-    try {
-      await page.addStyleTag({ content: '.ui-welcome li { color: #ddd !important; }' })
-      const found = await contrastViolations(page, WELCOME_DIALOG)
-      assert.ok(found.some((line) => line.includes('ui-welcome')), `a planted #ddd welcome line is reported: ${JSON.stringify(found)}`)
-    } finally { await context.close() }
+    t.after(() => context.close())
+    await page.addStyleTag({ content: '.ui-welcome li { color: #ddd !important; }' })
+    const found = await contrastViolations(page, WELCOME_DIALOG)
+    assert.ok(found.some((line) => line.includes('ui-welcome')), `a planted #ddd welcome line is reported: ${JSON.stringify(found)}`)
   })
 })

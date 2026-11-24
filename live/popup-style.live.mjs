@@ -41,51 +41,45 @@ async function pageDialogStyleInPage (props) {
 
 describe('a Penpa+ popup', () => {
   for (const theme of ['light', 'dark']) {
-    it(`on solve.html has the page dialog's font, colours and button, in the ${theme} theme`, async () => {
+    it(`on solve.html has the page dialog's font, colours and button, in the ${theme} theme`, async (t) => {
       const { context, page } = await openSolvePage(browser(), AKARI_SOLVE)
-      try {
-        await page.evaluate((t) => engine.setTheme(t), theme)
-        await animationsDone(page)
-        await openSettings(page)
-        const want = await page.evaluate(pageDialogStyleInPage, STYLE_PROPS)
-        await page.keyboard.press('Escape')
-        await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
-        const got = await page.evaluate(popupStyleInPage, STYLE_PROPS)
-        assert.deepEqual(got.panel, want.panel)
-        assert.deepEqual(got.button, want.button)
-        assert.equal(got.title.fontFamily, want.panel.fontFamily)
-        assert.equal(got.text.fontFamily, want.panel.fontFamily)
-        assert.equal(got.focused.boxShadow, 'none', 'no SweetAlert purple ring on a focused button')
-        // A keyboard focus gets the page's focus ring, as a wa-button's.
-        await page.evaluate(() => document.querySelector('.swal2-confirm').blur())
-        // After a key press the browser rings a script's focus as it does a keyboard's.
-        await page.keyboard.press('Shift')
-        await page.evaluate(() => document.querySelector('.swal2-confirm').focus())
-        const ring = await page.evaluate(() => {
-          const confirm = document.querySelector('.swal2-confirm')
-          const { outlineStyle, outlineWidth, outlineColor } = getComputedStyle(confirm)
-          const probe = Object.assign(document.createElement('div'), { style: 'color: var(--wa-color-focus)' })
-          document.body.append(probe)
-          const focusColor = getComputedStyle(probe).color
-          probe.remove()
-          return { focused: document.activeElement === confirm, outlineStyle, outlineWidth, outlineColor, focusColor }
-        })
-        assert.equal(ring.focused, true, 'the confirm button holds focus')
-        assert.deepEqual([ring.outlineStyle, ring.outlineWidth, ring.outlineColor], ['solid', '3px', ring.focusColor])
-      } finally {
-        await context.close()
-      }
+      t.after(() => context.close())
+      await page.evaluate((t) => engine.setTheme(t), theme)
+      await animationsDone(page)
+      await openSettings(page)
+      const want = await page.evaluate(pageDialogStyleInPage, STYLE_PROPS)
+      await page.keyboard.press('Escape')
+      await page.getByRole('dialog', { name: 'Settings' }).waitFor({ state: 'hidden' })
+      const got = await page.evaluate(popupStyleInPage, STYLE_PROPS)
+      assert.deepEqual(got.panel, want.panel)
+      assert.deepEqual(got.button, want.button)
+      assert.equal(got.title.fontFamily, want.panel.fontFamily)
+      assert.equal(got.text.fontFamily, want.panel.fontFamily)
+      assert.equal(got.focused.boxShadow, 'none', 'no SweetAlert purple ring on a focused button')
+      // A keyboard focus gets the page's focus ring, as a wa-button's.
+      await page.evaluate(() => document.querySelector('.swal2-confirm').blur())
+      // After a key press the browser rings a script's focus as it does a keyboard's.
+      await page.keyboard.press('Shift')
+      await page.evaluate(() => document.querySelector('.swal2-confirm').focus())
+      const ring = await page.evaluate(() => {
+        const confirm = document.querySelector('.swal2-confirm')
+        const { outlineStyle, outlineWidth, outlineColor } = getComputedStyle(confirm)
+        const probe = Object.assign(document.createElement('div'), { style: 'color: var(--wa-color-focus)' })
+        document.body.append(probe)
+        const focusColor = getComputedStyle(probe).color
+        probe.remove()
+        return { focused: document.activeElement === confirm, outlineStyle, outlineWidth, outlineColor, focusColor }
+      })
+      assert.equal(ring.focused, true, 'the confirm button holds focus')
+      assert.deepEqual([ring.outlineStyle, ring.outlineWidth, ring.outlineColor], ['solid', '3px', ring.focusColor])
     })
   }
 
-  it("on index.html keeps SweetAlert's own look", async () => {
+  it("on index.html keeps SweetAlert's own look", async (t) => {
     const { context, page } = await openPenpa(browser())
-    try {
-      const got = await page.evaluate(popupStyleInPage, STYLE_PROPS)
-      assert.equal(got.panel.backgroundColor, 'rgb(255, 255, 255)')
-      assert.equal(got.button.backgroundColor, 'rgb(112, 102, 224)')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const got = await page.evaluate(popupStyleInPage, STYLE_PROPS)
+    assert.equal(got.panel.backgroundColor, 'rgb(255, 255, 255)')
+    assert.equal(got.button.backgroundColor, 'rgb(112, 102, 224)')
   })
 })

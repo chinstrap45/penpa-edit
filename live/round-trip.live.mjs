@@ -34,21 +34,18 @@ async function entriesInPage () {
 describe('openReloader', () => {
   // Chromium keeps no cookie for `file://`, so only the served page shows one.
   for (const served of [false, true]) {
-    it(`boots each load with none of what the page before it left${served ? ', served' : ', over file://'}`, async () => {
+    it(`boots each load with none of what the page before it left${served ? ', served' : ', over file://'}`, async (t) => {
       const reloader = await openReloader(browser(), { served })
-      try {
-        const first = await reloader.load(AKARI_SOLVE)
-        await first.page.evaluate(leaveEntriesInPage)
-        assert.deepEqual(await first.page.evaluate(entriesInPage), {
-          global: 'global', local: 'local', session: 'session', localforage: 'localforage', cookie: served ? 'cookie' : null
-        })
-        const second = await reloader.load(AKARI_SOLVE)
-        assert.deepEqual(await second.page.evaluate(entriesInPage), {
-          global: null, local: null, session: null, localforage: null, cookie: null
-        })
-      } finally {
-        await reloader.close()
-      }
+      t.after(() => reloader.close())
+      const first = await reloader.load(AKARI_SOLVE)
+      await first.page.evaluate(leaveEntriesInPage)
+      assert.deepEqual(await first.page.evaluate(entriesInPage), {
+        global: 'global', local: 'local', session: 'session', localforage: 'localforage', cookie: served ? 'cookie' : null
+      })
+      const second = await reloader.load(AKARI_SOLVE)
+      assert.deepEqual(await second.page.evaluate(entriesInPage), {
+        global: null, local: null, session: null, localforage: null, cookie: null
+      })
     })
   }
 })

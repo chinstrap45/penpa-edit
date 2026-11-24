@@ -17,100 +17,80 @@ const boardWidthInCells = (page) => page.evaluate(() => pu.width_c)
 const cardBodyHeight = (page) => page.evaluate(() => document.querySelector('section[aria-label="Board"] .ui-body').clientHeight)
 
 describe('solve.html with a big Board card', () => {
-  it('fits a 6x6 board to the card past 90 px per cell, and refits after a resize', async () => {
+  it('fits a 6x6 board to the card past 90 px per cell, and refits after a resize', async (t) => {
     const { context, page } = await openBig()
-    try {
-      const fits = async () => { const r = await boardAgainstCard(page); return r.inside && r.h > 6 * PENPA_MAX && r.h > (await cardBodyHeight(page)) * 0.8 }
-      assert.equal(await settle(fits, true), true, 'the board fills the card')
-      assert.ok(await cellSize(page) > PENPA_MAX, 'the cell size is past 90')
-      const before = await boardAgainstCard(page)
-      await page.setViewportSize({ width: 1700, height: 1000 })
-      const smaller = async () => { const r = await boardAgainstCard(page); return r.inside && r.h < before.h }
-      assert.equal(await settle(smaller, true), true, 'a smaller window, a smaller board')
-      await page.setViewportSize(BIG_DESK.viewport)
-      assert.equal(await settle(fits, true), true, 'the board fills the card again')
-      assert.equal(await maxSizeMessages(page), 0, 'no max-size message')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const fits = async () => { const r = await boardAgainstCard(page); return r.inside && r.h > 6 * PENPA_MAX && r.h > (await cardBodyHeight(page)) * 0.8 }
+    assert.equal(await settle(fits, true), true, 'the board fills the card')
+    assert.ok(await cellSize(page) > PENPA_MAX, 'the cell size is past 90')
+    const before = await boardAgainstCard(page)
+    await page.setViewportSize({ width: 1700, height: 1000 })
+    const smaller = async () => { const r = await boardAgainstCard(page); return r.inside && r.h < before.h }
+    assert.equal(await settle(smaller, true), true, 'a smaller window, a smaller board')
+    await page.setViewportSize(BIG_DESK.viewport)
+    assert.equal(await settle(fits, true), true, 'the board fills the card again')
+    assert.equal(await maxSizeMessages(page), 0, 'no max-size message')
   })
 
-  it('zooms in past 90 up to CELL_SIZE_RANGE.max and no further, without a message', async () => {
+  it('zooms in past 90 up to CELL_SIZE_RANGE.max and no further, without a message', async (t) => {
     const { context, page } = await openBig()
-    try {
-      const sizes = await page.evaluate(() => {
-        const { max } = engine.CELL_SIZE_RANGE
-        engine.setCellSize(91)
-        const past = engine.getState().cellSize
-        engine.setCellSize(max)
-        const top = engine.getState().cellSize
-        let over = false
-        try { engine.setCellSize(max + 1) } catch { over = true }
-        return { max, past, top, over }
-      })
-      assert.ok(sizes.max > PENPA_MAX)
-      assert.deepEqual(sizes, { max: sizes.max, past: 91, top: sizes.max, over: true })
-      assert.equal(await maxSizeMessages(page), 0, 'no max-size message')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    const sizes = await page.evaluate(() => {
+      const { max } = engine.CELL_SIZE_RANGE
+      engine.setCellSize(91)
+      const past = engine.getState().cellSize
+      engine.setCellSize(max)
+      const top = engine.getState().cellSize
+      let over = false
+      try { engine.setCellSize(max + 1) } catch { over = true }
+      return { max, past, top, over }
+    })
+    assert.ok(sizes.max > PENPA_MAX)
+    assert.deepEqual(sizes, { max: sizes.max, past: 91, top: sizes.max, over: true })
+    assert.equal(await maxSizeMessages(page), 0, 'no max-size message')
   })
 
-  it('leaves index.html a cell size of 12-90, no max-size message and the same board after a large fit', async () => {
+  it('leaves index.html a cell size of 12-90, no max-size message and the same board after a large fit', async (t) => {
     const { context, page } = await openBig()
-    try {
-      assert.equal(await settle(async () => (await cellSize(page)) > PENPA_MAX, true), true, 'the fit is past 90')
-      const cells = await boardWidthInCells(page)
-      const saved = await page.evaluate(() => {
-        UserSettings.attemptSave()
-        return { size: pu.size, cookie: document.cookie.split('; ').find((c) => c.startsWith('displaysize=')) ?? null }
-      })
-      assert.notEqual(saved.cookie, null, 'solve.html saves the size, so the check below reads something')
-      assert.ok(Number(saved.cookie.split('=')[1]) <= PENPA_MAX, `the cookie holds ${saved.cookie}`)
-      assert.ok(saved.size > PENPA_MAX, 'the page itself still draws the large size')
-      await page.getByRole('button', { name: 'Penpa+', exact: true }).click()
-      await page.waitForFunction(() => typeof pu !== 'undefined' && !document.querySelector('section[aria-label="Board"]'))
-      const size = await page.evaluate(() => UserSettings.displaysize)
-      assert.ok(size >= PENPA_MIN && size <= PENPA_MAX, `index.html draws at ${size}`)
-      assert.equal(await maxSizeMessages(page), 0, 'index.html shows no max-size message')
-      assert.equal(await boardWidthInCells(page), cells, 'index.html lays the board out as solve.html did')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.equal(await settle(async () => (await cellSize(page)) > PENPA_MAX, true), true, 'the fit is past 90')
+    const cells = await boardWidthInCells(page)
+    const saved = await page.evaluate(() => {
+      UserSettings.attemptSave()
+      return { size: pu.size, cookie: document.cookie.split('; ').find((c) => c.startsWith('displaysize=')) ?? null }
+    })
+    assert.notEqual(saved.cookie, null, 'solve.html saves the size, so the check below reads something')
+    assert.ok(Number(saved.cookie.split('=')[1]) <= PENPA_MAX, `the cookie holds ${saved.cookie}`)
+    assert.ok(saved.size > PENPA_MAX, 'the page itself still draws the large size')
+    await page.getByRole('button', { name: 'Penpa+', exact: true }).click()
+    await page.waitForFunction(() => typeof pu !== 'undefined' && !document.querySelector('section[aria-label="Board"]'))
+    const size = await page.evaluate(() => UserSettings.displaysize)
+    assert.ok(size >= PENPA_MIN && size <= PENPA_MAX, `index.html draws at ${size}`)
+    assert.equal(await maxSizeMessages(page), 0, 'index.html shows no max-size message')
+    assert.equal(await boardWidthInCells(page), cells, 'index.html lays the board out as solve.html did')
   })
 
-  it('opens a link written at a large size on index.html with no max-size message', async () => {
+  it('opens a link written at a large size on index.html with no max-size message', async (t) => {
     const { context, page } = await openBig()
-    let link
-    let cells
-    try {
-      assert.equal(await settle(async () => (await cellSize(page)) > PENPA_MAX, true), true, 'the fit is past 90')
-      cells = await boardWidthInCells(page)
-      link = await page.evaluate(() => { const url = pu.maketext_solve(); return url.slice(url.indexOf('#')) })
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.equal(await settle(async () => (await cellSize(page)) > PENPA_MAX, true), true, 'the fit is past 90')
+    const cells = await boardWidthInCells(page)
+    const link = await page.evaluate(() => { const url = pu.maketext_solve(); return url.slice(url.indexOf('#')) })
     const opened = await openPenpa(browser(), link, { served: true })
-    try {
-      assert.equal(await maxSizeMessages(opened.page), 0, 'no max-size message')
-      const size = await opened.page.evaluate(() => UserSettings.displaysize)
-      assert.ok(size >= PENPA_MIN && size <= PENPA_MAX, `index.html draws at ${size}`)
-      assert.equal(await boardWidthInCells(opened.page), cells, 'index.html lays the board out as solve.html did')
-    } finally {
-      await opened.context.close()
-    }
+    t.after(() => opened.context.close())
+    assert.equal(await maxSizeMessages(opened.page), 0, 'no max-size message')
+    const size = await opened.page.evaluate(() => UserSettings.displaysize)
+    assert.ok(size >= PENPA_MIN && size <= PENPA_MAX, `index.html draws at ${size}`)
+    assert.equal(await boardWidthInCells(opened.page), cells, 'index.html lays the board out as solve.html did')
   })
 })
 
 describe('Penpa+\'s own page', () => {
-  it('still caps the cell size at 90 and shows its message', async () => {
+  it('still caps the cell size at 90 and shows its message', async (t) => {
     const { context, page } = await openPenpa(browser(), '', { served: true })
-    try {
-      await page.evaluate(() => { UserSettings.displaysize = 200 })
-      assert.equal(await page.evaluate(() => UserSettings.displaysize), PENPA_MAX)
-      assert.equal(await maxSizeMessages(page), 1)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await page.evaluate(() => { UserSettings.displaysize = 200 })
+    assert.equal(await page.evaluate(() => UserSettings.displaysize), PENPA_MAX)
+    assert.equal(await maxSizeMessages(page), 1)
   })
 })

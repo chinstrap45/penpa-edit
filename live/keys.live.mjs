@@ -52,81 +52,66 @@ function recordPreventionInPage () {
 
 describe('browser keys', () => {
   for (const mode of ['sudoku', 'line']) {
-    it(`F5 and Alt+Left are not prevented in ${mode} mode`, async () => {
+    it(`F5 and Alt+Left are not prevented in ${mode} mode`, async (t) => {
       const { context, page } = await openSolve()
-      try {
-        await setMode(page, mode)
-        await page.evaluate(recordPreventionInPage)
-        await page.keyboard.press('F5')
-        await page.keyboard.press('Alt+ArrowLeft')
-        const prevented = await page.evaluate(() => window.preventedKeys)
-        assert.deepEqual([prevented.F5, prevented['Alt+ArrowLeft']], [false, false])
-      } finally {
-        await context.close()
-      }
+      t.after(() => context.close())
+      await setMode(page, mode)
+      await page.evaluate(recordPreventionInPage)
+      await page.keyboard.press('F5')
+      await page.keyboard.press('Alt+ArrowLeft')
+      const prevented = await page.evaluate(() => window.preventedKeys)
+      assert.deepEqual([prevented.F5, prevented['Alt+ArrowLeft']], [false, false])
     })
   }
 
-  it('Ctrl+D, Ctrl+digit outside Sudoku, PageDown, Home and a bare Alt are not prevented', async () => {
+  it('Ctrl+D, Ctrl+digit outside Sudoku, PageDown, Home and a bare Alt are not prevented', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      await setMode(page, 'number')
-      await clickCell(page, CELL)
-      const before = await board(page)
-      await page.evaluate(recordPreventionInPage)
-      const keys = ['Ctrl+d', 'Ctrl+1', 'Ctrl+9', 'PageDown', 'Home', 'F1', 'F11', 'F12', 'Alt+Alt']
-      for (const key of keys) {
-        await page.keyboard.press(key.replace('Ctrl', 'Control').replace('Alt+Alt', 'Alt'))
-      }
-      const prevented = await page.evaluate((names) => names.filter((k) => window.preventedKeys[k] !== false), keys)
-      assert.deepEqual(prevented, [], 'each key was seen and left alone')
-      assert.deepEqual(await board(page), before, 'none of them touched the board')
-    } finally {
-      await context.close()
+    t.after(() => context.close())
+    await setMode(page, 'number')
+    await clickCell(page, CELL)
+    const before = await board(page)
+    await page.evaluate(recordPreventionInPage)
+    const keys = ['Ctrl+d', 'Ctrl+1', 'Ctrl+9', 'PageDown', 'Home', 'F1', 'F11', 'F12', 'Alt+Alt']
+    for (const key of keys) {
+      await page.keyboard.press(key.replace('Ctrl', 'Control').replace('Alt+Alt', 'Alt'))
     }
+    const prevented = await page.evaluate((names) => names.filter((k) => window.preventedKeys[k] !== false), keys)
+    assert.deepEqual(prevented, [], 'each key was seen and left alone')
+    assert.deepEqual(await board(page), before, 'none of them touched the board')
   })
 
-  it('Ctrl+digit in Sudoku writes a centre mark and is prevented', async () => {
+  it('Ctrl+digit in Sudoku writes a centre mark and is prevented', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      await setMode(page, 'sudoku')
-      await clickCell(page, CELL)
-      await page.evaluate(recordPreventionInPage)
-      await page.keyboard.press('Control+5')
-      assert.equal(await page.evaluate(() => window.preventedKeys['Ctrl+5']), true, 'the key is the board\'s')
-      assert.deepEqual(Object.values((await board(page)).entered.number ?? {}), [['5', 9, '6']], 'one centre mark was written')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await setMode(page, 'sudoku')
+    await clickCell(page, CELL)
+    await page.evaluate(recordPreventionInPage)
+    await page.keyboard.press('Control+5')
+    assert.equal(await page.evaluate(() => window.preventedKeys['Ctrl+5']), true, 'the key is the board\'s')
+    assert.deepEqual(Object.values((await board(page)).entered.number ?? {}), [['5', 9, '6']], 'one centre mark was written')
   })
 
-  it('Ctrl+digit in Sudoku stays the browser\'s once the hold has ended, off the Centre tool', async () => {
+  it('Ctrl+digit in Sudoku stays the browser\'s once the hold has ended, off the Centre tool', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      await setMode(page, 'sudoku')
-      await clickCell(page, CELL)
-      const before = await board(page)
-      await page.evaluate(recordPreventionInPage)
-      await page.keyboard.down('Control')
-      await page.evaluate(() => engine.releaseHolds())
-      await page.keyboard.press('5')
-      await page.keyboard.up('Control')
-      assert.equal(await page.evaluate(() => window.preventedKeys['Ctrl+5']), false, 'the key is left alone')
-      assert.deepEqual(await board(page), before, 'the board is untouched')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await setMode(page, 'sudoku')
+    await clickCell(page, CELL)
+    const before = await board(page)
+    await page.evaluate(recordPreventionInPage)
+    await page.keyboard.down('Control')
+    await page.evaluate(() => engine.releaseHolds())
+    await page.keyboard.press('5')
+    await page.keyboard.up('Control')
+    assert.equal(await page.evaluate(() => window.preventedKeys['Ctrl+5']), false, 'the key is left alone')
+    assert.deepEqual(await board(page), before, 'the board is untouched')
   })
 
-  it('F2 and F3 do not open Penpa+\'s setter-mode question', async () => {
+  it('F2 and F3 do not open Penpa+\'s setter-mode question', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      await page.keyboard.press('F2')
-      await page.keyboard.press('F3')
-      assert.equal(await page.evaluate(() => engine.getState().penpaDialogOpen), false)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await page.keyboard.press('F2')
+    await page.keyboard.press('F3')
+    assert.equal(await page.evaluate(() => engine.getState().penpaDialogOpen), false)
   })
 })
 
@@ -162,156 +147,135 @@ describe('typing in a field', () => {
 })
 
 describe('Escape', () => {
-  it('closes a menu first, then the dialog, then clears the selection', async () => {
+  it('closes a menu first, then the dialog, then clears the selection', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      await setMode(page, 'number')
-      await clickCell(page, CELL)
-      assert.equal(await selected(page), 1)
-      await page.evaluate(addDialogInPage, DIALOG_NAME)
-      await page.evaluate((label) => { document.querySelector(`wa-dialog[label="${label}"]`).open = true }, DIALOG_NAME)
-      const dialog = page.getByRole('dialog', { name: DIALOG_NAME })
-      await dialog.waitFor()
-      await page.getByRole('button', { name: 'Menu' }).click()
-      const menu = page.getByRole('menu')
-      await menu.waitFor()
+    t.after(() => context.close())
+    await setMode(page, 'number')
+    await clickCell(page, CELL)
+    assert.equal(await selected(page), 1)
+    await page.evaluate(addDialogInPage, DIALOG_NAME)
+    await page.evaluate((label) => { document.querySelector(`wa-dialog[label="${label}"]`).open = true }, DIALOG_NAME)
+    const dialog = page.getByRole('dialog', { name: DIALOG_NAME })
+    await dialog.waitFor()
+    await page.getByRole('button', { name: 'Menu' }).click()
+    const menu = page.getByRole('menu')
+    await menu.waitFor()
 
-      await page.keyboard.press('Escape')
-      await menu.waitFor({ state: 'hidden' })
-      assert.equal(await dialog.isVisible(), true, 'the dialog is still open')
-      assert.equal(await selected(page), 1, 'the selection stays')
+    await page.keyboard.press('Escape')
+    await menu.waitFor({ state: 'hidden' })
+    assert.equal(await dialog.isVisible(), true, 'the dialog is still open')
+    assert.equal(await selected(page), 1, 'the selection stays')
 
-      await page.keyboard.press('Escape')
-      await dialog.waitFor({ state: 'hidden' })
-      assert.equal(await selected(page), 1, 'the selection stays')
+    await page.keyboard.press('Escape')
+    await dialog.waitFor({ state: 'hidden' })
+    assert.equal(await selected(page), 1, 'the selection stays')
 
-      await page.keyboard.press('Escape')
-      assert.equal(await settle(() => selected(page), 0), 0, 'with nothing else open Escape reaches Penpa+')
-    } finally {
-      await context.close()
-    }
+    await page.keyboard.press('Escape')
+    assert.equal(await settle(() => selected(page), 0), 0, 'with nothing else open Escape reaches Penpa+')
   })
 })
 
 describe('the solved dialog', () => {
-  it('is the desk\'s own, not a Penpa+ popup, and a digit typed while it is open does not change the board', async () => {
+  it('is the desk\'s own, not a Penpa+ popup, and a digit typed while it is open does not change the board', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const { context, page } = await openSolve(link)
-    try {
-      // The author's answer is a 2 in the cell at ANSWER_CELL of the center list.
-      await page.evaluate(typeDigitInPage, { index: ANSWER_CELL, digit: '2' })
-      await page.getByRole('dialog', { name: 'Puzzle solved' }).waitFor()
-      assert.equal(await page.evaluate(() => engine.getState().penpaDialogOpen), false, 'no Penpa+ popup')
-      const before = await board(page)
-      await page.keyboard.press('5')
-      await page.keyboard.press('Backspace')
-      assert.deepEqual(await board(page), before)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    // The author's answer is a 2 in the cell at ANSWER_CELL of the center list.
+    await page.evaluate(typeDigitInPage, { index: ANSWER_CELL, digit: '2' })
+    await page.getByRole('dialog', { name: 'Puzzle solved' }).waitFor()
+    assert.equal(await page.evaluate(() => engine.getState().penpaDialogOpen), false, 'no Penpa+ popup')
+    const before = await board(page)
+    await page.keyboard.press('5')
+    await page.keyboard.press('Backspace')
+    assert.deepEqual(await board(page), before)
   })
 })
 
 describe('Penpa+\'s own modal dialogs', () => {
-  it('block the board\'s keys while one is open, and stop blocking when it closes', async () => {
+  it('block the board\'s keys while one is open, and stop blocking when it closes', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      await setMode(page, 'number')
-      await clickCell(page, CELL)
-      const before = await board(page)
-      assert.equal(before.selection.length, 1, 'a cell is selected, so a digit would be entered')
-      const showModal = (display) => page.evaluate((d) => { document.querySelector('.modal').style.display = d }, display)
-      await showModal('block')
-      assert.equal(await settle(() => page.evaluate(() => engine.getState().penpaDialogOpen), true), true)
-      await page.keyboard.press('5')
-      assert.deepEqual(await board(page), before)
-      await showModal('none')
-      assert.equal(await settle(() => page.evaluate(() => engine.getState().penpaDialogOpen), false), false)
-      await page.keyboard.press('5')
-      assert.deepEqual(await typedDigits(page), ['5'])
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await setMode(page, 'number')
+    await clickCell(page, CELL)
+    const before = await board(page)
+    assert.equal(before.selection.length, 1, 'a cell is selected, so a digit would be entered')
+    const showModal = (display) => page.evaluate((d) => { document.querySelector('.modal').style.display = d }, display)
+    await showModal('block')
+    assert.equal(await settle(() => page.evaluate(() => engine.getState().penpaDialogOpen), true), true)
+    await page.keyboard.press('5')
+    assert.deepEqual(await board(page), before)
+    await showModal('none')
+    assert.equal(await settle(() => page.evaluate(() => engine.getState().penpaDialogOpen), false), false)
+    await page.keyboard.press('5')
+    assert.deepEqual(await typedDigits(page), ['5'])
   })
 })
 
 describe('?', () => {
   for (const mode of ['number', 'surface']) {
-    it(`changes no cell and opens no Penpa+ dialog in ${mode} mode`, async () => {
+    it(`changes no cell and opens no Penpa+ dialog in ${mode} mode`, async (t) => {
       const { context, page } = await openSolve()
-      try {
-        await setMode(page, mode)
-        await clickCell(page, CELL)
-        const before = await board(page)
-        await page.keyboard.press('?')
-        assert.deepEqual(await board(page), before)
-        assert.equal(await page.evaluate(() => engine.getState().penpaDialogOpen), false, 'Penpa+\'s own shortcuts dialog stays shut')
-      } finally {
-        await context.close()
-      }
+      t.after(() => context.close())
+      await setMode(page, mode)
+      await clickCell(page, CELL)
+      const before = await board(page)
+      await page.keyboard.press('?')
+      assert.deepEqual(await board(page), before)
+      assert.equal(await page.evaluate(() => engine.getState().penpaDialogOpen), false, 'Penpa+\'s own shortcuts dialog stays shut')
     })
   }
 })
 
 describe('focus returns to the board', () => {
-  it('after a board click', async () => {
+  it('after a board click', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      await setMode(page, 'number')
-      await page.evaluate(addFieldsInPage)
-      await page.getByRole('combobox', { name: 'Native pick' }).focus()
-      await clickCell(page, OTHER_CELL)
-      await page.keyboard.press('4')
-      assert.deepEqual(await typedDigits(page), ['4'])
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await setMode(page, 'number')
+    await page.evaluate(addFieldsInPage)
+    await page.getByRole('combobox', { name: 'Native pick' }).focus()
+    await clickCell(page, OTHER_CELL)
+    await page.keyboard.press('4')
+    assert.deepEqual(await typedDigits(page), ['4'])
   })
 
-  it('after a dialog closes', async () => {
+  it('after a dialog closes', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      await setMode(page, 'number')
-      await page.evaluate(addFieldsInPage)
-      await page.evaluate(addDialogInPage, DIALOG_NAME)
-      await clickCell(page, CELL)
-      await page.getByRole('combobox', { name: 'Native pick' }).focus()
-      await page.evaluate((label) => { document.querySelector(`wa-dialog[label="${label}"]`).open = true }, DIALOG_NAME)
-      const dialog = page.getByRole('dialog', { name: DIALOG_NAME })
-      await dialog.waitFor()
-      await page.keyboard.press('Escape')
-      await dialog.waitFor({ state: 'hidden' })
-      // The UI blurs the control Web Awesome handed focus back to in a later timeout, so a key pressed at once can land first.
-      assert.equal(await settle(() => page.evaluate(() => document.activeElement === document.body), true), true)
-      await page.keyboard.press('6')
-      assert.deepEqual(await typedDigits(page), ['6'])
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await setMode(page, 'number')
+    await page.evaluate(addFieldsInPage)
+    await page.evaluate(addDialogInPage, DIALOG_NAME)
+    await clickCell(page, CELL)
+    await page.getByRole('combobox', { name: 'Native pick' }).focus()
+    await page.evaluate((label) => { document.querySelector(`wa-dialog[label="${label}"]`).open = true }, DIALOG_NAME)
+    const dialog = page.getByRole('dialog', { name: DIALOG_NAME })
+    await dialog.waitFor()
+    await page.keyboard.press('Escape')
+    await dialog.waitFor({ state: 'hidden' })
+    // The UI blurs the control Web Awesome handed focus back to in a later timeout, so a key pressed at once can land first.
+    assert.equal(await settle(() => page.evaluate(() => document.activeElement === document.body), true), true)
+    await page.keyboard.press('6')
+    assert.deepEqual(await typedDigits(page), ['6'])
   })
 
-  it('after a menu choice', async () => {
+  it('after a menu choice', async (t) => {
     const { context, page } = await openSolve()
-    try {
-      await setMode(page, 'number')
-      await page.evaluate(addDialogInPage, DIALOG_NAME)
-      // The menu sits in the UI itself here, outside the dialog.
-      await page.evaluate(() => {
-        const menu = document.querySelector('wa-dialog wa-dropdown')
-        const holder = document.createElement('div')
-        holder.style.cssText = 'position:absolute;right:0;bottom:0;z-index:2000'
-        holder.append(menu)
-        document.querySelector('.ui-root').append(holder)
-      })
-      await clickCell(page, CELL)
-      await page.getByRole('button', { name: 'Menu' }).click()
-      await page.getByRole('menuitem', { name: 'Choice A' }).click()
-      await settle(() => page.evaluate(() => document.querySelector('wa-dropdown').open), false)
-      await page.keyboard.press('8')
-      assert.deepEqual(await typedDigits(page), ['8'])
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await setMode(page, 'number')
+    await page.evaluate(addDialogInPage, DIALOG_NAME)
+    // The menu sits in the UI itself here, outside the dialog.
+    await page.evaluate(() => {
+      const menu = document.querySelector('wa-dialog wa-dropdown')
+      const holder = document.createElement('div')
+      holder.style.cssText = 'position:absolute;right:0;bottom:0;z-index:2000'
+      holder.append(menu)
+      document.querySelector('.ui-root').append(holder)
+    })
+    await clickCell(page, CELL)
+    await page.getByRole('button', { name: 'Menu' }).click()
+    await page.getByRole('menuitem', { name: 'Choice A' }).click()
+    await settle(() => page.evaluate(() => document.querySelector('wa-dropdown').open), false)
+    await page.keyboard.press('8')
+    assert.deepEqual(await typedDigits(page), ['8'])
   })
 })
 
@@ -319,19 +283,16 @@ describe('content keys', () => {
   // The same keys on both pages, from the same board: what the old page does is the reference.
   const KEYS = ['5', 'ArrowRight', '7', 'Backspace', 'ArrowDown', '3', 'Delete', 'ArrowLeft', ' ', 'ArrowUp', '1']
   for (const mode of ['number', 'sudoku']) {
-    it(`do on solve.html what they do on the old page: ${mode} mode`, async () => {
+    it(`do on solve.html what they do on the old page: ${mode} mode`, async (t) => {
       const runs = []
       for (const solve of [false, true]) {
         const { context, page } = await openPenpa(browser(), AKARI_SOLVE, { solve, contextOptions: DESK_SIZE })
-        try {
-          if (solve) await waitForDesk(page)
-          await setMode(page, mode)
-          await page.evaluate((i) => { pu.selection = [pu.centerlist[i]]; pu.cursol = pu.centerlist[i] }, CELL)
-          for (const key of KEYS) await page.keyboard.press(key)
-          runs.push(await board(page))
-        } finally {
-          await context.close()
-        }
+        t.after(() => context.close())
+        if (solve) await waitForDesk(page)
+        await setMode(page, mode)
+        await page.evaluate((i) => { pu.selection = [pu.centerlist[i]]; pu.cursol = pu.centerlist[i] }, CELL)
+        for (const key of KEYS) await page.keyboard.press(key)
+        runs.push(await board(page))
       }
       assert.deepEqual(runs[1], runs[0])
       assert.notEqual(JSON.stringify(runs[0].entered.number ?? runs[0].entered), '{}', 'the keys entered something')

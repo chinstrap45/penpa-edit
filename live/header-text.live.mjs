@@ -55,17 +55,14 @@ describe('a link\'s Title, Author, Source and Rules', () => {
     })
   })
 
-  it('show as text in a replay link\'s title line', async () => {
+  it('show as text in a replay link\'s title line', async (t) => {
     const replay = await first.page.evaluate(() => pu.maketext_replay())
     const opened = await openPenpa(browser(), replay.slice(replay.indexOf('#')))
-    try {
-      const shown = await opened.page.evaluate(() => ({
-        text: document.getElementById('puzzletitle').textContent,
-        elements: document.querySelectorAll('#puzzletitle *').length
-      }))
-      assert.deepEqual(shown, { text: `${TITLE} | Author: ${AUTHOR} | Time: 00:00:00:00:0 (d:h:m:s:ts)`, elements: 0 })
-    } finally {
-      await opened.context.close()
-    }
+    t.after(() => opened.context.close())
+    const shown = await opened.page.evaluate(() => ({
+      text: document.getElementById('puzzletitle').textContent,
+      elements: document.querySelectorAll('#puzzletitle *').length
+    }))
+    assert.deepEqual(shown, { text: `${TITLE} | Author: ${AUTHOR} | Time: 00:00:00:00:0 (d:h:m:s:ts)`, elements: 0 })
   })
 })

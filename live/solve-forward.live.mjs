@@ -40,60 +40,45 @@ describe('a solve link opened on index.html', () => {
   })
 
   for (const form of ['#', '?']) {
-    it(`lands on solve.html with its data and the same board on a desktop screen, in ${form} form`, async () => {
+    it(`lands on solve.html with its data and the same board on a desktop screen, in ${form} form`, async (t) => {
       const data = form + hashLink.slice(1)
       const { context, page } = await openIndex(data)
-      try {
-        await waitForDesk(page)
-        assert.equal(pathOf(page), '/solve.html', 'the page is the solve page')
-        assert.equal(dataOf(page), data, 'the link\'s data came along unchanged')
-        assert.deepEqual(await givens(page), expectedGivens, 'the board is the one the link holds')
-      } finally {
-        await context.close()
-      }
+      t.after(() => context.close())
+      await waitForDesk(page)
+      assert.equal(pathOf(page), '/solve.html', 'the page is the solve page')
+      assert.equal(dataOf(page), data, 'the link\'s data came along unchanged')
+      assert.deepEqual(await givens(page), expectedGivens, 'the board is the one the link holds')
     })
   }
 
-  it('leaves no index.html entry for Back to return to', async () => {
+  it('leaves no index.html entry for Back to return to', async (t) => {
     const { context, page } = await openIndex(hashLink)
-    try {
-      await waitForDesk(page)
-      await page.goBack()
-      assert.equal(page.url(), 'about:blank', 'Back goes to the page before the link')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    await waitForDesk(page)
+    await page.goBack()
+    assert.equal(page.url(), 'about:blank', 'Back goes to the page before the link')
   })
 
-  it('stays on index.html on a phone-sized screen', async () => {
+  it('stays on index.html on a phone-sized screen', async (t) => {
     const { context, page } = await openIndex(hashLink, PHONE_SIZE)
-    try {
-      assert.equal(pathOf(page), '/index.html')
-      assert.deepEqual(await givens(page), expectedGivens)
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.equal(pathOf(page), '/index.html')
+    assert.deepEqual(await givens(page), expectedGivens)
   })
 
-  it('stays on index.html on a touch screen, whatever its width', async () => {
+  it('stays on index.html on a touch screen, whatever its width', async (t) => {
     const { context, page } = await openIndex(hashLink, { ...DESK_SIZE, hasTouch: true })
-    try {
-      assert.equal(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), true, 'the screen reads as touch')
-      assert.equal(pathOf(page), '/index.html')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.equal(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), true, 'the screen reads as touch')
+    assert.equal(pathOf(page), '/index.html')
   })
 
-  it('stays on index.html when the solve page\'s Penpa+ button marked it, in either form', async () => {
+  it('stays on index.html when the solve page\'s Penpa+ button marked it, in either form', async (t) => {
     for (const data of [`${hashLink}&${PENPA_MARK}`, `?${hashLink.slice(1)}&${PENPA_MARK}`]) {
       const { context, page } = await openIndex(data)
-      try {
-        assert.equal(pathOf(page), '/index.html', data)
-        assert.deepEqual(await givens(page), expectedGivens, 'the mark leaves the board as the link holds it')
-      } finally {
-        await context.close()
-      }
+      t.after(() => context.close())
+      assert.equal(pathOf(page), '/index.html', data)
+      assert.deepEqual(await givens(page), expectedGivens, 'the mark leaves the board as the link holds it')
     }
   })
 })
@@ -107,44 +92,32 @@ describe('a link with both a query and `#` data opened on index.html', () => {
 
   const hasButton = (page) => page.evaluate(() => Boolean(document.querySelector('#top_button #chinstrap')))
 
-  it('is no solve when only its `#` data says so: no forward, no button', async () => {
+  it('is no solve when only its `#` data says so: no forward, no button', async (t) => {
     const { context, page } = await openIndex(`?x=1${hashLink}`)
-    try {
-      assert.equal(pathOf(page), '/index.html', 'the page stays')
-      assert.equal(await hasButton(page), false, 'and has no button back')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.equal(pathOf(page), '/index.html', 'the page stays')
+    assert.equal(await hasButton(page), false, 'and has no button back')
   })
 
-  it('is a solve when its query says so: forwarded, and kept on index.html by the mark with the button', async () => {
+  it('is a solve when its query says so: forwarded, and kept on index.html by the mark with the button', async (t) => {
     const query = `?${hashLink.slice(1)}`
     const forwarded = await openIndex(`${query}#m=edit`)
-    try {
-      await waitForDesk(forwarded.page)
-      assert.equal(pathOf(forwarded.page), '/solve.html', 'the query alone decides the forward')
-    } finally {
-      await forwarded.context.close()
-    }
+    t.after(() => forwarded.context.close())
+    await waitForDesk(forwarded.page)
+    assert.equal(pathOf(forwarded.page), '/solve.html', 'the query alone decides the forward')
     const kept = await openIndex(`${query}&${PENPA_MARK}#m=edit`)
-    try {
-      assert.equal(pathOf(kept.page), '/index.html', 'the mark in the query keeps the page')
-      assert.equal(await hasButton(kept.page), true, 'a page held as a solve has the button')
-    } finally {
-      await kept.context.close()
-    }
+    t.after(() => kept.context.close())
+    assert.equal(pathOf(kept.page), '/index.html', 'the mark in the query keeps the page')
+    assert.equal(await hasButton(kept.page), true, 'a page held as a solve has the button')
   })
 })
 
 describe('an edit link opened on index.html', () => {
-  it('stays on index.html on a desktop screen', async () => {
+  it('stays on index.html on a desktop screen', async (t) => {
     const link = await makeNumberSolveLink(browser())
     const editLink = link.replace('m=solve', 'm=edit')
     const { context, page } = await openIndex(editLink)
-    try {
-      assert.equal(pathOf(page), '/index.html')
-    } finally {
-      await context.close()
-    }
+    t.after(() => context.close())
+    assert.equal(pathOf(page), '/index.html')
   })
 })
