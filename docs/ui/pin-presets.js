@@ -32,7 +32,7 @@
 
   // [family, genre, tools as 'mode/submode' ('mode/' for a mode with none)], the families in the order the list shows them. A
   // preset holds the tools a solver uses while solving, not the ones a setter draws a Sudoku's clues with (thermometers, cages,
-  // dots, arrows): a Sudoku variant needs only the entry modes, so it is Classic sudoku. A tool a puzzle's grid lacks is left out on load.
+  // dots, arrows): a Sudoku variant needs only the entry modes and Surface, so it is Classic sudoku. A tool a puzzle's grid lacks is left out on load.
   const BUILT_IN = [
     ['Number placement', 'Classic sudoku', SUDOKU],
     ['Number placement', 'Sudoku with lines and marks', [...SUDOKU, 'combi/linex']],

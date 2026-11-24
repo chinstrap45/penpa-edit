@@ -111,6 +111,9 @@ describe('the built-in presets', () => {
     const presets = await presetList(page).locator('[role=option][data-tools]').evaluateAll((options) =>
       options.map((o) => ({ name: o.textContent, tools: o.dataset.tools.split(',') })))
     await page.keyboard.press('Escape')
+    const toolsOf = (name) => presets.find((preset) => preset.name === name)?.tools
+    assert.deepEqual(toolsOf('Classic sudoku'), ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/'])
+    assert.deepEqual(toolsOf('Sudoku with lines and marks'), ['sudoku/1', 'sudoku/2', 'sudoku/3', 'surface/', 'combi/linex'])
     for (const { name, tools } of presets) {
       if (tools.includes('sudoku/1')) {
         assert.deepEqual(tools.slice(0, 3), ['sudoku/1', 'sudoku/2', 'sudoku/3'], `${name} starts with the entry modes`)
