@@ -106,17 +106,16 @@
     try {
       stored = JSON.parse(raw)
     } catch (e) {
-      console.warn(`${key} is unreadable (${e.message}); ${what} are not read from it, and the next write replaces it.`)
+      console.warn(`${key} is unreadable (${e.message}): it should hold ${what}. Nothing is read from it, and the next write replaces it.`)
       return fallback
     }
     if (!isValid(stored)) {
-      console.warn(`${key} does not hold ${what} as this page saves them; none is read from it, and the next write replaces it.`)
+      console.warn(`${key} does not hold ${what} in the form this page saves. Nothing is read from it, and the next write replaces it.`)
       return fallback
     }
     return stored
   }
 
-  // A flag kept as `value` under `key` while `on`, and absent while not.
   function storeFlag (key, value, on) {
     if (on) {
       localStorage.setItem(key, value)
