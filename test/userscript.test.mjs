@@ -1,5 +1,6 @@
 // The Redirect script: its body run in a page whose `location` is the link opened, and its header read as Tampermonkey reads it.
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import vm from 'node:vm'
@@ -18,10 +19,42 @@ function headerOf () {
   return Object.fromEntries([...header.matchAll(/^\/\/ @(\S+)\s+(.*)$/gm)].map(([, key, value]) => [key, value.trim()]))
 }
 
+const HEADER_END = '// ==/UserScript=='
+const versionOf = (text) => text.match(/^\/\/ @version\s+(\S+)/m)[1]
+const bodyOf = (text) => text.slice(text.indexOf(HEADER_END) + HEADER_END.length)
+
+// True when dotted version `a` is greater than `b`, compared number by number.
+function isGreater (a, b) {
+  const [left, right] = [a, b].map((version) => version.split('.').map(Number))
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const [x, y] = [left[i] ?? 0, right[i] ?? 0]
+    if (x !== y) return x > y
+  }
+  return false
+}
+
+// Throws when `head`'s body differs from `base`'s and its @version is not above `base`'s.
+function assertVersionBumped (base, head) {
+  if (bodyOf(base) === bodyOf(head)) return
+  assert.ok(isGreater(versionOf(head), versionOf(base)), `the body changed but @version stays ${versionOf(head)} (master: ${versionOf(base)})`)
+}
+
 describe('the Redirect script', () => {
-  it('has a version above 1.1.0, the one that named the old address', () => {
-    const [major, minor, patch] = headerOf().version.split('.').map(Number)
-    assert.ok(major > 1 || (major === 1 && (minor > 1 || (minor === 1 && patch > 0))), headerOf().version)
+  const script = (version, body) => `// ==UserScript==\n// @version ${version}\n${HEADER_END}\n${body}\n`
+
+  it('fails a body change that keeps the version, or lowers it', () => {
+    assert.throws(() => assertVersionBumped(script('1.2.0', 'a()'), script('1.2.0', 'b()')), /@version stays 1\.2\.0/)
+    assert.throws(() => assertVersionBumped(script('1.10.0', 'a()'), script('1.9.0', 'b()')), /@version stays/)
+  })
+
+  it('passes a body change with a higher version, compared number by number, and an unchanged body', () => {
+    assertVersionBumped(script('1.9.0', 'a()'), script('1.10.0', 'b()'))
+    assertVersionBumped(script('1.2.0', 'a()'), script('1.2.0', 'a()'))
+  })
+
+  it('has a version above the one on origin/master when its body differs from master\'s', () => {
+    const onMaster = execFileSync('git', ['show', 'origin/master:userscript/penpa-redirect.user.js'], { encoding: 'utf8' })
+    assertVersionBumped(onMaster, readFileSync(REDIRECT_SCRIPT, 'utf8'))
   })
 
   it('names ChinStrap, the name the pages speak in, and not caneff, in what Tampermonkey shows', () => {
