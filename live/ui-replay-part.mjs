@@ -42,7 +42,7 @@ const GENERATED_SAMPLE = ['genre/compass', 'genre/shimaguni', 'paint/multicolor-
 const SOLVE_TODO = {}
 
 // The ids each PR's run replays, or every id under `REPLAY_UI_CORPUS=all`; `ids` must be sorted.
-export async function uiReplayIds (ids, all = process.env.REPLAY_UI_CORPUS === 'all') {
+async function uiReplayIds (ids, all = process.env.REPLAY_UI_CORPUS === 'all') {
   if (all) return ids
   const chosen = []
   for (const id of ids) {

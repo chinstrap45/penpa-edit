@@ -407,7 +407,7 @@ export const uiDriver = {
 }
 
 // `solve.html`: a mode change is a pick in the Mode card.
-export const solveUiDriver = {
+const solveUiDriver = {
   start: (page, steps) => startUiDriver(page, steps, modeCardChoices),
   checkpointAfter: uiCheckpointAfter
 }
