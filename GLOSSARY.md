@@ -11,6 +11,8 @@ The words this repo uses for Penpa+ and our changes to it. Terms come from Penpa
   Enter keys step through it. In the new solve UI it seeds the pins.
 - **Pin**: a mode and one of its sub-modes the solver keeps for Tab in the new solve UI; its style is the last one used
   on it. The same mode can be pinned with different sub-modes.
+- **Genre group**: one of the headings the Pinned card's preset list files its built-in presets under (Number placement,
+  Loops and paths, Shading, Regions, Objects and placement); each preset is one puzzle genre's pins. Not a Mode family or a Tool group.
 - **Tab cycle**: Tab and Shift+Tab stepping through the pins in the new solve UI. Not the Tab set, which only seeds them.
 - **Review page**: `docs/gallery.html` (the file keeps the name "gallery"): a list of representative puzzles, each opened in `solve.html` inside an iframe at a size the reviewer picks, for going through the solve page by hand.
 - **Upstream**: `swaroopg92/penpa-edit`, the Penpa+ this repo forks.
