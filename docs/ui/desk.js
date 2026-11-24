@@ -5,7 +5,8 @@
 (function () {
   'use strict'
 
-  const { el, addTooltip, readStored, storeFlag, visibleBox } = window.uiKit
+  const { el, addTooltip, readStored, storeFlag, clamp } = window.uiKit
+  const { boardView } = window
 
   const CARD_GAP_PX = 10
   const DESK_MARGIN_PX = 14
@@ -13,11 +14,6 @@
   const MIN_COLUMN_WIDTH_PX = 240
   const MIN_BOARD_WIDTH_PX = 300
   const TOP_MARGIN_PX = 12
-  // Below this a card body is a layout in progress, not a box to fit the board to.
-  const MIN_FIT_BOX_PX = 40
-  const FIT_PASSES = 3
-  // The board's container is 1 px wider than its canvas on every side, and it is the container that scrolls the card.
-  const BOARD_FRAME_PX = 2
   // The finest width the fit pass tells apart when it looks for the narrowest left column that needs no scroll.
   const LEFT_WIDTH_STEP_PX = 8
   // A card never reaches closer than this to the desk's edge once it has to shrink to stay inside.
@@ -37,8 +33,6 @@
   const TEXT_SCALE_MAX = 1.5
   // The least room between the top bar's heading and its first control.
   const HEADING_GAP_PX = 12
-  // The step of the board card's - and + buttons, in pixels per cell.
-  const ZOOM_STEP_PX = 4
   // The smallest a card is dragged to, [width, height].
   const MIN_SIZE = { board: [240, 200], mouse: [260, 140], pins: [240, 110], mode: [280, 170], recent: [240, 56], rules: [200, 80] }
   // The Rules card's own text size, kept beside the layout and cleared with it. Pixels; the - and + buttons step it.
@@ -49,12 +43,6 @@
   const CLOSEABLE_CARDS = ['rules', 'mouse', 'pins', 'mode', 'recent']
   const closedKey = (id) => `chinstrap-solve-${id}-closed-v1`
   const CARD_CLOSED = '1'
-  // Set to COORDINATES_SHOWN when the solver turned on the board coordinates (#249, #250). The key keeps #249's name, so a setting made then holds.
-  const COORDINATES_KEY = 'chinstrap-solve-grid-numbers-v1'
-  const COORDINATES_SHOWN = '1'
-  // Set to GRID_NUMBERING_ALL when the solver turned "Number the grid only" off (#348); it is on until then.
-  const GRID_NUMBERING_KEY = 'chinstrap-solve-number-grid-only-v1'
-  const GRID_NUMBERING_ALL = 'all'
   // Each resize handle by name, with the edges of the card it moves. `desk.css` places and styles each by the same name.
   // What every resize handle says on hover: a double-click on it makes the axes it resizes automatic again (#252).
   const FIT_TOOLTIP = 'Double-click to fit automatically'
@@ -739,12 +727,12 @@
     const board = cards.board
     board.node.style.width = `${boardMax}px`
     setHeight(board.node, Math.max(MIN_SIZE.board[1], columnHeight))
-    const zoomedTo = isZoomed ? cellPx : null
-    fitBoard(board.body)
+    const zoomedTo = boardView.zoomedCellPx()
+    boardView.fitBoard()
     const drawnWidth = board.body.firstElementChild.getBoundingClientRect().width
-    const boardWidth = clamp(Math.ceil(drawnWidth) + board.node.offsetWidth - bodyRoom(board.body).w, MIN_SIZE.board[0], boardMax)
+    const boardWidth = clamp(Math.ceil(drawnWidth) + board.node.offsetWidth - boardView.bodyRoom().w, MIN_SIZE.board[0], boardMax)
     if (zoomedTo !== null) {
-      zoomBoardTo(zoomedTo)
+      boardView.zoomBoardTo(zoomedTo)
     }
 
     const leftMax = hasLeft ? Math.max(leftMin, width - gapCount * DESK_MARGIN_PX - boardWidth - rightWidth) : 0
@@ -1117,211 +1105,7 @@
     })
   }
 
-  // ---- The board in its card ----------------------------------------------------------------------------------------
-
-  // The cell size the board is drawn at; the - and + buttons step it from here.
-  let cellPx = null
-  // True from the solver's first - or + until Fit (or a layout reset) refits the board.
-  let isZoomed = false
-  // The Board card's - and + buttons, which are disabled at the cell-size limits.
-  let zoomButtons = null
-  // The cursor's cell as the last change saw it (read when the desk opens, so the starting cell is not a move), and
-  // whether it has moved since (until it has, the cursor is Penpa+'s starting cell, not a place the solver chose).
-  let cursorCell = null
-  let hasCursorMoved = false
-
-  // The Board card's box that holds the canvas, and the layer in it that carries the board coordinates (desk.css gives the
-  // box the gutter they sit in, while `ui-coordinates-on` is set).
-  let boardBox = null
-  let coordinatesLayer = null
-
-  const areCoordinatesWanted = () => localStorage.getItem(COORDINATES_KEY) === COORDINATES_SHOWN
-
-  const isGridNumberedOnly = () => localStorage.getItem(GRID_NUMBERING_KEY) !== GRID_NUMBERING_ALL
-
-  // The width of one gutter the coordinates sit in.
-  const coordinatesGutter = () => (boardBox.classList.contains('ui-coordinates-on') ? parseFloat(getComputedStyle(boardBox).paddingLeft) : 0)
-  // The room the coordinates take on one axis, which the fit leaves out: a gutter on each side when the grid alone is numbered
-  // (it is labelled on all four sides then), else one.
-  const coordinatesRoom = () => coordinatesGutter() * (isGridNumberedOnly() ? 2 : 1)
-
-  // A band is about this many cells wide (#250), so a band is one to two cells wide whatever the grid's shape.
-  const BAND_CELLS = 1.5
-  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  // A, B, ... Z, AA, AB, ...: a grid wider than 26 bands runs on as a spreadsheet's columns do.
-  const bandName = (i) => (i < LETTERS.length ? '' : bandName(Math.floor(i / LETTERS.length) - 1)) + LETTERS[i % LETTERS.length]
-
-  // 1, 2, 3... at each of `ats` (the labels of a numbered axis), and A, B, C... at each of `ats` (a band axis).
-  const numbered = (ats) => ats.map((at, i) => ({ at, text: i + 1, band: false }))
-  const lettered = (ats) => ats.map((at, i) => ({ at, text: bandName(i), band: true }))
-
-  // The middles of the equal bands a grid that is not square (#250) is cut into across the grid's bounding box, along one axis.
-  function bandMiddles (from, to, area) {
-    const count = Math.round((to - from) / (BAND_CELLS * area.cellWidth))
-    return Array.from({ length: count }, (_, i) => from + ((i + 0.5) * (to - from)) / count)
-  }
-
-  // The labels of a grid that is not square (#250): letters over equal bands across the grid's bounding box, numbers down it, each at its band's middle.
-  function bandLabels (area) {
-    return {
-      columns: lettered(bandMiddles(area.left, area.right, area)),
-      rows: bandMiddles(area.top, area.bottom, area).map((at, j) => ({ at, text: j + 1, band: true }))
-    }
-  }
-
-  // The labels of a grid of horizontal rows (#350): numbers down, one at each row's y, and letters across as `bandLabels` draws them.
-  function rowLabels (rows, area) {
-    return { columns: lettered(bandMiddles(area.left, area.right, area)), rows: numbered(rows) }
-  }
-
-  // The labels of a square-cell grid: its own column and row numbers, on the centre lines of the cells.
-  function numberLabels (axes) {
-    return { columns: numbered(axes.columns), rows: numbered(axes.rows) }
-  }
-
-  // Puts one label per column and row in the gutter outside the canvas, outside any outside clue (a scrolled board slides them over its cells, see stickCoordinates): numbers on a square-cell grid, numbers down and letters across on a grid of horizontal rows, bands on any other.
-  function drawCoordinates () {
-    const wanted = areCoordinatesWanted()
-    boardBox.classList.toggle('ui-coordinates-on', wanted)
-    boardBox.classList.toggle('ui-coordinates-four-sides', wanted && isGridNumberedOnly())
-    coordinatesLayer.replaceChildren()
-    if (!wanted) {
-      return
-    }
-    const axes = engine.getGridAxes({ framedOnly: isGridNumberedOnly() })
-    const rows = axes ? null : engine.getGridRows()
-    const labels = axes ? numberLabels(axes) : rows ? rowLabels(rows, engine.getGridArea()) : bandLabels(engine.getGridArea())
-    const isNumbered = Boolean(axes || rows)
-    const box = boardBox.getBoundingClientRect()
-    const gutter = coordinatesGutter()
-    const label = (axis, side, { text, band }, left, top) => el('span', {
-      class: band ? 'ui-grid-coordinate ui-grid-band' : 'ui-grid-coordinate', 'data-axis': axis, 'data-side': side, style: `left:${left}px;top:${top}px`
-    }, [String(text)])
-    const sides = [['start', 0]]
-    // The far sides repeat the labels of a grid that is numbered alone, on a square-cell grid or a grid of rows; the bands of any other grid are not repeated.
-    if (isNumbered && isGridNumberedOnly()) {
-      sides.push(['end', 1])
-    }
-    coordinatesLayer.append(
-      ...sides.flatMap(([side, far]) => labels.columns.map((c) => label('column', side, c, c.at - box.left, gutter / 2 + far * (box.height - gutter)))),
-      ...sides.flatMap(([side, far]) => labels.rows.map((r) => label('row', side, r, gutter / 2 + far * (box.width - gutter), r.at - box.top))))
-    stickCoordinates()
-  }
-
-  // Slides the column labels down and the row labels right by how far the board has scrolled past the card's top and left
-  // edges (desk.css reads the two variables), so they stay in view while the cells scroll under them.
-  function stickCoordinates () {
-    const view = visibleBox(boardBox.parentElement)
-    const box = boardBox.getBoundingClientRect()
-    coordinatesLayer.style.setProperty('--ui-stick-x', `${Math.max(0, view.left - box.left)}px`)
-    coordinatesLayer.style.setProperty('--ui-stick-y', `${Math.max(0, view.top - box.top)}px`)
-    // The far labels slide the other way, up and left, when the board's right and bottom edges are past the card's.
-    coordinatesLayer.style.setProperty('--ui-stick-end-x', `${Math.min(0, view.right - box.right)}px`)
-    coordinatesLayer.style.setProperty('--ui-stick-end-y', `${Math.min(0, view.bottom - box.bottom)}px`)
-  }
-
-  function setGridNumberedOnly (boardBody, only) {
-    storeFlag(GRID_NUMBERING_KEY, GRID_NUMBERING_ALL, !only)
-    drawCoordinates()
-    if (!isZoomed) {
-      fitBoard(boardBody)
-    }
-  }
-
-  function setCoordinatesWanted (boardBody, shown) {
-    storeFlag(COORDINATES_KEY, COORDINATES_SHOWN, shown)
-    drawCoordinates()
-    if (!isZoomed) {
-      fitBoard(boardBody)
-    }
-  }
-
-  // The box inside the body's padding (desk.css), which is the room the board has.
-  function bodyRoom (body) {
-    const style = getComputedStyle(body)
-    return {
-      w: body.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
-      h: body.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
-    }
-  }
-
-  function showZoomLimits () {
-    const { min, max } = engine.CELL_SIZE_RANGE
-    zoomButtons.out.disabled = cellPx <= min
-    zoomButtons.in.disabled = cellPx >= max
-  }
-
-  // Redrawing the board can change the room it has (a scrollbar going, the layout settling), so the fit repeats until
-  // the room it was made for is the room that is left, at most FIT_PASSES times.
-  function fitBoard (boardBody) {
-    isZoomed = false
-    drawCoordinates()
-    for (let pass = 0; pass < FIT_PASSES; pass++) {
-      const room = bodyRoom(boardBody)
-      const w = room.w - BOARD_FRAME_PX - coordinatesRoom()
-      const h = room.h - BOARD_FRAME_PX - coordinatesRoom()
-      if (w < MIN_FIT_BOX_PX || h < MIN_FIT_BOX_PX) {
-        return
-      }
-      cellPx = engine.fitBoard(w, h)
-      const after = bodyRoom(boardBody)
-      if (after.w === room.w && after.h === room.h) {
-        break
-      }
-    }
-    showZoomLimits()
-    drawCoordinates()
-  }
-
-  // Scrolls the Board card's body so the cursor's cell is in view: only when it is not, or always (centred) with `centre`.
-  function showCursor (boardBody, centre) {
-    const focus = engine.getFocusRect()
-    if (!focus) {
-      return
-    }
-    const visible = visibleBox(boardBody)
-    const isInside = focus.left >= visible.left && focus.right <= visible.right && focus.top >= visible.top && focus.bottom <= visible.bottom
-    if (isInside && !centre) {
-      return
-    }
-    boardBody.scrollLeft += (focus.left + focus.right - visible.left - visible.right) / 2
-    boardBody.scrollTop += (focus.top + focus.bottom - visible.top - visible.bottom) / 2
-  }
-
-  // Follows the cursor when it moves to a cell the card does not show.
-  function followCursor (boardBody) {
-    const focus = engine.getFocusRect()
-    const cell = focus ? focus.cell : null
-    if (cell === cursorCell) {
-      return
-    }
-    cursorCell = cell
-    hasCursorMoved = true
-    showCursor(boardBody, false)
-  }
-
-  function zoomBoardTo (px) {
-    const { min, max } = engine.CELL_SIZE_RANGE
-    cellPx = clamp(px, min, max)
-    isZoomed = true
-    engine.setCellSize(cellPx)
-    showZoomLimits()
-    drawCoordinates()
-  }
-
-  function zoomBoard (boardBody, steps) {
-    if (cellPx === null) {
-      return
-    }
-    zoomBoardTo(cellPx + steps * ZOOM_STEP_PX)
-    if (hasCursorMoved) {
-      showCursor(boardBody, true)
-    }
-  }
-
   // ---- The Rules card's text size ---------------------------------------------------------------------------------
-
-  const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
   // The size before the desk's text scale (desk.css's --ui-rules-text). The default lives in the stylesheet, so the buttons
   // read it back from the page rather than from a constant.
@@ -1350,8 +1134,7 @@
   const isCardClosed = (id) => localStorage.getItem(closedKey(id)) === CARD_CLOSED
 
   // Resolves to `{ bar, cards, closeButtons, relayout, resetLayout, fit, fitToTools, closeableCards, isCardClosed, setCardClosed,
-  // areCoordinatesWanted, setCoordinatesWanted: (shown) => setCoordinatesWanted(desk.cards.board.body, shown), isGridNumberedOnly,
-  // setGridNumberedOnly: (only) => setGridNumberedOnly(desk.cards.board.body, only), fitBoard }` once
+  // areCoordinatesWanted, setCoordinatesWanted, isGridNumberedOnly, setGridNumberedOnly, fitBoard }` once
   // the desk is built, for the files that fill the bar and the cards. `closeableCards` is `[id, title]` per card the solver can
   // close, in the Cards menu's order, and `closeButtons` each one's header ×, by id. `fitBoard()` fits the board to its card, as Fit does.
   window.deskReady = engine.ready.then(() => {
@@ -1359,11 +1142,7 @@
     CLOSEABLE_CARDS.forEach((id) => {
       desk.cards[id].node.hidden = isCardClosed(id)
     })
-    engine.mount(desk.cards.board.body)
-    boardBox = desk.cards.board.body.firstElementChild
-    coordinatesLayer = el('div', { class: 'ui-grid-coordinates', 'aria-hidden': 'true' })
-    boardBox.append(coordinatesLayer)
-    boardBox.parentElement.addEventListener('scroll', stickCoordinates)
+    boardView.mount(desk.cards.board.body)
     openLayout()
     fitPending = Object.keys(saved).length === 0
     layout(desk)
@@ -1425,7 +1204,7 @@
     const resetLayout = () => {
       startFit()
       placesKept = null
-      isZoomed = false
+      boardView.forgetZoom()
       localStorage.removeItem(LAYOUT_KEY)
       localStorage.removeItem(RULES_TEXT_KEY)
       showRulesText(desk)
@@ -1459,26 +1238,7 @@
     showRulesText(desk)
     desk.rulesText.smaller.addEventListener('click', () => stepRulesText(desk, -1))
     desk.rulesText.bigger.addEventListener('click', () => stepRulesText(desk, 1))
-    const boardBody = desk.cards.board.body
-    zoomButtons = desk.zoom
-    desk.zoom.out.addEventListener('click', () => zoomBoard(boardBody, -1))
-    desk.zoom.in.addEventListener('click', () => zoomBoard(boardBody, 1))
-    desk.zoom.fit.addEventListener('click', () => fitBoard(boardBody))
-    cursorCell = engine.getFocusRect()?.cell ?? null
-    engine.on('change', () => {
-      followCursor(boardBody)
-      drawCoordinates()
-    })
-    // Fires once on observe, which is the first fit, and again whenever the card changes size: a refit, unless the solver
-    // zoomed, which only Fit or a layout reset drops. The card is watched, not its body, since a scrollbar appearing
-    // narrows the body and would undo the zoom at once.
-    new ResizeObserver(() => {
-      if (!isZoomed) {
-        fitBoard(boardBody)
-      } else {
-        drawCoordinates()
-      }
-    }).observe(desk.cards.board.node)
+    boardView.watch(desk.zoom, desk.cards.board.node)
     return {
       bar: desk.bar,
       cards: desk.cards,
@@ -1490,11 +1250,11 @@
       closeableCards: CLOSEABLE_CARDS.map((id) => [id, CARD_TITLES[id]]),
       isCardClosed,
       setCardClosed,
-      areCoordinatesWanted,
-      setCoordinatesWanted: (shown) => setCoordinatesWanted(desk.cards.board.body, shown),
-      isGridNumberedOnly,
-      setGridNumberedOnly: (only) => setGridNumberedOnly(desk.cards.board.body, only),
-      fitBoard: () => fitBoard(boardBody)
+      areCoordinatesWanted: boardView.areCoordinatesWanted,
+      setCoordinatesWanted: boardView.setCoordinatesWanted,
+      isGridNumberedOnly: boardView.isGridNumberedOnly,
+      setGridNumberedOnly: boardView.setGridNumberedOnly,
+      fitBoard: boardView.fitBoard
     }
   })
   // A failed load needs no second report: main.js shows its error dialog. Anything else that stopped the desk is thrown
