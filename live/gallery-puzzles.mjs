@@ -1,10 +1,10 @@
 // The puzzles the review page (`docs/gallery.html`, #256) lists, and where each one's link comes from. A puzzle with a recording takes its link from that
 // recording's `header.source`; the rest are built on a new board. Not a check itself, so `live/**/*.live.mjs` skips it.
 import { readFileSync } from 'node:fs'
-import { ICEBREAKER, linkFromNewBoard, newBoardSolveLinkInPage, puzzleSolveLinkInPage } from './page.mjs'
+import { LONG_RULES_PUZZLE, linkFromNewBoard, newBoardSolveLinkInPage, puzzleSolveLinkInPage } from './page.mjs'
 
-// The Icebreaker rules four times over, with clues outside the board: the long rules and outside clues the page is reviewed with.
-const ICEBREAKER_REVIEWED = { ...ICEBREAKER, rules: Array(4).fill(ICEBREAKER.rules).join('\n\n'), outsideClues: [1, 2, 3, 4, 5, 6, 7, 8] }
+// The long rules four times over, with clues outside the board: the long rules and outside clues the page is reviewed with.
+const LONG_RULES_REVIEWED = { ...LONG_RULES_PUZZLE, rules: Array(4).fill(LONG_RULES_PUZZLE.rules).join('\n\n'), outsideClues: [1, 2, 3, 4, 5, 6, 7, 8] }
 
 // Each puzzle: its id (the review page's address names it), the name, genre and grid shape the list shows, and where its
 // link comes from: a recording under `live/recordings/`, whose header also gives the engine's `gridtype` the page must open
@@ -16,7 +16,7 @@ const SPEC = [
   { id: 'starbattle', name: 'Star Battle', genre: 'Star Battle', shape: '10x10', recording: 'solve/starbattle' },
   { id: 'slitherlink', name: 'Slitherlink', genre: 'Slitherlink', shape: '5x5', recording: 'solve/slitherlink' },
   { id: 'or-shading', name: 'Or-shading', genre: 'Shading', shape: '5x5', recording: 'solve/or-shading' },
-  { id: 'icebreaker', name: 'Icebreaker', genre: 'Nurikabe + Icelom, long rules, outside clues', shape: '10x10', gridtype: 'square', build: (browser) => linkFromNewBoard(browser, puzzleSolveLinkInPage, ICEBREAKER_REVIEWED) },
+  { id: 'long-rules', name: 'Long rules', genre: 'Lorem ipsum rules, outside clues', shape: '10x10', gridtype: 'square', build: (browser) => linkFromNewBoard(browser, puzzleSolveLinkInPage, LONG_RULES_REVIEWED) },
   { id: 'rectangle', name: 'Arukone 14x9', genre: 'Arukone', shape: '14x9, not square', recording: 'genre/arukone' },
   { id: 'hex', name: 'Hex grid', genre: 'Sudoku', shape: 'hexagonal', recording: 'grid/hex-sudoku' },
   { id: 'triangle', name: 'Triangle grid', genre: 'Sudoku', shape: 'triangular', recording: 'grid/tri-sudoku' },

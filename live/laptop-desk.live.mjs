@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, it } from 'node:test'
 import { CARD_GAP_PX, MOUSE_MIN_HEIGHT_PX, MOUSE_SLACK_PX, overlaps, SLACK_PX, steady } from './desk-layout.mjs'
-import { afterChange, ICEBREAKER, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, resetLayoutInSettings, useBrowser, waitForDesk } from './page.mjs'
+import { afterChange, LONG_RULES_PUZZLE, LAYOUT_KEY, linkFromNewBoard, openSolvePage, puzzleSolveLinkInPage, resetLayoutInSettings, useBrowser, waitForDesk } from './page.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -27,14 +27,14 @@ const EDGE_MARGIN_PX = 8
 // The share of the left column Rules stops at when Mouse needs the rest (Chris, 2026-11-17).
 const RULES_SHARE = 0.55
 
-// The Icebreaker rules four times over: more than Rules can show at a laptop size.
-const LONG_RULES = { ...ICEBREAKER, rules: Array(4).fill(ICEBREAKER.rules).join('\n\n') }
+// The long rules four times over: more than Rules can show at a laptop size.
+const LONG_RULES_FOURFOLD = { ...LONG_RULES_PUZZLE, rules: Array(4).fill(LONG_RULES_PUZZLE.rules).join('\n\n') }
 // The long rules with only Line's three Mouse rows to show.
-const LONG_LINE_RULES = { ...LONG_RULES, tabs: ['Line Normal'] }
+const LONG_LINE_RULES = { ...LONG_RULES_FOURFOLD, tabs: ['Line Normal'] }
 // The long rules on another puzzle: an 8x8 board.
-const OTHER_PUZZLE = { ...LONG_RULES, size: 8 }
+const OTHER_PUZZLE = { ...LONG_RULES_FOURFOLD, size: 8 }
 // One short line of rules.
-const ONE_LINE_RULES = { ...ICEBREAKER, rules: 'Shade some cells.' }
+const ONE_LINE_RULES = { ...LONG_RULES_PUZZLE, rules: 'Shade some cells.' }
 
 // Runs in the page. The bar's box, the heading's, every visible control's, and whether the title is cut short.
 function readBarInPage () {
@@ -120,8 +120,11 @@ describe('the top bar on a laptop screen', () => {
     return steady(page, readBarInPage)
   }
 
+  // The fixture's title is short; centring only overlaps the controls at 1366 with a heading this long.
+  const LONG_HEADING = { ...LONG_RULES_PUZZLE, title: 'Long rules (lorem ipsum)', author: 'Placeholder' }
+
   it('centres the title and author when there is room, and moves them to the left end when centring would overlap', async () => {
-    const page = await open(ICEBREAKER, WIDE)
+    const page = await open(LONG_HEADING, WIDE)
     const wide = await barAt(page, WIDE)
     assert.equal(near(wide.heading.x + wide.heading.w / 2, wide.bar.x + wide.bar.w / 2), true, `centred at ${WIDE.width}: ${JSON.stringify(wide.heading)}`)
     assert.deepEqual(overlapping(wide), [])
@@ -136,7 +139,7 @@ describe('the top bar on a laptop screen', () => {
   })
 
   it('moves the heading clear of a control added to the bar after it was placed', async () => {
-    const page = await open(ICEBREAKER, WIDE)
+    const page = await open(LONG_HEADING, WIDE)
     const before = await barAt(page, WIDE)
     assert.equal(near(before.heading.x + before.heading.w / 2, before.bar.x + before.bar.w / 2), true, 'centred to start with')
     await page.evaluate(() => {
@@ -151,7 +154,7 @@ describe('the top bar on a laptop screen', () => {
 
   for (const viewport of LAPTOPS) {
     it(`keeps every control clear of the whole title and author at ${viewport.width}x${viewport.height}`, async () => {
-      const page = await open(ICEBREAKER, viewport)
+      const page = await open(LONG_HEADING, viewport)
       const read = await barAt(page, viewport)
       assert.deepEqual(overlapping(read), [])
       assert.equal(read.titleCut, false, 'the title is whole')
@@ -159,7 +162,7 @@ describe('the top bar on a laptop screen', () => {
   }
 
   it('makes the buttons smaller only when the title still overlaps them at the left end', async () => {
-    const page = await open(ICEBREAKER, LAPTOPS[0])
+    const page = await open(LONG_HEADING, LAPTOPS[0])
     // The title grows one narrow letter at a time until the bar goes compact, so the title is the longest the left end takes beside full-size buttons whatever the font.
     const grown = await page.evaluate(async () => {
       const bar = document.querySelector('.ui-bar')
@@ -181,7 +184,7 @@ describe('the top bar on a laptop screen', () => {
   })
 
   it('has no theme button and no Reset layout button, and Penpa+ is a text button', async () => {
-    const page = await open(ICEBREAKER, LAPTOPS[1])
+    const page = await open(LONG_RULES_PUZZLE, LAPTOPS[1])
     const bar = page.locator('.ui-bar')
     assert.equal(await bar.getByRole('button', { name: /theme/i }).count(), 0, 'the theme is chosen in Settings')
     assert.equal(await bar.getByRole('button', { name: 'Reset layout' }).count(), 0, 'Reset layout is in Settings')
@@ -190,7 +193,7 @@ describe('the top bar on a laptop screen', () => {
   })
 
   it('shows each top-bar button\'s label on hover, with its shortcut, and the current one after it changes', async () => {
-    const page = await open(ICEBREAKER, LAPTOPS[1])
+    const page = await open(LONG_RULES_PUZZLE, LAPTOPS[1])
     const hoverLabel = async (name, label) => {
       await barButton(page, name).hover()
       return settle(() => shownTooltips(page), [label])
@@ -231,7 +234,7 @@ describe('the desk on a laptop screen', () => {
   let opened
   afterEach(async () => { await opened?.context.close() })
 
-  async function open (viewport, puzzle = ICEBREAKER) {
+  async function open (viewport, puzzle = LONG_RULES_PUZZLE) {
     opened = await openSolvePage(browser(), await linkFor(puzzle), { contextOptions: { viewport } })
     return opened.page
   }
@@ -289,7 +292,7 @@ describe('the desk on a laptop screen', () => {
   })
 
   it('gives Rules the larger share when its text cannot fit', async () => {
-    const read = await deskSettled(await open(LAPTOPS[0], LONG_RULES))
+    const read = await deskSettled(await open(LAPTOPS[0], LONG_RULES_FOURFOLD))
     const { Rules, Mouse } = read.cards
     assert.equal(read.overflowY.Rules > 0, true, 'the long rules do not fit')
     assert.equal(Rules.h > Mouse.h, true, `Rules ${Rules.h}px, Mouse ${Mouse.h}px`)
@@ -401,7 +404,7 @@ describe('the desk holds together', () => {
   let opened
   afterEach(async () => { await opened?.context.close() })
 
-  async function open (viewport, puzzle = ICEBREAKER) {
+  async function open (viewport, puzzle = LONG_RULES_PUZZLE) {
     opened = await openSolvePage(browser(), await linkFor(puzzle), { contextOptions: { viewport } })
     return opened.page
   }
@@ -503,7 +506,7 @@ describe('the desk holds together', () => {
   })
 
   it('refits an untouched layout after the window is resized and back: the same as a fresh load at each size', async () => {
-    const small = await openSolvePage(browser(), await linkFor(ICEBREAKER), { contextOptions: { viewport: LAPTOPS[0] } })
+    const small = await openSolvePage(browser(), await linkFor(LONG_RULES_PUZZLE), { contextOptions: { viewport: LAPTOPS[0] } })
     const freshSmall = (await deskSettled(small.page)).cards
     await small.context.close()
     const page = await open(LAPTOPS[1])
@@ -661,10 +664,10 @@ describe('the desk holds together', () => {
     assert.equal(Math.abs(spare - padding) <= MOUSE_SLACK_PX, true, `Mouse has ${spare}px below the tallest tool's last row, its padding ${padding}px`)
   })
 
-  // Icebreaker's tools need more than 45% of the column, so Rules stops at 55% and Mouse takes the rest (the controller's
+  // The long-rules puzzle's tools need more than 45% of the column, so Rules stops at 55% and Mouse takes the rest (the controller's
   // reading of Chris's ruling: the cap guarantees Mouse the lesser of its tallest tool and 45%).
-  it('stops Rules at 55% of the column on Icebreaker, whose tools need the rest', async () => {
-    const page = await open(LAPTOPS[1], LONG_RULES)
+  it('stops Rules at 55% of the column on the long-rules puzzle, whose tools need the rest', async () => {
+    const page = await open(LAPTOPS[1], LONG_RULES_FOURFOLD)
     const read = await deskSettled(page)
     const column = read.desk.h - 2 * TOP_MARGIN_PX
     assert.equal(Math.abs(read.cards.Rules.h - Math.floor(RULES_SHARE * column)) <= SLACK_PX, true, `Rules is ${read.cards.Rules.h}px of a ${column}px column`)
@@ -694,7 +697,7 @@ describe('the desk holds together', () => {
   })
 
   it('keeps Mouse about 45% of the column when its tools need it, Rules scrolling past about 55%', async () => {
-    const page = await open(LAPTOPS[1], LONG_RULES)
+    const page = await open(LAPTOPS[1], LONG_RULES_FOURFOLD)
     await deskSettled(page)
     // A Tab set of the tools with the most Mouse rows, which need more than the column's lower 45%.
     await page.evaluate(() => {
@@ -726,7 +729,7 @@ describe('the desk holds together', () => {
   it('mends a card kept from another puzzle that would sit over that puzzle\'s fitted cards', async () => {
     const page = await open(LAPTOPS[1])
     await deskSettled(page)
-    // Mouse just under Icebreaker's short Rules, where the long rules' taller Rules card reaches.
+    // Mouse just under the long-rules puzzle's short Rules, where the long rules' taller Rules card reaches.
     await dragFrom(page, await headPoint(page, 'Mouse'), 0, 10)
     const other = await openBeside(OTHER_PUZZLE)
     assert.deepEqual(cardOverlaps(await deskSettled(other)), [])
