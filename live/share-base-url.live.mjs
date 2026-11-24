@@ -1,4 +1,3 @@
-// Share links made from a local page name the fork when link shortening is on, and keep the page's own address when it is off.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { FORK_URL } from '../test/redirect-urls.mjs'

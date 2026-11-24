@@ -1,4 +1,4 @@
-// The nightly full seam's failure report (`.github/workflows/nightly.yml`, #268): a planted failing test in a part's log
+// The nightly full seam's failure report (`.github/workflows/nightly.yml`): a planted failing test in a part's log
 // files one issue naming it, through a stub `gh`. The workflow's run on GitHub is proven only by a scheduled run.
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
@@ -47,7 +47,7 @@ describe('the nightly seam issue', () => {
   })
 })
 
-// The full mode of the engine replay (`FULL_ROUND_TRIPS_ENV` in `live/replay.mjs`, #267): the nightly's call of CI turns it on
+// The full mode of the engine replay (`FULL_ROUND_TRIPS_ENV` in `live/replay.mjs`): the nightly's call of CI turns it on
 // and no other run of CI does.
 describe('the nightly full round trips', () => {
   const workflow = (name) => readFileSync(new URL(`../.github/workflows/${name}`, import.meta.url), 'utf8')

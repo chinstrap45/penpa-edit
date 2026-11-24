@@ -1,4 +1,4 @@
-// The pin toggle on each tool row of the Mode card's picker (#307): a click or Shift+Enter pins or unpins that row's tool without picking it or
+// The pin toggle on each tool row of the Mode card's picker: a click or Shift+Enter pins or unpins that row's tool without picking it or
 // closing the picker. Driven by role, name and the real mouse and keys; the tool by `engine.getTool()`.
 import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'

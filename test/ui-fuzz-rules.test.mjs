@@ -1,6 +1,6 @@
 import fc from 'fast-check'
-// The UI fuzz's rules (`live/ui-fuzz/rules.mjs`, #195) on hand-made snapshots: each rule fires on a bad page and holds on a
-// good one, without a browser. Also its unpin action (`live/ui-fuzz/actions.mjs`, #295) on a fake page.
+// The UI fuzz's rules (`live/ui-fuzz/rules.mjs`) on hand-made snapshots: each rule fires on a bad page and holds on a
+// good one, without a browser. Also its unpin action (`live/ui-fuzz/actions.mjs`) on a fake page.
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { KINDS, UNPIN_SELECTOR } from '../live/ui-fuzz/actions.mjs'
@@ -34,7 +34,6 @@ function quietPage (overrides = {}) {
 }
 
 const rule = (name) => RULES.find((r) => r.name === name)
-// `now` and `before` are overrides of a quiet page; `opened` is one too, or null. `history` is the kinds run so far.
 const check = (name, now, { before = {}, action = null, opened = {}, history = [] } = {}) =>
   rule(name).check({ now: quietPage(now), before: quietPage(before), action, opened: opened && quietPage(opened), history })
 const action = (kind, arg) => ({ kind, arg })
@@ -303,7 +302,6 @@ describe('the UI fuzz rules', () => {
 })
 
 describe('the unpin action (#295)', () => {
-  // A page whose Pinned card holds `chips` unpin buttons and the "Unpin all" button; it records what the action looks up and clicks.
   function fakePage (chips) {
     const log = { looked: [], clicked: 0 }
     const chipButtons = { count: async () => chips, nth: () => { log.clicked++; throw new Error('clicked a chip') } }
@@ -329,7 +327,6 @@ describe('the unpin action (#295)', () => {
 })
 
 describe('the actions inside a closable card (#342)', () => {
-  // The kinds that click a control inside a card, by the card they need.
   const INSIDE = {
     Mode: ['mode pick', 'mode search', 'pin toggle'],
     Pinned: ['unpin', 'pin pick', 'pin drag', 'preset load', 'preset save', 'preset star', 'preset delete'],
