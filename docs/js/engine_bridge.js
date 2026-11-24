@@ -1035,9 +1035,7 @@
     // The tool each key lends while held in Sudoku, as `{ key: 'Shift' | 'Ctrl', tool }` with `tool` from `listTools()`: Shift
     // Corner, Ctrl Centre. A grid without that tool gets no row, as it gets no hold.
     holdTools () {
-      return [['Shift', 'Shift'], ['Ctrl', 'Control']].filter(([, key]) => heldTool(key)).map(([label, key]) => ({
-        key: label, tool: heldTool(key)
-      }))
+      return [['Shift', 'Shift'], ['Ctrl', 'Control']].map(([label, key]) => ({ key: label, tool: heldTool(key) })).filter((row) => row.tool)
     },
 
     undo () {
