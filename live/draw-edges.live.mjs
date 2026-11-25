@@ -77,7 +77,7 @@ describe('the Draw on edges control', () => {
     await page.reload()
     await page.evaluate(() => engine.ready)
     await setTool(page, { mode: 'number', submode: '1' })
-    await settle(() => edgesState(page), true)
+    assert.equal(await settle(() => edgesState(page), true), true, 'the link\'s value is back')
     assert.equal((await pressedName(page)).trim(), 'On')
   })
 
@@ -106,6 +106,6 @@ describe('the Draw on edges control', () => {
       const [body, group] = await Promise.all([card.locator('.ui-body').boundingBox(), control(page).boundingBox()])
       return group !== null && group.y + group.height <= body.y + body.height + 1 && await card.locator('.ui-body').evaluate((b) => b.scrollHeight <= b.clientHeight)
     }
-    await settle(inside, true)
+    assert.equal(await settle(inside, true), true, 'the control and the whole card body show')
   })
 })
