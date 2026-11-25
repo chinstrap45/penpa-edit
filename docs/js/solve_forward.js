@@ -25,7 +25,7 @@ const isMarkedForPenpa = (params) => params.get(PENPA_MARK_KEY) === PENPA_MARK_V
 function withPenpaMark (data) {
   const params = penpaLinkParams(data)
   // A link with no parameters is no solve link, so there is nothing to keep on this page.
-  if (!params.size || isMarkedForPenpa(params)) {
+  if (!params.toString() || isMarkedForPenpa(params)) {
     return data
   }
   // The mark goes where penpaLinkParams reads the parameters: the end of the query, or of the `#` data.

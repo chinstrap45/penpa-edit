@@ -5,14 +5,15 @@ import { describe, it } from 'node:test'
 import vm from 'node:vm'
 
 const source = readFileSync(new URL('../docs/js/solve_forward.js', import.meta.url), 'utf8')
-const forward = vm.runInNewContext(`${source}; ({ withPenpaMark, withoutPenpaMark, penpaLinkParams })`, { URLSearchParams })
-const marked = (data) => forward.penpaLinkParams(data).get('ui') === 'penpa'
+const forward = vm.runInNewContext(`${source}; ({ PENPA_MARK, withPenpaMark, withoutPenpaMark, penpaLinkParams })`, { URLSearchParams })
+const marked = (data) => forward.penpaLinkParams(data).get(forward.PENPA_MARK.split('=')[0]) === forward.PENPA_MARK.split('=')[1]
 
 const LINKS = {
   'a query with `p=`': '?m=solve&p=abc',
   'a query with `p=` and `#` data': '?m=solve&p=abc#m=edit',
   'only `#` data': '#m=solve&p=abc',
-  'a query without `p=` and solve `#` data': '?fbclid=1#m=solve&p=abc'
+  'a query without `p=` and solve `#` data': '?fbclid=1#m=solve&p=abc',
+  'a query whose parameter only ends in `p`': '?xp=1#m=solve&p=abc'
 }
 
 describe('the Penpa+ mark', () => {
@@ -24,4 +25,10 @@ describe('the Penpa+ mark', () => {
       assert.equal(forward.withoutPenpaMark(withMark), link)
     })
   }
+
+  it('leaves a link with no parameters unmarked', () => {
+    for (const link of ['?fbclid=1', '?fbclid=1#', '']) {
+      assert.equal(forward.withPenpaMark(link), link)
+    }
+  })
 })
