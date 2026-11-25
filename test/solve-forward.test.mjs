@@ -19,6 +19,7 @@ const LINKS = {
 describe('the Penpa+ mark', () => {
   for (const [name, link] of Object.entries(LINKS)) {
     it(`is found where it was put, and taken off again, on ${name}`, () => {
+      assert.equal(forward.penpaLinkParams(link).get('m'), 'solve', 'the link reads as the solve it holds')
       assert.equal(marked(link), false)
       const withMark = forward.withPenpaMark(link)
       assert.equal(marked(withMark), true, withMark)
