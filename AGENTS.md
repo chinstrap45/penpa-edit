@@ -50,6 +50,17 @@ The six default roles, each label string equal to its role: `needs-triage`, `nee
 
 Single-context: a root `GLOSSARY.md` and upstream's `docs/agents.md`, plus a root `adr/` (outside `docs/`, so Pages does not serve it). See `.agents/domain.md`.
 
+## Include closure
+
+The spec run's hold reads this section (#455).
+
+- **Directive**: `"./<path>"`
+- **Paths**: relative to the including file
+- **Generator**: `node live/build-solve.mjs`
+- **Shared files**: a new owned file also changes `AGENTS.md`, `.gitattributes` and `OWNED_PATHS` in `test/upstream-merge.test.mjs`, and
+  `package.json`'s `standard.globals` when it defines a global; a new `docs/js/` script also changes `docs/index.html` and `docs/solve.html`.
+  The directive finds those two; a ticket for such a file names the rest in its body.
+
 ## Coding standards
 
 Before you write or review code: read `CODING_STANDARDS.md`.
