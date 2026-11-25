@@ -101,7 +101,7 @@ describe('the Draw on edges control', () => {
     const card = page.getByRole('region', { name: 'Mode' })
     await setTool(page, { mode: 'surface' })
     await afterChange(page)
-    await setTool(page, { mode: 'move', submode: '1' })
+    await setTool(page, { mode: 'sudoku', submode: '1' })
     const inside = async () => {
       const [body, group] = await Promise.all([card.locator('.ui-body').boundingBox(), control(page).boundingBox()])
       return group !== null && group.y + group.height <= body.y + body.height + 1 && await card.locator('.ui-body').evaluate((b) => b.scrollHeight <= b.clientHeight)
