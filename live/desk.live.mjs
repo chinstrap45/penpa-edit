@@ -3,7 +3,7 @@
 // accessible name or test id; the board's size is what its canvas draws.
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, describe, it } from 'node:test'
-import { boardAgainstCard, newBoardSolveLink, openSolvePage, resetLayoutInSettings, useBrowser } from './page.mjs'
+import { boardAgainstCard, LAYOUT_KEY, newBoardSolveLink, openSolvePage, resetLayoutInSettings, useBrowser } from './page.mjs'
 import { settle } from './settle.mjs'
 import { CARDS } from './desk-layout.mjs'
 
@@ -101,6 +101,21 @@ describe('the desk', () => {
       assert.deepEqual(await settle(() => boxOf(page, 'Rules'), grown), grown)
     })
   }
+
+  it('gives Mouse the height a reload gives it after a tool change beside a Rules card resized by hand (#466)', async () => {
+    await page.setViewportSize({ width: 1400, height: 1100 })
+    await settle(async () => (await boardAgainstCard(page)).inside, true)
+    await drag(page, await handleCentre(page, 'Rules', 'bottom'), 0, -60)
+    const field = card(page, 'Mode').getByRole('combobox', { name: 'Tool' })
+    await field.click()
+    await field.fill('Number')
+    await field.press('Enter')
+    await field.press('Escape')
+    const mouse = await boxOf(page, 'Mouse')
+    await page.reload()
+    await card(page, 'Mouse').waitFor()
+    assert.deepEqual(await settle(() => boxOf(page, 'Mouse'), mouse), mouse)
+  })
 
   it('keeps the place of a card resized from its top edge that was never moved', async () => {
     await drag(page, await handleCentre(page, 'Rules', 'top'), 0, -30)
@@ -285,6 +300,12 @@ describe('the desk with a link that carries no rules', () => {
     await settle(async () => (await boardAgainstCard(page)).inside, true)
   })
   afterEach(async () => { await opened?.context.close() })
+
+  it('does not keep the empty Rules card as resized in height when a drag left its height as it was (#466)', async () => {
+    await drag(page, await handleCentre(page, 'Rules', 'top'), 0, -240)
+    const kept = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)) ?? {}, LAYOUT_KEY)
+    assert.equal(kept.rules?.hh ?? 0, 0)
+  })
 
   for (const [edge, dy] of [['top', -240], ['bottom', 240]]) {
     it(`keeps the empty Rules card's box after its ${edge} edge is dragged away from it and a reload (#343)`, async () => {
