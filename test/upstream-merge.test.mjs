@@ -1,7 +1,7 @@
 // The workflow's own wiring (permissions, step order, the push) is proven only by a workflow_dispatch run.
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -285,32 +285,37 @@ describe('the upstream merge script', () => {
   })
 })
 
-// AGENTS.md § "Our files": a directory ends in "/", and a file in it is probed by a made-up name.
-const OWNED_PATHS = [
-  '.gitattributes', 'AGENTS.md', 'CLAUDE.md', 'CODING_STANDARDS.md', 'GLOSSARY.md', '.agents/', 'research/', 'adr/', 'userscript/', 'live/',
-  'docs/identity.js', 'docs/js/header_text.js', 'docs/js/recorder.js', 'docs/js/tool_calls.js', 'docs/js/engine_bridge.js', 'docs/js/penpa_layer.js', 'docs/js/progress_autosave.js', 'docs/js/chinstrap_button.js', 'docs/js/solve_forward.js', 'docs/solve.html', 'docs/gallery.html', 'docs/gallery.js', 'docs/gallery-puzzles.js', 'docs/ui/',
-  'test/ui-boundary.test.mjs', 'test/recordings.test.mjs', 'test/use-browser.test.mjs',
-  'test/snapshots.test.mjs', 'test/constraints.test.mjs', 'test/header-text.test.mjs', 'test/canonical-state.test.mjs', 'test/ui-fuzz-rules.test.mjs', 'test/ui-fuzz-nightly.test.mjs',
-  'test/userscript.test.mjs', 'test/upstream-merge.test.mjs', 'test/build-solve.test.mjs', 'test/package-scripts.test.mjs', 'test/stub-gh.mjs', 'test/run-live.test.mjs',
-  'test/nightly-seam.test.mjs', 'test/ui-corpus-issue.test.mjs', 'test/lint.test.mjs', 'test/redirect-urls.mjs', 'test/run-narrowed.test.mjs', 'test/ci-concurrency.test.mjs', 'test/setup-tests-action.test.mjs', 'test/live-scratch.mjs',
-  '.github/workflows/', '.github/actions/', '.github/scripts/'
-]
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
+// `.gitattributes` is the record of what is ours: each `<pattern> merge=ours` line is one owned path. A directory (`dir/**`)
+// becomes `dir/`, and it is probed by a made-up file name in it. Read from that file, these tests check only that each
+// pattern matches what it names; the two below it check the file against sources of their own.
+const OWNED_PATHS = readFileSync(join(REPO_ROOT, '.gitattributes'), 'utf8').split('\n')
+  .filter((line) => line.endsWith(' merge=ours'))
+  .map((line) => line.slice(0, -' merge=ours'.length).replace(/^\//, '').replace(/\*\*$/, ''))
 
 describe("the repo's .gitattributes", () => {
   for (const path of OWNED_PATHS) {
-    it(`marks ${path} merge=ours`, () => {
+    it(`its line for ${path} marks it merge=ours`, () => {
       const probe = path.endsWith('/') ? `${path}sub/probe.txt` : path
       assert.equal(git(REPO_ROOT, 'check-attr', 'merge', '--', probe), `${probe}: merge: ours`)
     })
   }
 
-  it('marks no tracked file that is not an owned path, so upstream\'s files still merge', () => {
-    const tracked = git(REPO_ROOT, 'ls-files')
-    const marked = execFileSync('git', ['check-attr', '--stdin', 'merge'], { cwd: REPO_ROOT, input: tracked, encoding: 'utf8' })
-      .split('\n').filter((line) => line.endsWith(': merge: ours')).map((line) => line.slice(0, -': merge: ours'.length))
-    const stray = marked.filter((file) => !OWNED_PATHS.some((path) => (path.endsWith('/') ? file.startsWith(path) : file === path)))
-    assert.deepEqual(stray, [])
+  const markedOurs = (files) => execFileSync('git', ['check-attr', '--stdin', 'merge'], { cwd: REPO_ROOT, input: files.join('\n'), encoding: 'utf8' })
+    .split('\n').filter((line) => line.endsWith(': merge: ours')).map((line) => line.slice(0, -': merge: ours'.length))
+
+  // A mark on a file upstream ships drops upstream's changes to it at the next merge; these few we took over on purpose.
+  const TAKEN_OVER = ['docs/identity.js']
+  it('marks no file upstream/master tracks but the ones we took over, so upstream\'s files still merge', () => {
+    assert.deepEqual(markedOurs(git(REPO_ROOT, 'ls-tree', '-r', '--name-only', 'upstream/master').split('\n')), TAKEN_OVER)
+  })
+
+  // Owned files named apart from `.gitattributes` (Chris, 2026-11-24), so a line dropped from it fails here.
+  const RULED_OURS = ['.claude/settings.json', '.claude/hooks/command-parser.mjs', '.claude/hooks/deny-npm-ci-symlink.mjs',
+    '.claude/hooks/deny-recording-writes.mjs', 'docs/js/puzzlink_import.js', 'test/recordings-approve.test.mjs',
+    'test/recordings-hook.test.mjs', 'test/expected-gate.test.mjs', 'test/required-checks.test.mjs', 'test/npm-ci-hook.test.mjs']
+  it('marks each file Chris ruled ours', () => {
+    assert.deepEqual(markedOurs(RULED_OURS), RULED_OURS)
   })
 
   it('does not mark a same-named file in another directory, even on a case-insensitive clone', () => {
@@ -419,10 +424,41 @@ describe('file-upstream-triage', () => {
 
 describe('the upstream-merge workflow', () => {
   const workflow = readFileSync(fileURLToPath(new URL('../.github/workflows/upstream-merge.yml', import.meta.url)), 'utf8')
+  // The shell the `tests` step runs.
+  const testsStep = workflow.match(/- id: tests\n(?:\s+[^\n]*\n)*?\s+run: \|\n((?:\s+[^\n]*\n)+)/)[1]
 
   it('hands the merge script the owned-commit file and runs the triage script on it, whether or not the merge succeeded', () => {
     assert.match(workflow, /upstream-merge\.sh upstream\/master "\$REPORT" "\$OWNED_COMMITS"/)
     assert.match(workflow, /- if: \$\{\{ !cancelled\(\) \}\}\n\s+name: File a triage issue[^\n]*\n(?:\s+[^\n]*\n)*?\s+run: bash \.github\/scripts\/file-upstream-triage\.sh "\$OWNED_COMMITS"/)
+  })
+
+  it('runs the lint, then the unit and live suites, each status kept and each output appended to the log the issue reads', () => {
+    const commands = testsStep.split('\n').map((line) => line.trim()).filter((line) => /^npm /.test(line))
+    assert.deepEqual(commands, [
+      'npm run lint 2>&1 | tee "$TEST_LOG" || status=1',
+      'npm test 2>&1 | tee -a "$TEST_LOG" || status=1',
+      'npm run test:live 2>&1 | tee -a "$TEST_LOG" || status=1'
+    ])
+    assert.match(testsStep, /exit "\$status"/)
+    assert.match(workflow, /context=test[^\n]*\n\s+-f description="npm run lint, npm test and test:live passed/)
+    assert.match(workflow, /failed `npm run lint && npm test && npm run test:live`/)
+  })
+
+  it('after a failed lint still runs the unit and live suites, logs all three in order and fails the step', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tests-step-'))
+    try {
+      const npm = '#!/usr/bin/env bash\ncase "$*" in\n  "run lint") echo lint failed; exit 1 ;;\n  test) echo unit ran ;;\n  "run test:live") echo live ran ;;\n  *) echo "unexpected npm $*"; exit 2 ;;\nesac\n'
+      writeFileSync(join(dir, 'npm'), npm, { mode: 0o755 })
+      const log = join(dir, 'test.log')
+      // GitHub runs a `shell: bash` step as `bash --noprofile --norc -eo pipefail`.
+      const run = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', testsStep], {
+        env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, TEST_LOG: log }, encoding: 'utf8'
+      })
+      assert.equal(run.status, 1)
+      assert.equal(readFileSync(log, 'utf8'), 'lint failed\nunit ran\nlive ran\n')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 

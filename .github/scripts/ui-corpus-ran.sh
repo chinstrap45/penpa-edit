@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Files the UI corpus's failure when its last scheduled run is missing or older than MAX_AGE_HOURS (#324): a workflow that
-# never started cannot report itself, so the nightly seam checks on it. The seam's schedule is about an hour before the
-# corpus's, so the run it sees is about a day old.
-# Usage: ui-corpus-ran.sh <run-url>
+# A workflow that never started cannot report itself, so its last scheduled run is checked from outside. The seam runs about an hour
+# before the corpus, so the run it sees is about a day old.
 set -euo pipefail
 MAX_AGE_HOURS=36
 scripts=$(dirname "$0")

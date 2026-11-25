@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# Files one needs-triage issue per upstream commit that touched a file we own, unless an issue of any state already
-# carries its sha in the title: a night that fails after filing lists the same commits again, and a closed issue is a
-# triage already done. A failed search stops the script: filing blind could duplicate.
-# Usage: file-upstream-triage.sh <owned-commits-file>   (the lines upstream-merge.sh writes)
+# Skips a commit whose sha already titles an issue of any state: a night that fails after filing lists the same commits
+# again, and a closed issue is a triage already done. A failed search stops the script: filing blind could duplicate.
 set -euo pipefail
 commits=$1
 [[ -s $commits ]] || exit 0

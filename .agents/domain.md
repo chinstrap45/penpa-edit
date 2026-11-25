@@ -7,7 +7,7 @@ How the engineering skills should consume this repo's domain documentation when 
 - **`GLOSSARY.md`** at the repo root.
 - **`adr/`** (root, outside `docs/` so Pages does not serve it): read ADRs that touch the area you're about to work in.
 
-If either doesn't exist, **proceed silently**. Don't flag its absence; don't suggest creating it upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
+New terms and decisions go in through `/domain-modeling`; an ADR such as ADR-0001 (`adr/0001-split-engine-from-ui.md`) is the example.
 
 ## File structure
 

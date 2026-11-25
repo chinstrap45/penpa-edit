@@ -1,7 +1,5 @@
 name: UI fuzz nightly
 
-# The random clicker on `solve.html` for 30 minutes with a fresh seed (#234, spec #195). A failure files one `bug` +
-# `needs-info` issue titled by the failure, or comments on the open one; `live/ui-fuzz/nightly.mjs` does the filing.
 on:
   schedule:
     - cron: '47 6 * * *'

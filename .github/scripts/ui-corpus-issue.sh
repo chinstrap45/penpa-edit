@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Reports the nightly UI corpus (#324): a red night files one issue naming the failing recordings, or comments on the
-# open one; a green night comments on the open issue, if any, and files nothing. A run that succeeded but compared no
-# recording is red: a night that checked nothing is not a pass. Job result `not-run` is `ui-corpus-ran.sh`'s.
-# Usage: ui-corpus-issue.sh <log> <job-result|not-run> <run-url>
+# `result` is the corpus run's outcome, or `not-run` when no scheduled run started in time.
 set -euo pipefail
 scripts=$(dirname "$0")
 title='UI corpus failed'

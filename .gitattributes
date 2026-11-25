@@ -1,6 +1,7 @@
-# Files we own (AGENTS.md § "Our files"): the nightly upstream merge keeps our side. A directory needs "/**", since a
-# trailing-slash pattern sets no attribute on the files inside it. A root file takes a leading "/", or a file of that
-# name in any directory (and, with core.ignorecase, docs/agents.md for AGENTS.md) would match too.
+# Files we own, one line each: the record of what is ours (AGENTS.md § "Our files" says only what needs prose). The
+# nightly upstream merge keeps our side of these, and the lint reads this file for its scope. A directory needs "/**",
+# since a trailing-slash pattern sets no attribute on the files inside it. A root file takes a leading "/", or a file
+# of that name in any directory (and, with core.ignorecase, docs/agents.md for AGENTS.md) would match too.
 /.gitattributes merge=ours
 /AGENTS.md merge=ours
 /CLAUDE.md merge=ours
@@ -20,6 +21,7 @@ docs/js/progress_autosave.js merge=ours
 docs/js/chinstrap_button.js merge=ours
 docs/js/solve_forward.js merge=ours
 docs/js/penpa_layer.js merge=ours
+docs/js/puzzlink_import.js merge=ours
 docs/solve.html merge=ours
 docs/gallery.html merge=ours
 docs/gallery.js merge=ours
@@ -51,3 +53,11 @@ test/redirect-urls.mjs merge=ours
 .github/scripts/** merge=ours
 test/ui-corpus-issue.test.mjs merge=ours
 test/lint.test.mjs merge=ours
+test/recordings-approve.test.mjs merge=ours
+test/recordings-hook.test.mjs merge=ours
+test/expected-gate.test.mjs merge=ours
+test/required-checks.test.mjs merge=ours
+test/npm-ci-hook.test.mjs merge=ours
+/.claude/settings.json merge=ours
+/.claude/hooks/** merge=ours
+test/upstream-docs.test.mjs merge=ours

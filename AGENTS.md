@@ -9,17 +9,26 @@ The plan is the `/wayfinder` map on the tracker. A Tampermonkey script, `userscr
 only stops naming Swaroop or upstream as its owner, with no self-promotion (Chris, 2026-11-22). Penpa+'s MIT copyright lines stay.
 
 - **Read `docs/agents.md` first**: upstream's architecture overview and its four rules for AI agents (minimal modifications, readability, no
-  guessing, document new code). They hold here too.
+  guessing, document new code). Rules 1-3 hold here; rule 4 yields to `CODING_STANDARDS.md` rule 6 (a description stays where it
+  adds a fact). A worker meets rule 3's "ask" by stopping and reporting to its controller (Chris, 2026-11-24).
 - **Upstream**: the `upstream` remote is `swaroopg92/penpa-edit`, branch `master`. Its changes are merged into our `master`, never rebased.
   A file we own is marked `merge=ours` in `.gitattributes`, so a merge keeps our side and upstream's change to it is ported by hand
   or dropped (git has no built-in `ours` driver: only `upstream-merge.sh` passes one, with `git -c`; never write it to a config); every other upstream file follows `CODING_STANDARDS.md` § Upstream merges. Nothing ever goes back to upstream: no commit,
   push or PR (Chris, 2026-11-13). `gh repo set-default` names `chinstrap45/penpa-edit`, so `gh pr create` targets the fork.
 - **Share links point at the fork** (Chris, 2026-11-09). `maketext_baseurl()` in `docs/js/class_p.js` already builds links from
   `location.href`; its localhost / `file://` branch names the fork's address too.
-- **Our files**, outside upstream's: `.gitattributes`, `AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md`, `GLOSSARY.md`, `.agents/` (the skills' tracker,
-  label and domain docs; upstream already has a `docs/agents.md`, so ours cannot be `docs/agents/`), `research/` (notes read from Penpa+'s
-  source, outside `docs/` so Pages does not serve them), `adr/`, `userscript/`, `live/`, `.claude/settings.json`, `.claude/hooks/`, `docs/identity.js` (the popup titles and the name the pages speak in), `docs/js/header_text.js`, `docs/js/recorder.js`, `docs/js/tool_calls.js` (the Puzzle calls that change the tool: one list for the bridge, the autosave and the recorder, #422), `docs/solve.html` (built from `index.html` plus the solve UI by `node live/build-solve.mjs`, never edited by hand; the nightly upstream merge runs it, and the script's header says how, #431), `docs/gallery.html`, `docs/gallery.js` and `docs/gallery-puzzles.js` (the review page, #256: representative puzzles opened in `solve.html` at set sizes; `gallery-puzzles.js` is written by `node live/generate-gallery.mjs` from `live/gallery-puzzles.mjs`, which a live test checks it matches), `docs/ui/` (the solve UI; Web Awesome's bundle is vendored in it), `docs/js/engine_bridge.js`, `docs/js/penpa_layer.js`, `docs/js/progress_autosave.js`, `docs/js/chinstrap_button.js` (index.html's ChinStrap button back to `solve.html`, #364), `docs/js/solve_forward.js` (index.html forwards a desktop solve link to `solve.html`, and the mark the Penpa+ button adds so it does not, #376), `test/ui-boundary.test.mjs`, `test/recordings.test.mjs`, `test/use-browser.test.mjs`, `test/snapshots.test.mjs`, `test/constraints.test.mjs`, `test/header-text.test.mjs`, `test/canonical-state.test.mjs`, `test/ui-fuzz-rules.test.mjs`, `test/ui-fuzz-nightly.test.mjs`, `test/userscript.test.mjs`, `test/upstream-merge.test.mjs`, `test/build-solve.test.mjs`, `test/stub-gh.mjs`, `test/package-scripts.test.mjs`, `test/run-live.test.mjs`, `test/nightly-seam.test.mjs`, `test/ui-corpus-issue.test.mjs`, `test/lint.test.mjs`, `test/recordings-approve.test.mjs`, `test/expected-gate.test.mjs`, `test/recordings-hook.test.mjs`, `test/npm-ci-hook.test.mjs`, `test/required-checks.test.mjs`, `test/redirect-urls.mjs`, `test/run-narrowed.test.mjs`, `test/ci-concurrency.test.mjs`, `test/setup-tests-action.test.mjs`, `test/live-scratch.mjs`,
-  `.github/workflows/`, `.github/actions/` and `.github/scripts/`.
+- **Our files**, outside upstream's: `.gitattributes` is the record, one `merge=ours` line per owned file or directory, and the lint and
+  `test/upstream-merge.test.mjs` read it. Every owned file not named below is only such a line. The ones that need prose:
+  `.agents/` holds the skills' tracker, label and domain docs (upstream already has a `docs/agents.md`, so ours cannot be `docs/agents/`);
+  `research/` holds notes read from Penpa+'s source, outside `docs/` so Pages does not serve them; `docs/identity.js` holds the popup titles
+  and the name the pages speak in; `docs/js/tool_calls.js` is the Puzzle calls that change the tool, one list for the bridge, the autosave and
+  the recorder (#422); `docs/solve.html` is built from `index.html` plus the solve UI by `node live/build-solve.mjs`, never edited by hand
+  (the nightly upstream merge runs it, and the script's header says how, #431); `docs/gallery.html`, `docs/gallery.js` and
+  `docs/gallery-puzzles.js` are the review page (#256: representative puzzles opened in `solve.html` at set sizes), `gallery-puzzles.js`
+  written by `node live/generate-gallery.mjs` from `live/gallery-puzzles.mjs`, which a live test checks it matches; `docs/ui/` is the solve
+  UI, Web Awesome's bundle vendored in it; `docs/js/chinstrap_button.js` is index.html's ChinStrap button back to `solve.html` (#364);
+  `docs/js/solve_forward.js` forwards a desktop solve link from index.html to `solve.html`, and the mark the Penpa+ button adds so it does
+  not (#376); `docs/js/puzzlink_import.js` wraps puzzlink's decode so a failed import keeps the board (#18).
 - **`GLOSSARY.md`**: the vocabulary.
 - **Phones and tablets**: no change of ours is checked, styled or demonstrated at a phone or tablet size, and no ticket asks for it.
   Upstream's own phone support is left as it is. The one exception is routing: a phone-sized screen is checked to stay on
@@ -47,35 +56,18 @@ Before you write or review code: read `CODING_STANDARDS.md`.
 
 ## End-to-end seam
 
-- **Seam**: `npm run lint && npm test && npm run test:live:changed`. `npm run lint` (`live/lint.mjs`, #396) runs StandardJS and shellcheck over the `merge=ours` files, its scope read from git; before you change it, read the header of `live/lint.mjs`. `npm test` runs `test/constraints.test.mjs` (a Node check of `docs/js/constraints.js`), `test/header-text.test.mjs` (a Node check of `docs/js/header_text.js`), `test/canonical-state.test.mjs` (a Node check of `live/canonical-state.mjs`), `test/ui-fuzz-rules.test.mjs` (the solve page's UI fuzz rules, `live/ui-fuzz/rules.mjs`, on hand-made snapshots, and the unpin action of `live/ui-fuzz/actions.mjs`, on a fake page), `test/ui-fuzz-nightly.test.mjs` (the nightly UI fuzz's failure title, output reader and filing, `live/ui-fuzz/nightly.mjs`, on sample lines and fake runners), `test/lint.test.mjs` (the lint's scope and failures, #396), `test/ui-boundary.test.mjs` (no file under `docs/ui/` names Penpa's internals, and the shipped page holds no stream fit code, #341), `test/recordings.test.mjs` (`live/recordings.mjs`, which imports no Playwright, and the expected-file gate's import chain holds none, #437), `test/use-browser.test.mjs` (`useBrowser` fails a test whose page logs a `console.error`, in a child runner), `test/userscript.test.mjs` (the Redirect script), `test/upstream-merge.test.mjs` (the upstream merge's scripts, on scratch git repos, the solve page's rebuild included), `test/build-solve.test.mjs` (`live/build-solve.mjs` makes the committed `docs/solve.html`, #431), `test/package-scripts.test.mjs` (the scripts' concurrency cap), `test/run-live.test.mjs` (the live files' selection), `test/run-narrowed.test.mjs` (the narrowed command's listing and run), `test/nightly-seam.test.mjs` (the nightly seam's issue), `test/ui-corpus-issue.test.mjs` (the nightly UI corpus's issue and the check that it ran, #324), `test/ci-concurrency.test.mjs` (CI's cancel-a-superseded-PR-run rule, #317), `test/setup-tests-action.test.mjs` (the shared setup action caches Playwright's Chromium on the lockfile's version and downloads only on a miss, #417), the expected-file gate's own tests (`test/recordings-approve.test.mjs`, `test/expected-gate.test.mjs`, `test/recordings-hook.test.mjs`, `test/required-checks.test.mjs`), `test/npm-ci-hook.test.mjs` (the hook that refuses `npm ci` through a symlinked `node_modules`, #240) and, once in headless Chromium
-  (Playwright) over `file://`, upstream's puzz.link import snapshots (`test/snapshots.test.mjs`, the puzzle list read from upstream's
-  `test/public/puzz_link_parser.js`); a missing or changed snapshot, or a snapshot file with no puzzle in the list, fails
-  it, and nothing writes one. `npm run test:live:changed` runs the live files the change since `origin/master`'s merge base
-  needs (`live/run-live.mjs`, #268, #315, untracked files counted). A change to an input of the engine side runs the full
-  set: a file `docs/index.html` loads, read from the page and the scripts and sheets it reaches (`pageReach`, which
-  `live/page-reach.live.mjs` checks against what the page asks for), a module or `live/`/`test/` path the engine side's
-  live files import or name, `package*.json`, `.github/workflows/ci.yml`, `.github/actions/**` or the script itself. The engine side is the safety net's files
-  but the UI driver's replays: `live/engine-replay-*.live.mjs`, `live/replay.live.mjs`, the fuzz, Tier C, the plants'
-  `live/safety-net.live.mjs` and `live/upstream-links.live.mjs`. Any other change off the skip list (`docs/ui/**`,
-  `research/**`, `adr/**`, `*.md`, and the files `live/*.live.mjs` outside the safety net's) runs every live file but the
-  engine side's, the UI driver's replays `live/ui-replay-*.live.mjs` included; a change made only of skip-list paths runs
-  every live file but the safety net's. No change, or a detection that fails (an unreadable base, page or module), runs the full
-  set, and it prints which set it chose and why. `npm run test:live` is the full
-  set: it runs, through the same script,
-  `live/**/*.live.mjs` (`node:test` + Playwright, helpers in `live/page.mjs`, `live/pin-card.mjs`, `live/desk-layout.mjs`, `live/settle.mjs`, `live/upstream-docs.mjs`, `live/canonical-state.mjs`, `live/replay.mjs`, `live/engine-replay-part.mjs`, `live/ui-replay-part.mjs`, `live/fuzz.mjs`, `live/plants.mjs`, `live/puzzlink-cases.mjs`, `live/gallery-puzzles.mjs`, `live/tier-c.mjs`, `live/tier-c-puzzles.mjs` and the UI fuzz's `live/ui-fuzz/*.mjs`), replays every
-  recording under `live/recordings/` on the engine driver against its expected file (one with none fails; at its first and last checkpoint it also loads the board's duplicate link in a fresh page and checks the same board comes back, and with `REPLAY_FULL_ROUND_TRIPS=1` set, at every checkpoint, which the nightly's call of `ci.yml` sets through its `full-round-trips` input, #267), replays the
-  hand-made recordings and a sample of the generated ones on the UI driver against the engine driver, on Penpa+'s page
-  and on `solve.html` (`live/replay.mjs`, `live/ui-replay-part.mjs`), and fuzzes a few puzzles with fixed seeds against the solving
-  invariants, saving a failing run as a recording under `live/recordings/fuzz/`. Tier C (`live/tier-c.live.mjs`) runs the
-  answer-aimed fuzz on each of its puzzles and turns a Replay link into a recording; its kept recordings under
-  `live/recordings/solve/` are written by `node live/generate-tier-c.mjs`, a solver's history by its `--history`. It also opens the Penpa links the fork writes (the save dialog's, the progress store's; not the .pp and .gmp file texts) on `upstream/master`'s own files and checks the board matches the fork's (`live/upstream-links.live.mjs`; it needs the `upstream/master` ref, which CI fetches). It also checks that each plant undoing an
-  audit fix still applies to its file and fails a recording made for that finding (`live/safety-net.live.mjs`). It also runs the solve page's UI fuzz on a scripted
-  action list on each of its puzzles, and a seeded run on a page that throws on one action, and one on a page that breaks a rule on one, whose printed replay must fail
-  again on the same step, and one on each planted solve-UI bug (`UI_PLANTS` in `live/plants.mjs`), which it must shrink to
-  at most 5 steps and replay, the same seed passing with no plant in (`live/ui-fuzz.live.mjs`, #195, #233). It also opens the review page (`live/gallery.live.mjs`, #256) and steps through every puzzle it lists, checking each loads its board, the size picker and the address. In both commands, a page error or
-  `console.error` on a page `openPenpa` or `openReloader` opened fails the test it happened in (`useBrowser`), the network is stubbed, and
-  waits use `settle`, never a sleep. Both cap node at `--test-concurrency=4` (`live/run-live.mjs` holds the live files' flags), so at most 4 test files run at
-  once on the shared box.
+- **Seam**: `npm run lint && npm test && npm run test:live:changed`. `npm run lint` (`live/lint.mjs`, #396) runs StandardJS and shellcheck
+  over the `merge=ours` files, its scope read from git; before you change it, read its header. `npm test` runs the Node checks under
+  `test/` and, once in headless Chromium (Playwright) over `file://`, upstream's puzz.link import snapshots (`test/snapshots.test.mjs`);
+  a missing or changed snapshot, or a snapshot file with no puzzle in the list, fails it, and nothing writes one.
+  `npm run test:live` is every `live/**/*.live.mjs` file (`node:test` + Playwright); `npm run test:live:changed` runs the ones the change
+  since `origin/master`'s merge base needs. The selection is `live/run-live.mjs`'s, and its header says how. Three rules of it:
+  a change to an input of the engine side runs the full set; any other change off the skip list runs every live file but the engine
+  side's; a change made only of skip-list paths runs every live file but the safety net's. No change, or a detection that fails, runs
+  the full set, and it prints which set it chose and why. In both commands, a page error or `console.error` on a page `openPenpa` or
+  `openReloader` opened fails the test it happened in (`useBrowser`), the network is stubbed, and waits use `settle`, never a sleep.
+  Both cap node at `--test-concurrency=4` (`live/run-live.mjs` holds the live files' flags), so at most 4 test files run at once on
+  the shared box.
 - **Narrowed**: `node live/run-narrowed.mjs --changed origin/master`: `npm run lint`, `npm test`, then the live files CI's `live` job would run for
   the change since that ref (`live/run-live.mjs`'s rule above); `--list` prints one suite per line. A detection that fails runs the full set and says why (#316).
 - **CI**: `.github/workflows/ci.yml` runs `npm run lint` and `npm test` (job `unit`) and the live files spread over four runners (job `live`,

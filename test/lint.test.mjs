@@ -62,6 +62,13 @@ describe('the repo', () => {
     assert.ok(![...scope.js, ...scope.shell].some((file) => /^docs\/js\/class_|^docs\/js\/main\.js$/.test(file)), 'an upstream file is linted')
   })
 
+  it('reads the hooks and the gate tests', () => {
+    const { js } = lintScope(ROOT)
+    for (const file of ['.claude/hooks/deny-npm-ci-symlink.mjs', '.claude/hooks/deny-recording-writes.mjs', 'test/recordings-approve.test.mjs', 'test/recordings-hook.test.mjs', 'test/expected-gate.test.mjs', 'test/required-checks.test.mjs', 'test/npm-ci-hook.test.mjs']) {
+      assert.ok(js.includes(file), `${file} is not linted`)
+    }
+  })
+
   // A new owned file of a kind neither tool reads stays unlinted unless someone adds it here on purpose.
   it('leaves unlinted only owned files of the kinds no tool here reads', () => {
     const scope = lintScope(ROOT)

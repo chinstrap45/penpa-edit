@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Files a bug, needs-info issue, or comments on the open one with exactly that title.
 # A failed list stops the script: filing blind could duplicate.
-# With --comment-only, files nothing when no such issue is open.
-# Usage: file-issue-once.sh <title> <body-file> [--comment-only]
 set -euo pipefail
 title=$1
 body=$(cat "$2")

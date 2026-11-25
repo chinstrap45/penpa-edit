@@ -4,58 +4,36 @@
 // cwd, followed through `cd`, or the `--prefix` value. Other forms of the same wipe (a script that runs npm itself) are not seen.
 import { lstatSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { parseCall, someSegment, writeDeny } from './command-parser.mjs'
 
 const REASON = '`npm ci` through a symlinked node_modules empties the primary checkout\'s node_modules, which every ' +
   'worktree shares. Run `rm node_modules` first (the link only, never rm -r), then npm ci.'
 // npm's spellings of `ci`.
 const CI = new Set(['ci', 'clean-install', 'ic', 'install-clean', 'isntall-clean'])
-// Words that run the command after them.
-const PREFIXES = new Set(['env', 'npx', 'command', 'exec'])
 
-const unquote = (word) => word.replace(/^(['"])(.*)\1$/, '$2')
-
-function commandWords (segment) {
-  const words = segment.trim().split(/\s+/).filter(Boolean).map(unquote)
-  while (words.length && (PREFIXES.has(words[0]) || /^\w+=/.test(words[0]))) words.shift()
-  return words
-}
-
-function isSymlink (path) {
+// False only when `path` is known not to be a link: absent, or read and found not to be one.
+function mayBeSymlink (path) {
   try {
     return lstatSync(path).isSymbolicLink()
-  } catch {
-    return false // no node_modules there: nothing to wipe
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false // no node_modules there: nothing to wipe
+    return true // unreadable (permissions, I/O): it may be one
   }
 }
 
 function wipesLink (startCwd, command) {
-  let cwd = startCwd
-  return command.split(/&&|\|\||[;|\n]/).some((segment) => {
-    const [name, sub, ...args] = commandWords(segment)
-    if (name === 'cd' && sub) {
-      cwd = resolve(cwd, sub)
-      return false
-    }
+  return someSegment(startCwd, command, (segment, [name, sub, ...args], cwd) => {
     if (name !== 'npm' || !CI.has(sub)) return false
     const at = args.indexOf('--prefix')
     const prefix = at >= 0 ? args[at + 1] : args.find((a) => a.startsWith('--prefix='))?.slice('--prefix='.length)
-    return isSymlink(resolve(cwd, prefix ?? '.', 'node_modules'))
+    return mayBeSymlink(resolve(cwd, prefix ?? '.', 'node_modules'))
   })
 }
 
 function denied (raw) {
-  let input
-  try {
-    input = JSON.parse(raw)
-  } catch {
-    return true // a call this hook cannot read is denied, not let through
-  }
-  const { cwd = process.env.CLAUDE_PROJECT_DIR, tool_name: tool, tool_input: args = {} } = input ?? {}
-  return tool === 'Bash' && wipesLink(cwd, args?.command ?? '')
+  const call = parseCall(raw)
+  if (!call) return true // a call this hook cannot read is denied, not let through
+  return call.tool === 'Bash' && wipesLink(call.cwd, call.args.command ?? '')
 }
 
-if (denied(readFileSync(0, 'utf8'))) {
-  process.stdout.write(JSON.stringify({
-    hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: REASON }
-  }))
-}
+if (denied(readFileSync(0, 'utf8'))) writeDeny(REASON)
