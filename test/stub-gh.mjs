@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 // `prViewOutput`: what `gh pr view` prints. `issueEdits`: per issue number, what `gh api graphql` prints for that issue
-// (the expected-file gate's read of a ticket's body edits).
+// (its body and body edits).
 export function stubGh ({ listOutput = '', listFails = false, runListOutput = '', prViewOutput = '', issueEdits = {} }) {
   const dir = mkdtempSync(join(tmpdir(), 'stub-gh-'))
   const log = join(dir, 'calls.jsonl')

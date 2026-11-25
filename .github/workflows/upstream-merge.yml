@@ -92,6 +92,7 @@ jobs:
           if [[ '${{ steps.merge.outputs.merged }}' == false ]]; then
             echo 'Upstream has nothing new.' >>"$GITHUB_STEP_SUMMARY"
           fi
+          # The report is absent when a step before the merge failed; the issue step says so.
           if [[ -f $REPORT ]]; then cat "$REPORT" >>"$GITHUB_STEP_SUMMARY"; fi
       - if: failure()
         name: File or comment on the issue

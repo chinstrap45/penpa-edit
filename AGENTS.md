@@ -9,8 +9,8 @@ The plan is the `/wayfinder` map on the tracker. A Tampermonkey script, `userscr
 only stops naming Swaroop or upstream as its owner, with no self-promotion (Chris, 2026-11-22). Penpa+'s MIT copyright lines stay.
 
 - **Read `docs/agents.md` first**: upstream's architecture overview and its four rules for AI agents (minimal modifications, readability, no
-  guessing, document new code). Rules 1-3 hold here; rule 4 yields to `CODING_STANDARDS.md` rule 6. A worker meets rule 3's "ask" by
-  stopping and reporting to its controller (Chris, 2026-11-24).
+  guessing, document new code). Rules 1-3 hold here; rule 4 yields to `CODING_STANDARDS.md` rule 6 (a description stays where it
+  adds a fact). A worker meets rule 3's "ask" by stopping and reporting to its controller (Chris, 2026-11-24).
 - **Upstream**: the `upstream` remote is `swaroopg92/penpa-edit`, branch `master`. Its changes are merged into our `master`, never rebased.
   A file we own is marked `merge=ours` in `.gitattributes`, so a merge keeps our side and upstream's change to it is ported by hand
   or dropped (git has no built-in `ours` driver: only `upstream-merge.sh` passes one, with `git -c`; never write it to a config); every other upstream file follows `CODING_STANDARDS.md` § Upstream merges. Nothing ever goes back to upstream: no commit,

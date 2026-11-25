@@ -1,6 +1,7 @@
-# Files we own, one line each, the record of what is ours (AGENTS.md § "Our files" says only what needs prose): the nightly upstream merge keeps our side, and the lint reads this file for its scope. A directory needs "/**", since a
-# trailing-slash pattern sets no attribute on the files inside it. A root file takes a leading "/", or a file of that
-# name in any directory (and, with core.ignorecase, docs/agents.md for AGENTS.md) would match too.
+# Files we own, one line each: the record of what is ours (AGENTS.md § "Our files" says only what needs prose). The
+# nightly upstream merge keeps our side of these, and the lint reads this file for its scope. A directory needs "/**",
+# since a trailing-slash pattern sets no attribute on the files inside it. A root file takes a leading "/", or a file
+# of that name in any directory (and, with core.ignorecase, docs/agents.md for AGENTS.md) would match too.
 /.gitattributes merge=ours
 /AGENTS.md merge=ours
 /CLAUDE.md merge=ours

@@ -14,6 +14,7 @@ permissions:
   contents: read
   issues: write
 
+# Two overlapping runs could file the same failure twice.
 concurrency:
   group: ui-fuzz-nightly
   cancel-in-progress: false

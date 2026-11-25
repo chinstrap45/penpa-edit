@@ -141,6 +141,7 @@ async function main ([pr, base, head, commentFile]) {
   const changed = changedExpectedFiles(base, head)
   appendFileSync(output, `changed=${changed.length > 0}\n`)
   if (!changed.length) {
+    // Replaces an earlier run's comment, which may say this check fails.
     writeFileSync(commentFile, `## Expected-file gate at ${head}\n\nNo expected file changed.\n`)
     console.log('No expected file changed.')
     return 0

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The `not-run` result is the one `ui-corpus-ran.sh` passes.
+# `result` is the corpus run's outcome, or `not-run` when no scheduled run started in time.
 set -euo pipefail
 scripts=$(dirname "$0")
 title='UI corpus failed'

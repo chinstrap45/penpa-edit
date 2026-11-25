@@ -38,8 +38,8 @@ seam. These come from `sudokupad-scripts`, kept where they apply to Penpa+.
    explains a name, give the code a clearer name. Never name its callers or its
    history: "Called by X" goes false when a second caller lands, and "used to"
    belongs in git.
-   This yields upstream's `docs/agents.md` rule 4 (Chris, 2026-11-24); a worker meets that file's rule 3 "ask" by stopping and
-   reporting to its controller.
+   Upstream's `docs/agents.md` rule 4 (document new code) yields to this rule: a description stays where it adds a fact
+   (Chris, 2026-11-24). A worker meets that file's rule 3 "ask" by stopping and reporting to its controller.
 7. **A change fixes every comment, test title and doc line it makes false, in the
    same diff.** A stale claim fails no gate, and the next reader acts on it. Search
    for the old wording before calling the diff done.

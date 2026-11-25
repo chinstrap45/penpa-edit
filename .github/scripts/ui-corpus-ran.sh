@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A workflow that never started cannot report itself, so the nightly seam checks on it. The seam runs about an hour
+# A workflow that never started cannot report itself, so its last scheduled run is checked from outside. The seam runs about an hour
 # before the corpus, so the run it sees is about a day old.
 set -euo pipefail
 MAX_AGE_HOURS=36

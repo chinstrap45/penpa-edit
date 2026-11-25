@@ -8,6 +8,7 @@ commits=$1
 MAX_SUBJECT=200
 while IFS=$'\x1f' read -r sha subject files; do
   prefix="Upstream ${sha:0:10}: "
+  # A search on the sha, not a listing of the newest issues, so a long tracker cannot hide the earlier issue.
   found=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "${sha:0:10} in:title" --limit 20 --json title --jq '.[].title')
   if grep -qF -- "$prefix" <<<"$found"; then continue; fi
   body="Upstream commit https://github.com/swaroopg92/penpa-edit/commit/$sha touched a file we own (merge=ours), so the

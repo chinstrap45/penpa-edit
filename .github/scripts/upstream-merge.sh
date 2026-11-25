@@ -48,6 +48,7 @@ if ! git -c merge.ours.driver=true merge --no-ff --no-commit "$upstream"; then
   else
     printf '## The merge failed with no conflicting file\n\nRead the run.\n' >>"$report"
   fi
+  # A merge git refused before starting leaves nothing to abort.
   if git rev-parse -q --verify MERGE_HEAD >/dev/null; then git merge --abort; fi
   exit 1
 fi

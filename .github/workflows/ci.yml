@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_call:
     inputs:
-      # The nightly sets this: the engine replay checks the duplicate link at every checkpoint.
+      # When true, the engine replay checks the duplicate link at every checkpoint, not only the first and last.
       full-round-trips:
         type: boolean
         default: false
@@ -55,6 +55,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
+      # The live tests that open Penpa+ as upstream ships it read the upstream/master ref.
       - run: git fetch --no-tags --depth=1 https://github.com/swaroopg92/penpa-edit.git master:refs/remotes/upstream/master
       - uses: ./.github/actions/setup-tests
       - shell: bash

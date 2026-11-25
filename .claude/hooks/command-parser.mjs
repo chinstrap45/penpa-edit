@@ -1,5 +1,5 @@
-// The Bash-command reading both PreToolUse hooks share (#447): splitting a command into segments that follow `cd`, the
-// words of a segment, the parse of the call on stdin, and the deny reply. A fix here reaches both hooks.
+// Reading a Bash command for a PreToolUse hook: splitting it into segments that follow `cd`, the words of a segment,
+// the parse of the call on stdin, and the deny reply.
 import { resolve } from 'node:path'
 
 // Words that run the command after them.
