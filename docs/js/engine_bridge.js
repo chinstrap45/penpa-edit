@@ -107,6 +107,23 @@
     shortcuts_enabled: (on) => setCookie(SHORTCUTS_COOKIE, on ? '1' : '0', UserSettings._expDate),
     outline_text: (on) => setCookie(OUTLINE_COOKIE, on ? '1' : '0', UserSettings._expDate)
   }
+  // A flip of Draw on Edges lasts for the visit: a link's own value comes back on a reload. Penpa+ writes the option into the
+  // saved progress text, which boot() loads in place of the link, so every save writes the value the link opened with. That is
+  // the value at the first flip, since only `setSetting` changes the option on this page.
+  let linkDrawEdges = null
+  const penpaMakeTextDuplicate = Puzzle.prototype.maketext_duplicate
+  Puzzle.prototype.maketext_duplicate = function () {
+    const flipped = UserSettings._draw_edges
+    if (linkDrawEdges !== null) {
+      UserSettings._draw_edges = linkDrawEdges
+    }
+    try {
+      return penpaMakeTextDuplicate.apply(this, arguments)
+    } finally {
+      UserSettings._draw_edges = flipped
+    }
+  }
+
   // MVP gap: the setters of these keep the new value but leave the board as it was drawn, so the bridge redraws it.
   const REDRAWN_SETTINGS = ['sudoku_normal_size']
 
@@ -1227,6 +1244,9 @@
       }
       if (allowed !== BOOLEAN && !allowed.includes(value)) {
         throw new RangeError(`engine.setSetting: ${name} takes one of ${allowed.join(', ')}, got ${JSON.stringify(value)}`)
+      }
+      if (name === 'draw_edges') {
+        linkDrawEdges ??= UserSettings.draw_edges
       }
       UserSettings[name] = value
       SETTING_SAVERS[name]?.(value)
