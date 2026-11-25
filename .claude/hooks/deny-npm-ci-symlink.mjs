@@ -11,12 +11,13 @@ const REASON = '`npm ci` through a symlinked node_modules empties the primary ch
 // npm's spellings of `ci`.
 const CI = new Set(['ci', 'clean-install', 'ic', 'install-clean', 'isntall-clean'])
 
-function isSymlink (path) {
+// False only when `path` is known not to be a link: absent, or read and found not to be one.
+function mayBeSymlink (path) {
   try {
     return lstatSync(path).isSymbolicLink()
   } catch (error) {
     if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false // no node_modules there: nothing to wipe
-    return true // unreadable (permissions, I/O): not known to be safe, so denied
+    return true // unreadable (permissions, I/O): it may be one
   }
 }
 
@@ -25,7 +26,7 @@ function wipesLink (startCwd, command) {
     if (name !== 'npm' || !CI.has(sub)) return false
     const at = args.indexOf('--prefix')
     const prefix = at >= 0 ? args[at + 1] : args.find((a) => a.startsWith('--prefix='))?.slice('--prefix='.length)
-    return isSymlink(resolve(cwd, prefix ?? '.', 'node_modules'))
+    return mayBeSymlink(resolve(cwd, prefix ?? '.', 'node_modules'))
   })
 }
 
