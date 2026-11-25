@@ -1,7 +1,7 @@
 // The workflow's own wiring (permissions, step order, the push) is proven only by a workflow_dispatch run.
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -424,6 +424,8 @@ describe('file-upstream-triage', () => {
 
 describe('the upstream-merge workflow', () => {
   const workflow = readFileSync(fileURLToPath(new URL('../.github/workflows/upstream-merge.yml', import.meta.url)), 'utf8')
+  // The shell the `tests` step runs.
+  const testsStep = workflow.match(/- id: tests\n(?:\s+[^\n]*\n)*?\s+run: \|\n((?:\s+[^\n]*\n)+)/)[1]
 
   it('hands the merge script the owned-commit file and runs the triage script on it, whether or not the merge succeeded', () => {
     assert.match(workflow, /upstream-merge\.sh upstream\/master "\$REPORT" "\$OWNED_COMMITS"/)
@@ -431,16 +433,32 @@ describe('the upstream-merge workflow', () => {
   })
 
   it('runs the lint, then the unit and live suites, each status kept and each output appended to the log the issue reads', () => {
-    const step = workflow.match(/- id: tests\n(?:\s+[^\n]*\n)*?\s+run: \|\n((?:\s+[^\n]*\n)+)/)[1]
-    const commands = step.split('\n').map((line) => line.trim()).filter((line) => /^npm /.test(line))
+    const commands = testsStep.split('\n').map((line) => line.trim()).filter((line) => /^npm /.test(line))
     assert.deepEqual(commands, [
       'npm run lint 2>&1 | tee "$TEST_LOG" || status=1',
       'npm test 2>&1 | tee -a "$TEST_LOG" || status=1',
       'npm run test:live 2>&1 | tee -a "$TEST_LOG" || status=1'
     ])
-    assert.match(step, /exit "\$status"/)
+    assert.match(testsStep, /exit "\$status"/)
     assert.match(workflow, /context=test[^\n]*\n\s+-f description="npm run lint, npm test and test:live passed/)
     assert.match(workflow, /failed `npm run lint && npm test && npm run test:live`/)
+  })
+
+  it('after a failed lint still runs the unit and live suites, logs all three in order and fails the step', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tests-step-'))
+    try {
+      const npm = '#!/usr/bin/env bash\ncase "$*" in\n  "run lint") echo lint failed; exit 1 ;;\n  test) echo unit ran ;;\n  "run test:live") echo live ran ;;\n  *) echo "unexpected npm $*"; exit 2 ;;\nesac\n'
+      writeFileSync(join(dir, 'npm'), npm, { mode: 0o755 })
+      const log = join(dir, 'test.log')
+      // GitHub runs a `shell: bash` step as `bash --noprofile --norc -eo pipefail`.
+      const run = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', testsStep], {
+        env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, TEST_LOG: log }, encoding: 'utf8'
+      })
+      assert.equal(run.status, 1)
+      assert.equal(readFileSync(log, 'utf8'), 'lint failed\nunit ran\nlive ran\n')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 

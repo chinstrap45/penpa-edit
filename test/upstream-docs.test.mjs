@@ -2,7 +2,7 @@
 // through as itself, so a directory that is no repository is never told to run `git fetch upstream master`. Run in a child, since it reads the cwd.
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, it } from 'node:test'
@@ -30,7 +30,10 @@ describe('unpackUpstreamDocs', () => {
   })
 
   it('does not call a directory that is no repository a missing ref', () => {
-    const message = failureIn(ROOT)
+    // Below ROOT, since git's search stops at a ceiling directory but still reads the ceiling itself.
+    const plain = join(ROOT, 'plain')
+    mkdirSync(plain)
+    const message = failureIn(plain)
     assert.doesNotMatch(message, /is missing: run/)
     assert.match(message, /not a git repository/)
   })

@@ -4,11 +4,11 @@
 // scratch repo with a stubbed `gh`.
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, it } from 'node:test'
+import { after, describe, it } from 'node:test'
 import { DIFF_LINES, commentBody, gateVerdict, listedIds } from '../.github/scripts/expected-gate.mjs'
 import { expectedDiff } from '../live/expected-diff.mjs'
 import { stubGh } from './stub-gh.mjs'
@@ -161,14 +161,19 @@ describe('main, on a scratch repo with a stubbed gh', () => {
   const COMMIT_DAY = '2026-11-11T12:00:00Z'
   const EDIT_BEFORE = '2026-11-10T12:00:00Z'
   const EDIT_AFTER = '2026-11-12T12:00:00Z'
+  const LATER_DAY = '2026-11-13T12:00:00Z'
+  const ROOT = mkdtempSync(join(tmpdir(), 'expected-gate-'))
+  after(() => rmSync(ROOT, { recursive: true, force: true }))
 
-  // Base: `box` and `gone` (each with `a = 1`) and `kept`; the head commit is `change(write)`'s result.
-  function scratchRepo (change) {
-    const root = mkdtempSync(join(tmpdir(), 'expected-gate-'))
+  // Base: `box` and `gone` (each with `a = 1`) and `kept`; the head commit is `change(write)`'s result. With `later`,
+  // one more commit dated LATER_DAY follows it, adding a file that is no expected file.
+  function scratchRepo (change, later) {
+    const root = mkdtempSync(join(ROOT, 'repo-'))
+    let day = COMMIT_DAY
     const git = (...args) => execFileSync('git', args, {
       cwd: root,
       encoding: 'utf8',
-      env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com', GIT_AUTHOR_DATE: COMMIT_DAY, GIT_COMMITTER_DATE: COMMIT_DAY }
+      env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com', GIT_AUTHOR_DATE: day, GIT_COMMITTER_DATE: day }
     })
     const write = (id, suffix, text) => {
       mkdirSync(join(root, DIR), { recursive: true })
@@ -185,6 +190,12 @@ describe('main, on a scratch repo with a stubbed gh', () => {
     change({ write, remove: (id) => git('rm', '-q', `live/recordings/${id}.expected.json`) })
     git('add', '-A')
     git('commit', '-q', '-m', 'head', '--allow-empty')
+    if (later) {
+      day = LATER_DAY
+      writeFileSync(join(root, 'notes.txt'), 'later\n')
+      git('add', '-A')
+      git('commit', '-q', '-m', 'later')
+    }
     return { root, base, head: git('rev-parse', 'HEAD').trim() }
   }
 
@@ -201,7 +212,9 @@ describe('main, on a scratch repo with a stubbed gh', () => {
     const comment = join(dir, 'comment.md')
     writeFileSync(out, '')
     const run = spawnSync('node', [SCRIPT, '7', repo.base, repo.head, comment], { cwd: repo.root, env: { ...env, GITHUB_OUTPUT: out }, encoding: 'utf8' })
-    return { status: run.status, stdout: run.stdout, stderr: run.stderr, output: readFileSync(out, 'utf8'), comment: run.status === null ? '' : readFileSync(comment, 'utf8') }
+    const gate = { status: run.status, stdout: run.stdout, stderr: run.stderr, output: readFileSync(out, 'utf8'), comment: run.status === null ? '' : readFileSync(comment, 'utf8') }
+    rmSync(dir, { recursive: true, force: true })
+    return gate
   }
 
   it('with no expected file changed: changed=false, exit 0, and a comment saying so', () => {
@@ -231,6 +244,14 @@ describe('main, on a scratch repo with a stubbed gh', () => {
 
   it('fails a modified expected file the ticket listed only after the fix started', () => {
     const repo = scratchRepo(({ write }) => write('genre/box', '.expected.json', expected(['a = 2'])))
+    const body = 'Fix.\n\n## Expected changes\n\n- `genre/box`: a becomes 2\n'
+    const gate = runGate(repo, { prViewOutput: closes(40), issueEdits: { 40: ticket(body, EDIT_AFTER) } })
+    assert.equal(gate.status, 1)
+    assert.match(gate.stderr, /#40 listed it at 2026-11-12T12:00:00\.000Z, after the fix started at 2026-11-11T12:00:00\.000Z/)
+  })
+
+  it('dates the fix from its earliest commit, so a ticket listing between two commits is after the fix started', () => {
+    const repo = scratchRepo(({ write }) => write('genre/box', '.expected.json', expected(['a = 2'])), true)
     const body = 'Fix.\n\n## Expected changes\n\n- `genre/box`: a becomes 2\n'
     const gate = runGate(repo, { prViewOutput: closes(40), issueEdits: { 40: ticket(body, EDIT_AFTER) } })
     assert.equal(gate.status, 1)
