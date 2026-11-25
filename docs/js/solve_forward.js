@@ -23,7 +23,9 @@ const isMarkedForPenpa = (params) => params.get(PENPA_MARK_KEY) === PENPA_MARK_V
 
 // eslint-disable-next-line no-unused-vars -- a global the page's scripts call
 function withPenpaMark (data) {
-  if (!data || isMarkedForPenpa(penpaLinkParams(data))) {
+  const params = penpaLinkParams(data)
+  // A link with no parameters is no solve link, so there is nothing to keep on this page.
+  if (!params.size || isMarkedForPenpa(params)) {
     return data
   }
   // The mark goes where penpaLinkParams reads the parameters: the end of the query, or of the `#` data.
@@ -31,7 +33,7 @@ function withPenpaMark (data) {
   if (queryHoldsPuzzle(query)) {
     return `${query}&${PENPA_MARK}${hashData}`
   }
-  return `${query}${hashData || '#'}${hashData.length > 1 ? '&' : ''}${PENPA_MARK}`
+  return `${query}${hashData}&${PENPA_MARK}`
 }
 
 // eslint-disable-next-line no-unused-vars -- a global the page's scripts call

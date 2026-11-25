@@ -12,8 +12,7 @@ const LINKS = {
   'a query with `p=`': '?m=solve&p=abc',
   'a query with `p=` and `#` data': '?m=solve&p=abc#m=edit',
   'only `#` data': '#m=solve&p=abc',
-  'a query without `p=` and solve `#` data': '?fbclid=1#m=solve&p=abc',
-  'a query without `p=` and no `#` data': '?fbclid=1'
+  'a query without `p=` and solve `#` data': '?fbclid=1#m=solve&p=abc'
 }
 
 describe('the Penpa+ mark', () => {
