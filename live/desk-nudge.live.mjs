@@ -37,7 +37,7 @@ const LISTS = [
     drag('Pinned', -240, 240),
     ['reload', null]
   ]],
-  ['a tool picked after the empty Rules card was resized leaves Mouse the height a reload gives it', 'akari', [
+  ['a tool picked after a drag that left the height of the empty Rules card alone leaves Mouse the height a reload gives it', 'akari', [
     resize('Rules', 'top', -240, -240),
     ['mode search', [0, 0]],
     ['reload', null]

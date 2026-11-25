@@ -558,9 +558,8 @@
     function automaticHeight (id) {
       const { node } = cards[id]
       const content = { mode: fit.modeCardHeight, mouse: fit.mouseCardHeight, rules: (w) => rulesCardHeight(cards.rules, w) }[id]
-      // Beside a card the solver holds, Mouse takes the column's room below it, as a load gives it (Chris, 2026-11-25).
-      const fillsColumn = id === 'mouse' && !isByHand(saved.mouse, 'placed') &&
-        LEFT_COLUMN.some((other) => other !== 'mouse' && isShown(other) && !isAutomatic(saved[other]))
+      // Under a Rules card the solver sized or moved, even a closed one, Mouse takes the column's room, as a load gives it (Chris, 2026-11-25).
+      const fillsColumn = id === 'mouse' && !isAutomatic(saved.rules)
       const toBottom = desk.clientHeight - TOP_MARGIN_PX - node.offsetTop
       return Math.max(minHeightOf(id, cards[id]), Math.min(content && !fillsColumn ? content(node.offsetWidth) : toBottom, toBottom))
     }

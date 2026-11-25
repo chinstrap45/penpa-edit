@@ -117,17 +117,6 @@ describe('the desk', () => {
     assert.deepEqual(await settle(() => boxOf(page, 'Mouse'), mouse), mouse)
   })
 
-  it('does not keep the empty Rules card as resized in height when a drag left its height as it was (#466)', async () => {
-    const empty = await openSolvePage(browser(), await newBoardSolveLink(browser()))
-    try {
-      await drag(empty.page, await handleCentre(empty.page, 'Rules', 'top'), 0, -240)
-      const kept = await empty.page.evaluate((key) => JSON.parse(localStorage.getItem(key)) ?? {}, LAYOUT_KEY)
-      assert.equal(kept.rules?.hh ?? 0, 0)
-    } finally {
-      await empty.context.close()
-    }
-  })
-
   it('keeps the place of a card resized from its top edge that was never moved', async () => {
     await drag(page, await handleCentre(page, 'Rules', 'top'), 0, -30)
     const grown = await boxOf(page, 'Rules')
@@ -311,6 +300,12 @@ describe('the desk with a link that carries no rules', () => {
     await settle(async () => (await boardAgainstCard(page)).inside, true)
   })
   afterEach(async () => { await opened?.context.close() })
+
+  it('does not keep the empty Rules card as resized in height when a drag left its height as it was (#466)', async () => {
+    await drag(page, await handleCentre(page, 'Rules', 'top'), 0, -240)
+    const kept = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)) ?? {}, LAYOUT_KEY)
+    assert.equal(kept.rules?.hh ?? 0, 0)
+  })
 
   for (const [edge, dy] of [['top', -240], ['bottom', 240]]) {
     it(`keeps the empty Rules card's box after its ${edge} edge is dragged away from it and a reload (#343)`, async () => {
