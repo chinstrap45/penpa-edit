@@ -121,7 +121,7 @@ describe('the desk', () => {
     const empty = await openSolvePage(browser(), await newBoardSolveLink(browser()))
     try {
       await drag(empty.page, await handleCentre(empty.page, 'Rules', 'top'), 0, -240)
-      const kept = await empty.page.evaluate((key) => JSON.parse(localStorage.getItem(key)), LAYOUT_KEY)
+      const kept = await empty.page.evaluate((key) => JSON.parse(localStorage.getItem(key)) ?? {}, LAYOUT_KEY)
       assert.equal(kept.rules?.hh ?? 0, 0)
     } finally {
       await empty.context.close()
