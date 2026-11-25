@@ -52,14 +52,13 @@ Single-context: a root `GLOSSARY.md` and upstream's `docs/agents.md`, plus a roo
 
 ## Include closure
 
-The spec run's hold reads this section (#455).
-
 - **Directive**: `"./<path>"`
 - **Paths**: relative to the including file
 - **Generator**: `node live/build-solve.mjs`
-- **Shared files**: a new owned file also changes `AGENTS.md`, `.gitattributes` and `OWNED_PATHS` in `test/upstream-merge.test.mjs`, and
-  `package.json`'s `standard.globals` when it defines a global; a new `docs/js/` script also changes `docs/index.html` and `docs/solve.html`.
-  The directive finds those two; a ticket for such a file names the rest in its body.
+- **Shared files**, which no include line shows, so a ticket's body names them: a new owned file changes `.gitattributes` (and `AGENTS.md`
+  when it needs prose, and `package.json`'s `standard.globals` when it defines a global); a new `docs/js/` script changes `docs/index.html` and
+  `docs/solve.html`; a change to `docs/index.html` or `live/build-solve.mjs` changes `docs/solve.html`. The directive finds `index.html` and
+  `solve.html` only for a script that already exists.
 
 ## Coding standards
 
