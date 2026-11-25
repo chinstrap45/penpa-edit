@@ -7,27 +7,16 @@
 // and the test runs, which write recordings as their job, are allowed. A worker's call the hook cannot read is denied.
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { parseCall, someSegment, unquote, writeDeny } from './command-parser.mjs'
 
 const REASON = 'Implement-lane workers cannot write live/recordings/** (#33). Change code, or stop and report the red ' +
   'replay to your controller; the controller or Chris runs npm run recordings:approve for the ids the ticket lists.'
 const WRITERS = new Set(['cp', 'mv', 'rm', 'touch', 'truncate', 'ln', 'install', 'rsync', 'tee'])
 const GIT_WRITERS = new Set(['checkout', 'restore', 'rm', 'mv'])
-// Words that run the command after them.
-const PREFIXES = new Set(['env', 'npx', 'command', 'exec'])
-
-const unquote = (word) => word.replace(/^(['"])(.*)\1$/, '$2')
-
 // Whether `path` is under `live/recordings/`, or, when `above` is set, a directory that holds it.
 function touches (cwd, recordings, path, above = false) {
   const at = resolve(cwd, path)
   return `${at}/`.includes('/live/recordings/') || (above && `${recordings}/`.startsWith(`${at}/`))
-}
-
-// The command a segment runs, with the variable assignments and prefixes before it dropped.
-function commandWords (segment) {
-  const words = segment.trim().split(/\s+/).filter(Boolean).map(unquote)
-  while (words.length && (PREFIXES.has(words[0]) || /^\w+=/.test(words[0]))) words.shift()
-  return words
 }
 
 function runsApprove ([name, ...args]) {
@@ -36,13 +25,7 @@ function runsApprove ([name, ...args]) {
 }
 
 function bashWrites (startCwd, recordings, command) {
-  let cwd = startCwd
-  return command.split(/&&|\|\||[;|\n]/).some((segment) => {
-    const words = commandWords(segment)
-    if (words[0] === 'cd' && words[1]) {
-      cwd = resolve(cwd, words[1])
-      return false
-    }
+  return someSegment(startCwd, command, (segment, words, cwd) => {
     if (runsApprove(words)) return true
     for (const [, target] of segment.matchAll(/(?:^|[^0-9&>])>>?\s*("[^"]*"|'[^']*'|[^\s;&|]+)/g)) {
       if (touches(cwd, recordings, unquote(target))) return true
@@ -58,21 +41,12 @@ function bashWrites (startCwd, recordings, command) {
 function denied (raw) {
   const worker = (process.env.CLAUDE_PROJECT_DIR ?? '').includes('/.claude/worktrees/')
   if (!worker) return false
-  let input
-  try {
-    input = JSON.parse(raw)
-  } catch {
-    return true // a worker's call this hook cannot read is denied, not let through
-  }
-  const { cwd = process.env.CLAUDE_PROJECT_DIR, tool_name: tool, tool_input: args = {} } = input ?? {}
+  const call = parseCall(raw)
+  if (!call) return true // a worker's call this hook cannot read is denied, not let through
   const recordings = resolve(process.env.CLAUDE_PROJECT_DIR, 'live/recordings')
-  if (tool === 'Bash') return bashWrites(cwd, recordings, args?.command ?? '')
-  const path = args?.file_path ?? args?.notebook_path
-  return path !== undefined && touches(cwd, recordings, path)
+  if (call.tool === 'Bash') return bashWrites(call.cwd, recordings, call.args.command ?? '')
+  const path = call.args.file_path ?? call.args.notebook_path
+  return path !== undefined && touches(call.cwd, recordings, path)
 }
 
-if (denied(readFileSync(0, 'utf8'))) {
-  process.stdout.write(JSON.stringify({
-    hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: REASON }
-  }))
-}
+if (denied(readFileSync(0, 'utf8'))) writeDeny(REASON)
