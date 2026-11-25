@@ -475,5 +475,10 @@
     return plainName ? { title: plainName } : {}
   }
 
-  window.toolGuide = { tooltipAttrs, TOOL_GROUPS, NOTHING, AS_A_CLICK, SECOND_COLOUR_DOT, placeTool, looseText, searchWords, looseWords, matchesSearch, mouseRows, toolKey, findTool, chipLabel }
+  // The tools Penpa+'s Draw on Edges option changes (`type_set`): Number but for its sub-modes 2, 3 and 9, Symbol, Move and Sudoku.
+  const NUMBER_SUBMODES_ON_CELLS = ['2', '3', '9']
+  const drawsOnEdges = (tool) => ['symbol', 'move', 'sudoku'].includes(tool.mode) ||
+    (tool.mode === 'number' && !NUMBER_SUBMODES_ON_CELLS.includes(tool.submode))
+
+  window.toolGuide = { drawsOnEdges, tooltipAttrs, TOOL_GROUPS, NOTHING, AS_A_CLICK, SECOND_COLOUR_DOT, placeTool, looseText, searchWords, looseWords, matchesSearch, mouseRows, toolKey, findTool, chipLabel }
 })()

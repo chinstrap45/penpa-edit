@@ -80,7 +80,8 @@
     local_storage: BOOLEAN,
     auto_save_history: BOOLEAN,
     reload_button: BOOLEAN,
-    shortcuts_enabled: BOOLEAN
+    shortcuts_enabled: BOOLEAN,
+    draw_edges: BOOLEAN
   }
 
   // The settings that only some puzzles use, by the genre tags that make them apply. Sudoku's tags are Penpa+'s own "Sudoku"
@@ -105,6 +106,23 @@
     shortcuts_enabled: (on) => setCookie(SHORTCUTS_COOKIE, on ? '1' : '0', UserSettings._expDate),
     outline_text: (on) => setCookie(OUTLINE_COOKIE, on ? '1' : '0', UserSettings._expDate)
   }
+  // A flip of Draw on Edges lasts for the visit: a link's own value comes back on a reload. Penpa+ writes the option into the
+  // saved progress text, which boot() loads in place of the link, so every save writes the value the link opened with. That is
+  // the value at the first flip: nothing else on the page changes the option once the puzzle has loaded.
+  let linkDrawEdges = null
+  const penpaMakeTextDuplicate = Puzzle.prototype.maketext_duplicate
+  Puzzle.prototype.maketext_duplicate = function () {
+    const flipped = UserSettings._draw_edges
+    if (linkDrawEdges !== null) {
+      UserSettings._draw_edges = linkDrawEdges
+    }
+    try {
+      return penpaMakeTextDuplicate.apply(this, arguments)
+    } finally {
+      UserSettings._draw_edges = flipped
+    }
+  }
+
   // MVP gap: the setters of these keep the new value but leave the board as it was drawn, so the bridge redraws it.
   const REDRAWN_SETTINGS = ['sudoku_normal_size']
 
@@ -1211,7 +1229,7 @@
       return Object.keys(SETTINGS).filter((name) => SETTING_GENRES[name]?.() ?? true)
     },
 
-    // Changes one setting and saves it where Penpa+ saves it. An unknown name or a value the setting does not take throws and
+    // Changes one setting and saves it where Penpa+ saves it, but for draw_edges, which a link sets and nothing saves. An unknown name or a value the setting does not take throws and
     // changes nothing. conflict_detection 2 is "off for this puzzle": Penpa+ keeps it in memory only and turns it back on for
     // the next puzzle it loads, so the UI keeps it per puzzle.
     setSetting (name, value) {
@@ -1225,6 +1243,9 @@
       }
       if (allowed !== BOOLEAN && !allowed.includes(value)) {
         throw new RangeError(`engine.setSetting: ${name} takes one of ${allowed.join(', ')}, got ${JSON.stringify(value)}`)
+      }
+      if (name === 'draw_edges') {
+        linkDrawEdges ??= UserSettings.draw_edges
       }
       UserSettings[name] = value
       SETTING_SAVERS[name]?.(value)

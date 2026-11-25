@@ -299,21 +299,22 @@ export async function boardAgainstCard (page) {
 
 export const DESK_SIZE = { viewport: { width: 1400, height: 900 } }
 
-export function newBoardSolveLinkInPage ({ names, rules } = {}) {
+export function newBoardSolveLinkInPage ({ names, rules, drawEdges } = {}) {
   document.getElementById('nb_size1').value = 6
   document.getElementById('nb_size2').value = 6
   create_newboard()
   if (names) UserSettings.tab_settings = names
   if (rules) document.getElementById('saveinforules').value = rules
+  if (drawEdges) UserSettings.draw_edges = true
   const url = pu.maketext_solve()
   return url.slice(url.indexOf('#'))
 }
 
 const newBoardLinks = new Map()
 
-export function newBoardSolveLink (browser, names, rules) {
-  const key = JSON.stringify([names ?? null, rules ?? null])
-  if (!newBoardLinks.has(key)) newBoardLinks.set(key, linkFromNewBoard(browser, newBoardSolveLinkInPage, { names, rules }))
+export function newBoardSolveLink (browser, names, rules, drawEdges) {
+  const key = JSON.stringify([names ?? null, rules ?? null, drawEdges ?? null])
+  if (!newBoardLinks.has(key)) newBoardLinks.set(key, linkFromNewBoard(browser, newBoardSolveLinkInPage, { names, rules, drawEdges }))
   return newBoardLinks.get(key)
 }
 
