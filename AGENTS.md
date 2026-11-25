@@ -50,6 +50,16 @@ The six default roles, each label string equal to its role: `needs-triage`, `nee
 
 Single-context: a root `GLOSSARY.md` and upstream's `docs/agents.md`, plus a root `adr/` (outside `docs/`, so Pages does not serve it). See `.agents/domain.md`.
 
+## Include closure
+
+- **Directive**: `"./<path>"`
+- **Paths**: relative to the including file
+- **Generator**: `node live/build-solve.mjs`
+- **Shared files**, which no include line shows, so a ticket's body names them: a new owned file changes `.gitattributes` (and `AGENTS.md`
+  when it needs prose, and `package.json`'s `standard.globals` when it defines a global); a new `docs/js/` script changes `docs/index.html` and
+  `docs/solve.html`; a change to `docs/index.html` or `live/build-solve.mjs` changes `docs/solve.html`. The directive finds `index.html` and
+  `solve.html` only for a script that already exists.
+
 ## Coding standards
 
 Before you write or review code: read `CODING_STANDARDS.md`.
