@@ -81,7 +81,6 @@
     auto_save_history: BOOLEAN,
     reload_button: BOOLEAN,
     shortcuts_enabled: BOOLEAN,
-    // Penpa+'s Draw on Edges: the Mode card shows it, not the Settings dialog, and it is never saved (a link sets it).
     draw_edges: BOOLEAN
   }
 
@@ -109,7 +108,7 @@
   }
   // A flip of Draw on Edges lasts for the visit: a link's own value comes back on a reload. Penpa+ writes the option into the
   // saved progress text, which boot() loads in place of the link, so every save writes the value the link opened with. That is
-  // the value at the first flip, since only `setSetting` changes the option on this page.
+  // the value at the first flip: nothing else on the page changes the option once the puzzle has loaded.
   let linkDrawEdges = null
   const penpaMakeTextDuplicate = Puzzle.prototype.maketext_duplicate
   Puzzle.prototype.maketext_duplicate = function () {
@@ -1230,7 +1229,7 @@
       return Object.keys(SETTINGS).filter((name) => SETTING_GENRES[name]?.() ?? true)
     },
 
-    // Changes one setting and saves it where Penpa+ saves it. An unknown name or a value the setting does not take throws and
+    // Changes one setting and saves it where Penpa+ saves it, but for draw_edges, which a link sets and nothing saves. An unknown name or a value the setting does not take throws and
     // changes nothing. conflict_detection 2 is "off for this puzzle": Penpa+ keeps it in memory only and turns it back on for
     // the next puzzle it loads, so the UI keeps it per puzzle.
     setSetting (name, value) {

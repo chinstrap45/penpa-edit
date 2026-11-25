@@ -2,7 +2,7 @@
 // changes, opens with the link's value, and keeps a flip for the visit only.
 import assert from 'node:assert/strict'
 import { after, describe, it } from 'node:test'
-import { afterChange, board, linkFromNewBoard, openSolvePage, setTool, useBrowser } from './page.mjs'
+import { afterChange, board, newBoardSolveLink, newBoardSolveLinkInPage, openSolvePage, setTool, useBrowser, withPage } from './page.mjs'
 import { cellPixel } from './replay.mjs'
 import { settle } from './settle.mjs'
 
@@ -11,15 +11,14 @@ const browser = useBrowser()
 const CELL = 8
 const NEXT_CELL = 9
 
-function edgesOnLinkInPage () {
-  document.getElementById('nb_size1').value = 6
-  document.getElementById('nb_size2').value = 6
-  create_newboard()
-  const hashOf = () => pu.maketext_solve().replace(/^[^#]*/, '')
-  const off = hashOf()
-  UserSettings.draw_edges = true
-  return { off, on: hashOf() }
-}
+// The page's new-board link with Draw on Edges on: the same board as `newBoardSolveLinkInPage`, then the option flipped.
+const edgesOnLink = (browser) => withPage(browser, '', async (page) => {
+  await page.evaluate(newBoardSolveLinkInPage)
+  return page.evaluate(() => {
+    UserSettings.draw_edges = true
+    return pu.maketext_solve().replace(/^[^#]*/, '')
+  })
+})
 
 const edgesState = (page) => page.evaluate(() => UserSettings.draw_edges)
 
@@ -45,7 +44,7 @@ describe('the Draw on edges control', () => {
   }
 
   let links
-  const linksOf = async () => { links ??= await linkFromNewBoard(browser(), edgesOnLinkInPage); return links }
+  const linksOf = async () => { links ??= { off: await newBoardSolveLink(browser()), on: await edgesOnLink(browser()) }; return links }
 
   it('puts a Number click on an edge when on, in the cell when off', async () => {
     const page = await open((await linksOf()).off)
@@ -75,6 +74,7 @@ describe('the Draw on edges control', () => {
     await control(page).getByRole('button', { name: 'Off', exact: true }).click()
     assert.equal(await edgesState(page), false)
     assert.equal(await settle(async () => (await pressedName(page)).trim(), 'Off'), 'Off', 'the control shows the flip')
+    assert.equal(await page.evaluate(() => engine.saveProgress()), true, 'the progress is saved after the flip')
     await page.reload()
     await page.evaluate(() => engine.ready)
     await setTool(page, { mode: 'number', submode: '1' })

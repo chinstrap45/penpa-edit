@@ -308,11 +308,10 @@
       return [el('div', { class: 'ui-sub' }, ['Orientation']), group]
     }
 
-    // `edges` is whether Draw on Edges is on; the group shows only for a tool the option changes.
-    function drawEdgesGroup (edges) {
+    function drawEdgesGroup (isOn) {
       const group = el('div', { role: 'group', 'aria-label': 'Draw on edges', class: 'ui-edges' })
       ;[[true, 'On'], [false, 'Off']].forEach(([value, name]) => {
-        const button = el('button', { type: 'button', class: 'ui-edgebtn', 'aria-pressed': String(value === edges) }, [name])
+        const button = el('button', { type: 'button', class: 'ui-edgebtn', 'aria-pressed': String(value === isOn) }, [name])
         button.addEventListener('click', () => {
           engine.setSetting('draw_edges', value)
           button.blur()
@@ -322,6 +321,7 @@
       return [el('div', { class: 'ui-sub' }, ['Draw on edges']), group]
     }
 
+    // The Draw on edges group shows only for a tool the option changes.
     function renderToolOptions (target, tool, style, orientation, edges) {
       const parts = [...(tool.styles.length ? styleGroup(tool, style) : []), ...(orientation ? orientationGroup(orientation) : []),
         ...(drawsOnEdges(tool) ? drawEdgesGroup(edges) : [])]
