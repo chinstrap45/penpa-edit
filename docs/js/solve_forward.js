@@ -10,11 +10,13 @@ function splitAtHash (data) {
   return hash === -1 ? [data, ''] : [data.slice(0, hash), data.slice(hash)]
 }
 
-// Read the way Penpa+ reads them: from the query, or from the `#` data when there is no query (Chris, 2026-11-24).
+// A query with no `p=` (?fbclid=, ?utm_source=) is no link; boot() in general.js reads the `#` data then, and so does this.
+const queryHoldsPuzzle = (query) => /(^|&)p=/.test(query.slice(1))
+
 // eslint-disable-next-line no-unused-vars -- a global the page's scripts call
 function penpaLinkParams (data) {
   const [query, hashData] = splitAtHash(data)
-  return new URLSearchParams(query.startsWith('?') && query.length > 1 ? query.slice(1) : hashData.slice(1))
+  return new URLSearchParams(queryHoldsPuzzle(query) ? query.slice(1) : hashData.slice(1))
 }
 
 const isMarkedForPenpa = (params) => params.get(PENPA_MARK_KEY) === PENPA_MARK_VALUE
@@ -24,9 +26,12 @@ function withPenpaMark (data) {
   if (!data || isMarkedForPenpa(penpaLinkParams(data))) {
     return data
   }
-  // The mark goes where Penpa+ reads the parameters: the end of the query, when the link has one.
+  // The mark goes where penpaLinkParams reads the parameters: the end of the query, or of the `#` data.
   const [query, hashData] = splitAtHash(data)
-  return query.startsWith('?') ? `${query}&${PENPA_MARK}${hashData}` : `${data}&${PENPA_MARK}`
+  if (queryHoldsPuzzle(query)) {
+    return `${query}&${PENPA_MARK}${hashData}`
+  }
+  return `${query}${hashData || '#'}${hashData.length > 1 ? '&' : ''}${PENPA_MARK}`
 }
 
 // eslint-disable-next-line no-unused-vars -- a global the page's scripts call
