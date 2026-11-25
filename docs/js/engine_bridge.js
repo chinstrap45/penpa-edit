@@ -80,7 +80,9 @@
     local_storage: BOOLEAN,
     auto_save_history: BOOLEAN,
     reload_button: BOOLEAN,
-    shortcuts_enabled: BOOLEAN
+    shortcuts_enabled: BOOLEAN,
+    // Penpa+'s Draw on Edges: the Mode card shows it, not the Settings dialog, and it is never saved (a link sets it).
+    draw_edges: BOOLEAN
   }
 
   // The settings that only some puzzles use, by the genre tags that make them apply. Sudoku's tags are Penpa+'s own "Sudoku"

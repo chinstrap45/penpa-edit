@@ -16,7 +16,7 @@ const CELL = 12
 const SETTING_NAMES = [
   'sudoku_centre_size', 'sudoku_normal_size', 'outline_text', 'secondcolor', 'custom_colors_on',
   'conflict_detection', 'check_pencil_marks', 'ignore_line_style', 'starbattle_dots',
-  'local_storage', 'auto_save_history', 'reload_button', 'shortcuts_enabled'
+  'local_storage', 'auto_save_history', 'reload_button', 'shortcuts_enabled', 'draw_edges'
 ]
 
 // One control per setting: how the dialog shows it, what a fresh browser holds, and the value a click on the UI gives it.

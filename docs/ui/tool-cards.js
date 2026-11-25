@@ -5,7 +5,7 @@
   const MULTICOLOR_MODE = 'multicolor'
   const SWATCHES_IN_TWO_ROWS = 12
   const TWO_ROWS = 2
-  const { NOTHING, AS_A_CLICK, SECOND_COLOUR_DOT, mouseRows, toolKey, findTool, chipLabel } = window.toolGuide
+  const { NOTHING, AS_A_CLICK, SECOND_COLOUR_DOT, mouseRows, toolKey, findTool, chipLabel, drawsOnEdges } = window.toolGuide
   const { el, luminance, onDeskReady } = window.uiKit
 
   const MOUSE_BODY_SLACK_PX = 2
@@ -308,19 +308,34 @@
       return [el('div', { class: 'ui-sub' }, ['Orientation']), group]
     }
 
-    function renderToolOptions (target, tool, style, orientation) {
-      const parts = [...(tool.styles.length ? styleGroup(tool, style) : []), ...(orientation ? orientationGroup(orientation) : [])]
+    // `edges` is whether Draw on Edges is on; the group shows only for a tool the option changes.
+    function drawEdgesGroup (edges) {
+      const group = el('div', { role: 'group', 'aria-label': 'Draw on edges', class: 'ui-edges' })
+      ;[[true, 'On'], [false, 'Off']].forEach(([value, name]) => {
+        const button = el('button', { type: 'button', class: 'ui-edgebtn', 'aria-pressed': String(value === edges) }, [name])
+        button.addEventListener('click', () => {
+          engine.setSetting('draw_edges', value)
+          button.blur()
+        })
+        group.append(button)
+      })
+      return [el('div', { class: 'ui-sub' }, ['Draw on edges']), group]
+    }
+
+    function renderToolOptions (target, tool, style, orientation, edges) {
+      const parts = [...(tool.styles.length ? styleGroup(tool, style) : []), ...(orientation ? orientationGroup(orientation) : []),
+        ...(drawsOnEdges(tool) ? drawEdgesGroup(edges) : [])]
       target.replaceChildren(...parts)
       target.hidden = parts.length === 0
     }
 
     return {
-      render (tool, style, orientation) {
+      render (tool, style, orientation, edges) {
         toolTree.select(tool)
         if (!open) {
           showCurrent()
         }
-        renderToolOptions(toolOptions, tool, style, orientation)
+        renderToolOptions(toolOptions, tool, style, orientation, edges)
       },
       measure (sized, width) {
         return tallestOf(modeHeights, sized, `${width}/${getComputedStyle(body).fontSize}`, (unseen) => {
@@ -330,7 +345,7 @@
           const heights = unseen.map((tool) => {
             // Number is the one tool with an orientation; which direction is picked changes no height.
             const orientation = tool.mode === 'number' && engine.listOrientations().length ? engine.listOrientations()[0] : null
-            renderToolOptions(options, tool, tool.styles[0]?.style ?? null, orientation)
+            renderToolOptions(options, tool, tool.styles[0]?.style ?? null, orientation, false)
             return probe.offsetHeight
           })
           probe.remove()
@@ -376,8 +391,9 @@
       const current = engine.getTool()
       const held = engine.getState().held
       const orientation = engine.getOrientation()
-      const secondColour = styleColour(surfaceTool, engine.getSettings().secondcolor)
-      const now = `${toolKey(current)}/${current.style}/${orientation}/${held}/${secondColour}`
+      const settings = engine.getSettings()
+      const secondColour = styleColour(surfaceTool, settings.secondcolor)
+      const now = `${toolKey(current)}/${current.style}/${orientation}/${held}/${secondColour}/${settings.draw_edges}`
       if (now === drawn) {
         return
       }
@@ -389,7 +405,7 @@
       // The label keeps to one line and may be cut short (desk.css), so its whole text is its tooltip.
       // Not the element's text: a Number style's sample draws a digit.
       titleBarName.title = chipLabel(tool)
-      mode.render(tool, current.style, orientation)
+      mode.render(tool, current.style, orientation, settings.draw_edges)
     }
 
     render()
