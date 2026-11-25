@@ -74,6 +74,7 @@ describe('the Draw on edges control', () => {
     assert.equal((await pressedName(page)).trim(), 'On')
     await control(page).getByRole('button', { name: 'Off', exact: true }).click()
     assert.equal(await edgesState(page), false)
+    assert.equal(await settle(async () => (await pressedName(page)).trim(), 'Off'), 'Off', 'the control shows the flip')
     await page.reload()
     await page.evaluate(() => engine.ready)
     await setTool(page, { mode: 'number', submode: '1' })
