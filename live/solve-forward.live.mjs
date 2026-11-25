@@ -81,20 +81,24 @@ describe('a solve link opened on index.html', () => {
   })
 })
 
-// Penpa+ reads a link's settings from its query, or from its `#` data when it has no query, so a link with both is a solve
-// only when its query says so. The forward and the Back to new UI button must agree on that (#430): a link the page is
-// forwarded away from needs no button, and one it stays on as a solve needs it.
+// The page reads a link's puzzle from its query when the query holds `p=`, else from its `#` data (boot() in general.js), so
+// a link with both is a solve by whichever the page reads. The forward and the Back to new UI button must agree on that
+// (#430, #463): a link the page is forwarded away from needs no button, and one it stays on as a solve needs it.
 describe('a link with both a query and `#` data opened on index.html', () => {
   let hashLink
   before(async () => { hashLink = await makeNumberSolveLink(browser()) })
 
   const hasButton = (page) => page.evaluate(() => Boolean(document.querySelector('#top_button #chinstrap')))
 
-  it('is no solve when only its `#` data says so: no forward, no button', async (t) => {
-    const { context, page } = await openIndex(`?x=1${hashLink}`)
-    t.after(() => context.close())
-    assert.equal(pathOf(page), '/index.html', 'the page stays')
-    assert.equal(await hasButton(page), false, 'and has no button back')
+  it('is a solve when only its `#` data says so: forwarded, and kept on index.html by the mark with the button', async (t) => {
+    const forwarded = await openIndex(`?x=1${hashLink}`)
+    t.after(() => forwarded.context.close())
+    await waitForDesk(forwarded.page)
+    assert.equal(pathOf(forwarded.page), '/solve.html', 'a query with no `p=` leaves the `#` data to decide')
+    const kept = await openIndex(`?x=1${hashLink}&${PENPA_MARK}`)
+    t.after(() => kept.context.close())
+    assert.equal(pathOf(kept.page), '/index.html', 'the mark in the `#` data keeps the page')
+    assert.equal(await hasButton(kept.page), true, 'a page held as a solve has the button')
   })
 
   it('is a solve when its query says so: forwarded, and kept on index.html by the mark with the button', async (t) => {
