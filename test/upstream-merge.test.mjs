@@ -287,25 +287,35 @@ describe('the upstream merge script', () => {
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
 // `.gitattributes` is the record of what is ours: each `<pattern> merge=ours` line is one owned path. A directory (`dir/**`)
-// becomes `dir/`, and it is probed by a made-up file name in it.
+// becomes `dir/`, and it is probed by a made-up file name in it. Read from that file, these tests check only that each
+// pattern matches what it names; the two below it check the file against sources of their own.
 const OWNED_PATHS = readFileSync(join(REPO_ROOT, '.gitattributes'), 'utf8').split('\n')
   .filter((line) => line.endsWith(' merge=ours'))
   .map((line) => line.slice(0, -' merge=ours'.length).replace(/^\//, '').replace(/\*\*$/, ''))
 
 describe("the repo's .gitattributes", () => {
   for (const path of OWNED_PATHS) {
-    it(`marks ${path} merge=ours`, () => {
+    it(`its line for ${path} marks it merge=ours`, () => {
       const probe = path.endsWith('/') ? `${path}sub/probe.txt` : path
       assert.equal(git(REPO_ROOT, 'check-attr', 'merge', '--', probe), `${probe}: merge: ours`)
     })
   }
 
-  it('marks no tracked file that is not an owned path, so upstream\'s files still merge', () => {
-    const tracked = git(REPO_ROOT, 'ls-files')
-    const marked = execFileSync('git', ['check-attr', '--stdin', 'merge'], { cwd: REPO_ROOT, input: tracked, encoding: 'utf8' })
-      .split('\n').filter((line) => line.endsWith(': merge: ours')).map((line) => line.slice(0, -': merge: ours'.length))
-    const stray = marked.filter((file) => !OWNED_PATHS.some((path) => (path.endsWith('/') ? file.startsWith(path) : file === path)))
-    assert.deepEqual(stray, [])
+  const markedOurs = (files) => execFileSync('git', ['check-attr', '--stdin', 'merge'], { cwd: REPO_ROOT, input: files.join('\n'), encoding: 'utf8' })
+    .split('\n').filter((line) => line.endsWith(': merge: ours')).map((line) => line.slice(0, -': merge: ours'.length))
+
+  // A mark on a file upstream ships drops upstream's changes to it at the next merge; these few we took over on purpose.
+  const TAKEN_OVER = ['docs/identity.js']
+  it('marks no file upstream/master tracks but the ones we took over, so upstream\'s files still merge', () => {
+    assert.deepEqual(markedOurs(git(REPO_ROOT, 'ls-tree', '-r', '--name-only', 'upstream/master').split('\n')), TAKEN_OVER)
+  })
+
+  // Owned files named apart from `.gitattributes` (Chris, 2026-11-24), so a line dropped from it fails here.
+  const RULED_OURS = ['.claude/settings.json', '.claude/hooks/command-parser.mjs', '.claude/hooks/deny-npm-ci-symlink.mjs',
+    '.claude/hooks/deny-recording-writes.mjs', 'docs/js/puzzlink_import.js', 'test/recordings-approve.test.mjs',
+    'test/recordings-hook.test.mjs', 'test/expected-gate.test.mjs', 'test/required-checks.test.mjs', 'test/npm-ci-hook.test.mjs']
+  it('marks each file Chris ruled ours', () => {
+    assert.deepEqual(markedOurs(RULED_OURS), RULED_OURS)
   })
 
   it('does not mark a same-named file in another directory, even on a case-insensitive clone', () => {

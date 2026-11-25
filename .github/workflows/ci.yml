@@ -30,6 +30,8 @@ jobs:
       - uses: actions/checkout@v6
       # The Redirect script's test reads the script as master has it, to require a version bump.
       - run: git fetch --no-tags --depth=1 origin master:refs/remotes/origin/master
+      # The .gitattributes test reads upstream/master's file list, to keep its files unmarked.
+      - run: git fetch --no-tags --depth=1 https://github.com/swaroopg92/penpa-edit.git master:refs/remotes/upstream/master
       - uses: ./.github/actions/setup-tests
       # shellcheck is the runner image's own, never downloaded (#416): a runner without it fails here, by name.
       - run: shellcheck --version
