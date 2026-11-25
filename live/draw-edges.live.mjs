@@ -2,8 +2,8 @@
 // changes, opens with the link's value, and keeps a flip for the visit only.
 import assert from 'node:assert/strict'
 import { after, describe, it } from 'node:test'
-import { afterChange, board, newBoardSolveLink, newBoardSolveLinkInPage, openSolvePage, setTool, useBrowser, withPage } from './page.mjs'
-import { cellPixel } from './replay.mjs'
+import { afterChange, board, newBoardSolveLink, openSolvePage, setTool, useBrowser } from './page.mjs'
+import { cellPixel, numberPlaces } from './replay.mjs'
 import { settle } from './settle.mjs'
 
 const browser = useBrowser()
@@ -11,22 +11,10 @@ const browser = useBrowser()
 const CELL = 8
 const NEXT_CELL = 9
 
-// The page's new-board link with Draw on Edges on: the same board as `newBoardSolveLinkInPage`, then the option flipped.
-const edgesOnLink = (browser) => withPage(browser, '', async (page) => {
-  await page.evaluate(newBoardSolveLinkInPage)
-  return page.evaluate(() => {
-    UserSettings.draw_edges = true
-    return pu.maketext_solve().replace(/^[^#]*/, '')
-  })
-})
-
-const edgesState = (page) => page.evaluate(() => UserSettings.draw_edges)
+const edgesState = (page) => page.evaluate(() => engine.getSettings().draw_edges)
 
 const control = (page) => page.getByRole('region', { name: 'Mode' }).getByRole('group', { name: 'Draw on edges' })
 const pressedName = async (page) => control(page).locator('button[aria-pressed=true]').textContent()
-
-// Whether each digit on the board sits on a cell or on an edge or corner.
-const digitPlaces = (page) => page.evaluate(() => Object.keys(readEngineState().pu_a.number ?? {}).map((key) => (pu.centerlist.includes(Number(key)) ? 'cell' : 'edge')))
 
 async function typeAt (page, pixel, digit) {
   await page.mouse.click(pixel.x, pixel.y)
@@ -44,7 +32,7 @@ describe('the Draw on edges control', () => {
   }
 
   let links
-  const linksOf = async () => { links ??= { off: await newBoardSolveLink(browser()), on: await edgesOnLink(browser()) }; return links }
+  const linksOf = async () => { links ??= { off: await newBoardSolveLink(browser()), on: await newBoardSolveLink(browser(), undefined, undefined, true) }; return links }
 
   it('puts a Number click on an edge when on, in the cell when off', async () => {
     const page = await open((await linksOf()).off)
@@ -56,12 +44,12 @@ describe('the Draw on edges control', () => {
     await control(page).getByRole('button', { name: 'On', exact: true }).click()
     assert.equal(await edgesState(page), true)
     await typeAt(page, between, '5')
-    assert.deepEqual(await digitPlaces(page), ['edge'])
+    assert.deepEqual(await numberPlaces(page), ['edge'])
 
     await control(page).getByRole('button', { name: 'Off', exact: true }).click()
     assert.equal(await edgesState(page), false)
     await typeAt(page, between, '6')
-    assert.deepEqual((await digitPlaces(page)).sort(), ['cell', 'edge'], 'the first digit stays on its edge, the second is in a cell')
+    assert.deepEqual((await numberPlaces(page)).sort(), ['cell', 'edge'], 'the first digit stays on its edge, the second is in a cell')
     assert.ok((await board(page)).entered.number)
   })
 

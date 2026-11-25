@@ -85,6 +85,9 @@ export async function cellPixel (page, index) {
   return pointPixel(page, await page.evaluate((index) => pu.centerlist[index], index))
 }
 
+// Whether each number on the board sits in a cell or on an edge or corner.
+export const numberPlaces = (page) => page.evaluate(() => Object.keys(readEngineState().pu_a.number ?? {}).map((key) => (pu.centerlist.includes(Number(key)) ? 'cell' : 'edge')))
+
 export async function makeSurfaceSolveLink (browser) {
   return linkHash(await linkFromNewBoard(browser, surfaceSolveLinkInPage, ANSWER_CELLS))
 }
