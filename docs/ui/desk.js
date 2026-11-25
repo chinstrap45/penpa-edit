@@ -558,8 +558,11 @@
     function automaticHeight (id) {
       const { node } = cards[id]
       const content = { mode: fit.modeCardHeight, mouse: fit.mouseCardHeight, rules: (w) => rulesCardHeight(cards.rules, w) }[id]
+      // Beside a card the solver holds, Mouse takes the column's room below it, as a load gives it (Chris, 2026-11-25).
+      const fillsColumn = id === 'mouse' && !isByHand(saved.mouse, 'placed') &&
+        LEFT_COLUMN.some((other) => other !== 'mouse' && isShown(other) && !isAutomatic(saved[other]))
       const toBottom = desk.clientHeight - TOP_MARGIN_PX - node.offsetTop
-      return Math.max(minHeightOf(id, cards[id]), Math.min(content ? content(node.offsetWidth) : toBottom, toBottom))
+      return Math.max(minHeightOf(id, cards[id]), Math.min(content && !fillsColumn ? content(node.offsetWidth) : toBottom, toBottom))
     }
 
     function setRecentHeight () {
@@ -950,11 +953,13 @@
                 node.style.top = `${from.y + from.h - height}px`
               }
             }, (didMove) => {
-              if (didMove) {
+              // An empty Rules card keeps its one line, so a drag that leaves its height unchanged did not resize it.
+              const resized = axesOf(edges).filter((axis) => axis !== 'h' || node.offsetHeight !== from.h || !isEmptyRulesCard(id, node))
+              if (didMove && resized.length) {
                 if (edges.includes('left') || edges.includes('top')) {
                   keepPlace(id, node)
                 }
-                saveCard(id, node, { resized: axesOf(edges) })
+                saveCard(id, node, { resized })
               }
             })
           })

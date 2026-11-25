@@ -102,6 +102,19 @@ describe('the desk', () => {
     })
   }
 
+  it('gives Mouse the height a reload gives it after a tool change beside a Rules card resized by hand (#466)', async () => {
+    await drag(page, await handleCentre(page, 'Rules', 'bottom'), 0, 60)
+    const field = card(page, 'Mode').getByRole('combobox', { name: 'Tool' })
+    await field.click()
+    await field.fill('Surface')
+    await field.press('Enter')
+    await field.press('Escape')
+    const mouse = await boxOf(page, 'Mouse')
+    await page.reload()
+    await card(page, 'Mouse').waitFor()
+    assert.deepEqual(await settle(() => boxOf(page, 'Mouse'), mouse), mouse)
+  })
+
   it('keeps the place of a card resized from its top edge that was never moved', async () => {
     await drag(page, await handleCentre(page, 'Rules', 'top'), 0, -30)
     const grown = await boxOf(page, 'Rules')
